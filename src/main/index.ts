@@ -1,72 +1,77 @@
-import { app, shell, BrowserWindow } from 'electron'
+import { app, globalShortcut, powerMonitor } from 'electron'
 import { join } from 'path'
-import { electronApp, optimizer, is } from '@electron-toolkit/utils'
-import icon from '../../resources/icon.png?asset'
+import { electronApp, optimizer } from '@electron-toolkit/utils'
+import { registerIpc } from './ipc'
+import { showNotification } from './notify'
+import { DayfitService, type ViewState } from './service'
+import { createPopover } from './tray'
 
-function createWindow(): void {
-  // Create the browser window.
-  const mainWindow = new BrowserWindow({
-    width: 900,
-    height: 670,
-    show: false,
-    autoHideMenuBar: true,
-    ...(process.platform === 'linux' ? { icon } : {}),
-    webPreferences: {
-      preload: join(__dirname, '../preload/index.js'),
-      sandbox: false
+const TICK_MS = 30_000
+
+if (!app.requestSingleInstanceLock()) {
+  app.quit()
+} else {
+  app.whenReady().then(() => {
+    electronApp.setAppUserModelId('app.dayfit.desktop')
+    app.dock?.hide()
+    app.on('browser-window-created', (_, window) => optimizer.watchWindowShortcuts(window))
+
+    const service = new DayfitService(join(app.getPath('userData'), 'dayfit.json'), {
+      now: () => new Date()
+    })
+    const popover = createPopover()
+    app.on('second-instance', () => popover.show())
+
+    let hotkey: string | null = null
+    let launchAtLogin: boolean | null = null
+    /** Pushes the view to the renderer and applies settings-driven side effects. */
+    const publish = (view: ViewState): void => {
+      popover.send('dayfit:state', view)
+      const s = view.settings
+      if (s.hotkey !== hotkey) {
+        if (hotkey) globalShortcut.unregister(hotkey)
+        hotkey = s.hotkey
+        try {
+          globalShortcut.register(hotkey, () => popover.focus('quick-add'))
+        } catch {
+          // invalid accelerator string: leave the hotkey unbound
+        }
+      }
+      if (s.launchAtLogin !== launchAtLogin) {
+        launchAtLogin = s.launchAtLogin
+        app.setLoginItemSettings({ openAtLogin: launchAtLogin })
+      }
     }
+
+    registerIpc(service, publish)
+    publish(service.view())
+
+    const tick = (): void => {
+      const { events, nudges, view } = service.tick(powerMonitor.getSystemIdleTime())
+      const handlers = {
+        onDrank: () => publish(service.logWater()),
+        onNudge: (id: string, a: 'done' | 'extend' | 'move') => publish(service.answerNudge(id, a)),
+        onOpen: (nudge: boolean) => (nudge ? popover.focus('nudge') : popover.show())
+      }
+      for (const event of events)
+        showNotification({ type: 'event', event }, process.platform, handlers)
+      for (const id of nudges) {
+        const item = view.items.find((i) => i.id === id)
+        if (item)
+          showNotification(
+            { type: 'nudge', itemId: id, title: item.title },
+            process.platform,
+            handlers
+          )
+      }
+      publish(view)
+    }
+    setInterval(tick, TICK_MS)
+    powerMonitor.on('resume', tick)
+    powerMonitor.on('unlock-screen', tick)
   })
 
-  mainWindow.on('ready-to-show', () => {
-    mainWindow.show()
-  })
-
-  mainWindow.webContents.setWindowOpenHandler((details) => {
-    shell.openExternal(details.url)
-    return { action: 'deny' }
-  })
-
-  // HMR for renderer base on electron-vite cli.
-  // Load the remote URL for development or the local html file for production.
-  if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-    mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
-  } else {
-    mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
-  }
+  app.on('will-quit', () => globalShortcut.unregisterAll())
+  // Menu bar app: stay alive with no windows open.
+  app.on('window-all-closed', () => {})
 }
-
-// This method will be called when Electron has finished
-// initialization and is ready to create browser windows.
-// Some APIs can only be used after this event occurs.
-app.whenReady().then(() => {
-  // Set app user model id for windows
-  electronApp.setAppUserModelId('app.dayfit.desktop')
-
-  // Default open or close DevTools by F12 in development
-  // and ignore CommandOrControl + R in production.
-  // see https://github.com/alex8088/electron-toolkit/tree/master/packages/utils
-  app.on('browser-window-created', (_, window) => {
-    optimizer.watchWindowShortcuts(window)
-  })
-
-
-  createWindow()
-
-  app.on('activate', function () {
-    // On macOS it's common to re-create a window in the app when the
-    // dock icon is clicked and there are no other windows open.
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
-  })
-})
-
-// Quit when all windows are closed, except on macOS. There, it's common
-// for applications and their menu bar to stay active until the user quits
-// explicitly with Cmd + Q.
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit()
-  }
-})
-
-// In this file you can include the rest of your app's specific main process
-// code. You can also put them in separate files and require them here.

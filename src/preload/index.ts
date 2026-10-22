@@ -1,22 +1,33 @@
-import { contextBridge } from 'electron'
-import { electronAPI } from '@electron-toolkit/preload'
+import { contextBridge, ipcRenderer } from 'electron'
+import type { DayfitApi } from './index.d'
 
-// Custom APIs for renderer
-const api = {}
+const call =
+  (method: string) =>
+  (...args: unknown[]) =>
+    ipcRenderer.invoke(`dayfit:${method}`, ...args)
 
-// Use `contextBridge` APIs to expose Electron APIs to
-// renderer only if context isolation is enabled, otherwise
-// just add to the DOM global.
-if (process.contextIsolated) {
-  try {
-    contextBridge.exposeInMainWorld('electron', electronAPI)
-    contextBridge.exposeInMainWorld('api', api)
-  } catch (error) {
-    console.error(error)
+const subscribe =
+  <T>(channel: string) =>
+  (cb: (v: T) => void): (() => void) => {
+    const listener = (_e: unknown, v: T): void => cb(v)
+    ipcRenderer.on(channel, listener)
+    return () => ipcRenderer.removeListener(channel, listener)
   }
-} else {
-  // @ts-ignore (define in dts)
-  window.electron = electronAPI
-  // @ts-ignore (define in dts)
-  window.api = api
-}
+
+const dayfit = {
+  view: call('view'),
+  addItems: call('addItems'),
+  updateItem: call('updateItem'),
+  replan: call('replan'),
+  answerDecisions: call('answerDecisions'),
+  answerNudge: call('answerNudge'),
+  confirmCall: call('confirmCall'),
+  setLock: call('setLock'),
+  logWater: call('logWater'),
+  setManualBusy: call('setManualBusy'),
+  updateSettings: call('updateSettings'),
+  onState: subscribe('dayfit:state'),
+  onFocus: subscribe('dayfit:focus')
+} as DayfitApi
+
+contextBridge.exposeInMainWorld('dayfit', dayfit)
