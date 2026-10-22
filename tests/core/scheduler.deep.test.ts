@@ -230,14 +230,14 @@ describe('planDay part 1', () => {
     expect(r.blocks.filter((b) => b.itemId === f.id)).toEqual([frozen])
   })
 
-  test('frozen deep item is not placed again and frozen time is blocked', () => {
-    const d = deep(120)
+  test('fully frozen deep item is not placed again and frozen time is blocked', () => {
+    const d = deep(60)
     const frozen: Block = {
       itemId: d.id,
       kind: 'deep',
       start: 540,
       end: 600,
-      chunk: { index: 0, of: 2 },
+      chunk: null,
       reason: 'x'
     }
     const other = deep(60)
@@ -259,6 +259,109 @@ describe('planDay part 1', () => {
     expect(r.decisions).toEqual([])
     expect(deepBlocks(r.blocks)).toEqual([])
     expect(r.unscheduled).toEqual([b.id])
+  })
+
+  test('frozen walk is not duplicated on replan', () => {
+    const walk: Block = {
+      itemId: null,
+      kind: 'walk',
+      start: 660,
+      end: 670,
+      chunk: null,
+      reason: 'Walk break'
+    }
+    const r = planDay(input([], { now: 665, frozen: [walk] }))
+    expect(r.blocks.filter((b) => b.kind === 'walk').map((b) => b.start)).toEqual([
+      660, 780, 900, 1020
+    ])
+  })
+
+  test('half preference falls back to a gap straddling the boundary', () => {
+    // only free gap is 12:05-14:15, across the 13:30 boundary
+    const d = deep(120, { half: 'am' })
+    const items = [fixed(540, 180), fixed(860, 220), d]
+    const r = planDay(input(items, { settings: noWalks }))
+    expect(r.decisions).toEqual([{ kind: 'half-overflow', itemId: d.id, preferred: 'am' }])
+    const answers: DecisionAnswer[] = [{ itemId: d.id, choice: 'use-other-half' }]
+    const r2 = planDay(input(items, { settings: noWalks, answers }))
+    expect(r2.decisions).toEqual([])
+    expect(deepBlocks(r2.blocks)).toMatchObject([{ itemId: d.id, start: 725, end: 845 }])
+  })
+
+  test('partly frozen deep item places its remaining chunk', () => {
+    const d = deep(120)
+    const frozen: Block = {
+      itemId: d.id,
+      kind: 'deep',
+      start: 540,
+      end: 600,
+      chunk: { index: 0, of: 2 },
+      reason: 'x'
+    }
+    const r = planDay(input([d], { now: 600, frozen: [frozen], settings: noWalks }))
+    expect(deepBlocks(r.blocks)).toEqual([
+      frozen,
+      {
+        itemId: d.id,
+        kind: 'deep',
+        start: 605,
+        end: 665,
+        chunk: { index: 1, of: 2 },
+        reason: 'Earliest free slot'
+      }
+    ])
+  })
+
+  test('frozen 90m of a 120m deep item leaves one 30m block', () => {
+    const d = deep(120)
+    const frozen: Block = {
+      itemId: d.id,
+      kind: 'deep',
+      start: 540,
+      end: 630,
+      chunk: null,
+      reason: 'x'
+    }
+    const r = planDay(input([d], { now: 630, frozen: [frozen], settings: noWalks }))
+    const rest = deepBlocks(r.blocks).filter((b) => b.start > 540)
+    expect(rest).toEqual([
+      {
+        itemId: d.id,
+        kind: 'deep',
+        start: 635,
+        end: 665,
+        chunk: { index: 1, of: 2 },
+        reason: 'Earliest free slot'
+      }
+    ])
+  })
+
+  test('frozen remainder splits with continued chunk numbering', () => {
+    const d = deep(180)
+    const frozen: Block = {
+      itemId: d.id,
+      kind: 'deep',
+      start: 540,
+      end: 600,
+      chunk: { index: 0, of: 3 },
+      reason: 'x'
+    }
+    // 15-min fixed items every 90 min from 10:00 leave 65-min gaps after buffers
+    const fx = [600, 690, 780, 870, 960].map((s) => fixed(s, 15))
+    const r = planDay(input([...fx, d], { now: 600, frozen: [frozen], settings: noWalks }))
+    const rest = deepBlocks(r.blocks).filter((b) => b.start > 540)
+    expect(rest.map((b) => [b.end - b.start, b.chunk])).toEqual([
+      [60, { index: 1, of: 3 }],
+      [60, { index: 2, of: 3 }]
+    ])
+    expect(rest.every((b) => b.reason === 'Split: no 120m gap')).toBe(true)
+  })
+
+  test('blocks with equal times sort by createdAt then id', () => {
+    const later = fixed(600, 30, { createdAt: 900 })
+    const earlier = fixed(600, 30, { createdAt: 100 })
+    const r = planDay(input([later, earlier], { settings: noWalks }))
+    expect(r.blocks.map((b) => b.itemId)).toEqual([earlier.id, later.id])
   })
 
   test('blocks are sorted by start', () => {
