@@ -92,4 +92,54 @@ describe('QuickAdd', () => {
     await userEvent.type(custom, '25')
     expect(screen.getByRole('button', { name: 'Add' })).toBeEnabled()
   })
+
+  it('keeps a hand-set type after an unrelated keystroke following "at 9:30"', async () => {
+    const { box } = setup()
+    await userEvent.type(box, 'Standup at 9:30')
+    expect(screen.getByLabelText('Type')).toHaveValue('fixed')
+    await userEvent.selectOptions(screen.getByLabelText('Type'), 'task')
+    await userEvent.type(box, ' x')
+    expect(screen.getByLabelText('Type')).toHaveValue('task')
+  })
+
+  it('overwrites a hand-edited field once its token changes, and resets it when removed', async () => {
+    const { box } = setup()
+    await userEvent.type(box, 'Thing !high')
+    await userEvent.selectOptions(screen.getByLabelText('Priority'), 'low')
+    await userEvent.type(box, '{Backspace}{Backspace}{Backspace}{Backspace}{Backspace}!med')
+    expect(screen.getByLabelText('Priority')).toHaveValue('med')
+    await userEvent.selectOptions(screen.getByLabelText('Priority'), 'low')
+    await userEvent.clear(box)
+    await userEvent.type(box, 'Thing')
+    expect(screen.getByLabelText('Priority')).toHaveValue('med')
+  })
+
+  it('resets custom duration and day modes after a successful add', async () => {
+    const { box } = setup()
+    await userEvent.type(box, 'Thing')
+    await userEvent.selectOptions(screen.getByLabelText('Duration'), 'custom')
+    await userEvent.selectOptions(screen.getByLabelText('Day'), 'date')
+    await userEvent.click(box)
+    await userEvent.keyboard('{Enter}')
+    await vi.waitFor(() => expect(box).toHaveValue(''))
+    expect(screen.getByLabelText('Duration')).toHaveValue('30')
+    expect(screen.queryByLabelText('Custom minutes')).toBeNull()
+    expect(screen.getByLabelText('Day')).toHaveValue('today')
+  })
+
+  it('shows Tomorrow when parsed syntax sets the day after Pick date was used', async () => {
+    const { box } = setup()
+    await userEvent.type(box, 'Thing')
+    await userEvent.selectOptions(screen.getByLabelText('Day'), 'date')
+    await userEvent.type(box, ' tomorrow')
+    expect(screen.getByLabelText('Day')).toHaveValue('tomorrow')
+  })
+
+  it('Enter in the Label field does not add the item', async () => {
+    const { box } = setup()
+    await userEvent.type(box, 'Thing')
+    await userEvent.type(screen.getByLabelText('Label'), 'work{Enter}')
+    expect(addItems).not.toHaveBeenCalled()
+    expect(box).toHaveValue('Thing')
+  })
 })

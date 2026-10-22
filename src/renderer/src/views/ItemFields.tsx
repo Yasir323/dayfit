@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { addDays, formatClock, parseClock } from '../../../core/time'
 import { validateFields } from './validateFields'
 import type { DateStr, Half, ItemType, NewItem, Priority, Repeat } from '../../../core/types'
@@ -18,18 +18,22 @@ interface Props {
 
 export function ItemFields({ value, onChange, today, defaultDurations }: Props): React.JSX.Element {
   const [customDuration, setCustomDuration] = useState(false)
-  const [customDate, setCustomDate] = useState(false)
-  const set = (patch: Partial<NewItem>): void => onChange({ ...value, ...patch })
+  const fromCustomInput = useRef(false)
+  const set = (patch: Partial<NewItem>): void => {
+    // the deadline's date follows the Day field while they matched
+    if (patch.date && value.deadline && value.deadline.date === value.date && !patch.deadline)
+      patch = { ...patch, deadline: { ...value.deadline, date: patch.date } }
+    onChange({ ...value, ...patch })
+  }
+  // a preset arriving from outside (parsed syntax) leaves custom mode
+  useEffect(() => {
+    if (!fromCustomInput.current && PRESETS.includes(value.durationMin)) setCustomDuration(false)
+    fromCustomInput.current = false
+  }, [value.durationMin])
 
   const durationIsCustom = customDuration || !PRESETS.includes(value.durationMin)
   const tomorrow = addDays(today, 1)
-  const dayMode = customDate
-    ? 'date'
-    : value.date === today
-      ? 'today'
-      : value.date === tomorrow
-        ? 'tomorrow'
-        : 'date'
+  const dayMode = value.date === today ? 'today' : value.date === tomorrow ? 'tomorrow' : 'date'
   const hasStart = value.type === 'fixed' || value.type === 'household'
 
   const setType = (type: ItemType): void => {
@@ -53,7 +57,13 @@ export function ItemFields({ value, onChange, today, defaultDurations }: Props):
   const error = validateFields(value)
 
   return (
-    <div className="fields">
+    <div
+      className="fields"
+      onKeyDown={(e) => {
+        // Enter in a field must not submit the surrounding form
+        if (e.key === 'Enter' && e.target instanceof HTMLInputElement) e.preventDefault()
+      }}
+    >
       <label>
         Duration
         <select
@@ -82,9 +92,10 @@ export function ItemFields({ value, onChange, today, defaultDurations }: Props):
             min={1}
             step={1}
             value={Number.isNaN(value.durationMin) ? '' : value.durationMin}
-            onChange={(e) =>
+            onChange={(e) => {
+              fromCustomInput.current = true
               set({ durationMin: e.target.value === '' ? NaN : Number(e.target.value) })
-            }
+            }}
           />
         </label>
       )}
@@ -134,9 +145,9 @@ export function ItemFields({ value, onChange, today, defaultDurations }: Props):
           value={dayMode}
           onChange={(e) => {
             const m = e.target.value
-            setCustomDate(m === 'date')
             if (m === 'today') set({ date: today })
             else if (m === 'tomorrow') set({ date: tomorrow })
+            else if (dayMode !== 'date') set({ date: addDays(today, 2) })
           }}
         >
           <option value="today">Today</option>

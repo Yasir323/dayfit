@@ -51,6 +51,11 @@ export function QuickAdd({ settings, today, onAdded }: Props): React.JSX.Element
   const [failure, setFailure] = useState<string | null>(null)
   const parsed = useRef(parseLine('', today))
   const input = useRef<HTMLInputElement>(null)
+  const mirror = useRef<HTMLDivElement>(null)
+  const [formKey, setFormKey] = useState(0)
+  const syncScroll = (): void => {
+    if (mirror.current && input.current) mirror.current.scrollLeft = input.current.scrollLeft
+  }
   const line = useMemo(() => parseLine(text, today), [text, today])
 
   useEffect(() => input.current?.focus(), [])
@@ -76,7 +81,6 @@ export function QuickAdd({ settings, today, onAdded }: Props): React.JSX.Element
       ) {
         patch.durationMin = settings.defaultDurations[patch.type]
       }
-      if (cur.fields.fixedStart !== undefined) patch.type = base.type
       return { ...d, ...patch }
     })
   }
@@ -92,6 +96,7 @@ export function QuickAdd({ settings, today, onAdded }: Props): React.JSX.Element
       const v = await api.addItems([{ ...draft, title: line.title || text.trim() }])
       parsed.current = parseLine('', today)
       setText('')
+      setFormKey((k) => k + 1)
       setDraft(toNewItem(parsed.current, today, settings))
       onAdded(v, openToday)
       input.current?.focus()
@@ -111,7 +116,7 @@ export function QuickAdd({ settings, today, onAdded }: Props): React.JSX.Element
       }}
     >
       <div className="syntax-box">
-        <div className="syntax-mirror" aria-hidden="true">
+        <div ref={mirror} className="syntax-mirror" aria-hidden="true">
           {highlight(text, line.tokens)}
         </div>
         <input
@@ -123,16 +128,23 @@ export function QuickAdd({ settings, today, onAdded }: Props): React.JSX.Element
           placeholder="Call John 15m ~call !high #work"
           spellCheck={false}
           autoComplete="off"
-          onChange={(e) => onText(e.target.value)}
+          onChange={(e) => {
+            onText(e.target.value)
+            syncScroll()
+          }}
+          onScroll={syncScroll}
+          onKeyUp={syncScroll}
+          onSelect={syncScroll}
           onKeyDown={(e) => {
-            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+            if (e.key === 'Enter') {
               e.preventDefault()
-              void submit(true)
+              if (!e.nativeEvent.isComposing) void submit(e.metaKey || e.ctrlKey)
             }
           }}
         />
       </div>
       <ItemFields
+        key={formKey}
         value={draft}
         onChange={setDraft}
         today={today}
