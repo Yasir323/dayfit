@@ -11,6 +11,8 @@ interface Props {
 
 /** Timeline scale. */
 const PX_PER_MIN = 1.5
+/** Keeps very short blocks tall enough for their action buttons. */
+const MIN_BLOCK_PX = 18
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 const BUSY_MODES: [string, boolean | null][] = [
   ['Auto', null],
@@ -47,8 +49,16 @@ function span(view: ViewState): { start: Minutes; end: Minutes } {
 
 export function Today({ view, onView }: Props): React.JSX.Element {
   const [failure, setFailure] = useState<string | null>(null)
-  const [booking, setBooking] = useState<{ id: string; slot: Minutes } | null>(null)
+  const [booking, setBooking] = useState<{ id: string; slot: Minutes; slots: string } | null>(null)
   const [showUpcoming, setShowUpcoming] = useState(false)
+
+  // A pending "Book?" is void once the call is booked elsewhere or its slots change.
+  const slotsKey = (c: Item): string => JSON.stringify(c.suggestedSlots)
+  if (
+    booking &&
+    !view.awaitingCalls.some((c) => c.id === booking.id && slotsKey(c) === booking.slots)
+  )
+    setBooking(null)
 
   const run = async (p: () => Promise<ViewState>): Promise<void> => {
     setFailure(null)
@@ -56,6 +66,16 @@ export function Today({ view, onView }: Props): React.JSX.Element {
       onView(await p())
     } catch (e) {
       setFailure(e instanceof Error ? e.message : 'Something went wrong')
+    }
+  }
+
+  const copy = async (text: string): Promise<void> => {
+    setFailure(null)
+    try {
+      if (!navigator.clipboard) throw new Error('Clipboard unavailable')
+      await navigator.clipboard.writeText(text)
+    } catch {
+      setFailure('Could not copy')
     }
   }
 
@@ -88,15 +108,17 @@ export function Today({ view, onView }: Props): React.JSX.Element {
             ✓
           </button>
         )}
-        <button
-          type="button"
-          aria-label={locked ? 'Unlock' : 'Lock'}
-          aria-pressed={locked}
-          title={locked ? 'Unlock' : 'Lock'}
-          onClick={() => void run(() => api.setLock(item.id, !locked))}
-        >
-          {locked ? '🔒' : '🔓'}
-        </button>
+        {item.fixedStart === null && (
+          <button
+            type="button"
+            aria-label={locked ? 'Unlock' : 'Lock'}
+            aria-pressed={locked}
+            title={locked ? 'Unlock' : 'Lock'}
+            onClick={() => void run(() => api.setLock(item.id, !locked))}
+          >
+            {locked ? '🔒' : '🔓'}
+          </button>
+        )}
         {item.fixedStart !== null && (
           <button
             type="button"
@@ -161,7 +183,10 @@ export function Today({ view, onView }: Props): React.JSX.Element {
               <li
                 key={`${b.itemId ?? 'walk'}-${b.start}-${k}`}
                 className={`block block-${b.kind}${done ? ' is-done' : ''}`}
-                style={{ top: top(b.start), height: (b.end - b.start) * PX_PER_MIN }}
+                style={{
+                  top: top(b.start),
+                  height: Math.max((b.end - b.start) * PX_PER_MIN, MIN_BLOCK_PX)
+                }}
                 title={b.reason}
               >
                 <span className="block-time">{formatClock(b.start)}</span>
@@ -211,7 +236,7 @@ export function Today({ view, onView }: Props): React.JSX.Element {
                       <button
                         type="button"
                         className="chip"
-                        onClick={() => setBooking({ id: c.id, slot })}
+                        onClick={() => setBooking({ id: c.id, slot, slots: slotsKey(c) })}
                       >
                         {formatClock(slot)}
                       </button>
@@ -221,11 +246,7 @@ export function Today({ view, onView }: Props): React.JSX.Element {
                     <button
                       type="button"
                       className="copy"
-                      onClick={() =>
-                        void navigator.clipboard
-                          .writeText(freeText(c.suggestedSlots))
-                          .catch(() => setFailure('Could not copy'))
-                      }
+                      onClick={() => void copy(freeText(c.suggestedSlots))}
                     >
                       Copy
                     </button>

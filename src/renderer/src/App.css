@@ -153,6 +153,10 @@ body {
   font-size: 12px;
   line-height: 1.4;
 }
+.block:hover,
+.block:focus-within {
+  z-index: 1;
+}
 .block-fixed {
   background: #ede9fe;
   border-color: #7c3aed;

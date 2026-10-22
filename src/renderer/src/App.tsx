@@ -77,8 +77,16 @@ export function App(): React.JSX.Element {
   if (!view) return <div className="app">Dayfit</div>
 
   const titleOf = (id: string): string => view.items.find((i) => i.id === id)?.title ?? 'Item'
-  // The Dump tab runs its own Review for the decisions it produces.
-  const review = view.plan.decisions.length > 0 && tab !== 'dump'
+  const review = view.plan.decisions.length > 0
+  const banners = view.nudges.map((id, k) => (
+    <NudgeBanner
+      key={id}
+      id={id}
+      title={titleOf(id)}
+      onView={setView}
+      ref={k === 0 ? nudgeRef : undefined}
+    />
+  ))
 
   return (
     <div className="app">
@@ -96,15 +104,7 @@ export function App(): React.JSX.Element {
         ))}
       </nav>
 
-      {view.nudges.map((id, k) => (
-        <NudgeBanner
-          key={id}
-          id={id}
-          title={titleOf(id)}
-          onView={setView}
-          ref={k === 0 ? nudgeRef : undefined}
-        />
-      ))}
+      {!review && banners}
 
       <main className="tab-body">
         {tab === 'today' && <Today view={view} onView={setView} />}
@@ -137,7 +137,9 @@ export function App(): React.JSX.Element {
       </main>
 
       {review && (
+        // Banners move inside the overlay so a nudge is never hidden behind Review.
         <div className="overlay">
+          {banners}
           <Review
             key={JSON.stringify(view.plan.decisions)}
             decisions={view.plan.decisions}

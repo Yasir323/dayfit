@@ -236,3 +236,120 @@ describe('NudgeBanner', () => {
     ])
   })
 })
+
+describe('Today details', () => {
+  it('extends the timeline to an out-of-hours fixed item', () => {
+    const early = item('early', 'Gym', { type: 'fixed', fixedStart: 420, durationMin: 30 })
+    render(<Today view={makeView({ items: [...makeView().items, early] })} onView={vi.fn()} />)
+    expect(screen.getByText('07:00')).toBeInTheDocument()
+    expect(screen.getByText('08:00')).toBeInTheDocument()
+  })
+
+  it('+ glass logs water', async () => {
+    api.logWater.mockResolvedValue(makeView())
+    render(<Today view={makeView()} onView={vi.fn()} />)
+    expect(screen.getByText('500 / 2000 ml')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: '+ glass' }))
+    expect(api.logWater).toHaveBeenCalledTimes(1)
+  })
+
+  it('lock toggles via setLock; fixed items have no lock', async () => {
+    api.setLock.mockResolvedValue(makeView())
+    render(<Today view={makeView()} onView={vi.fn()} />)
+    const blocks = within(screen.getByRole('list', { name: 'Timeline' })).getAllByRole('listitem')
+    expect(within(blocks[0]).queryByRole('button', { name: 'Lock' })).toBeNull()
+    await userEvent.click(within(blocks[1]).getByRole('button', { name: 'Lock' }))
+    expect(api.setLock).toHaveBeenCalledWith('deep', true)
+  })
+
+  it('Upcoming shows "due <weekday>" for deadlines', async () => {
+    const later = item('u', 'Tax form', {
+      date: '2026-10-24',
+      deadline: { date: '2026-10-26', time: null }
+    })
+    render(<Today view={makeView({ upcoming: [later] })} onView={vi.fn()} />)
+    expect(screen.queryByText('Tax form')).toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: 'Upcoming (1)' }))
+    expect(screen.getByText('Tax form')).toBeInTheDocument()
+    expect(screen.getByText('due Mon')).toBeInTheDocument()
+  })
+
+  it('shows an error when the clipboard is unavailable', async () => {
+    Object.defineProperty(navigator, 'clipboard', { value: undefined, configurable: true })
+    const call = item('c1', 'Call John', { type: 'call', suggestedSlots: [560] })
+    render(<Today view={makeView({ awaitingCalls: [call] })} onView={vi.fn()} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Copy' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Could not copy')
+  })
+
+  it('drops a pending booking when the call slots change', async () => {
+    const call = item('c1', 'Call John', { type: 'call', suggestedSlots: [560, 620] })
+    const { rerender } = render(
+      <Today view={makeView({ awaitingCalls: [call] })} onView={vi.fn()} />
+    )
+    await userEvent.click(screen.getByRole('button', { name: '10:20' }))
+    expect(screen.getByText('Book 10:20?')).toBeInTheDocument()
+    const moved = { ...call, suggestedSlots: [620, 680] }
+    rerender(<Today view={makeView({ awaitingCalls: [moved] })} onView={vi.fn()} />)
+    expect(screen.queryByText('Book 10:20?')).toBeNull()
+    expect(screen.getByRole('button', { name: '11:20' })).toBeInTheDocument()
+  })
+})
+
+describe('App flows', () => {
+  it('toasts a move to nowhere as "→ unplanned"', async () => {
+    const base = makeView({ items: [...makeView().items, item('x', 'X')] })
+    api.view.mockResolvedValue(base)
+    render(<App />)
+    await screen.findByRole('list', { name: 'Timeline' })
+    act(() =>
+      pushState({ ...base, plan: { ...base.plan, moves: [{ itemId: 'x', from: 600, to: null }] } })
+    )
+    expect(screen.getByRole('status')).toHaveTextContent('Moved: X 10:00 → unplanned')
+  })
+
+  it('shows the Review overlay on any tab with items + upcoming, keeping banners visible', async () => {
+    const later = item('u1', 'Later thing', { date: '2026-10-24' })
+    const v = makeView({
+      upcoming: [later],
+      nudges: ['deep'],
+      plan: { ...makeView().plan, decisions: [{ kind: 'no-fit', itemId: 'u1' }] }
+    })
+    api.view.mockResolvedValue(v)
+    api.answerDecisions.mockResolvedValue(makeView())
+    render(<App />)
+    const row = await screen.findByRole('group', { name: 'Later thing' })
+    expect(screen.getByText("Payments refactor — time's up")).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('tab', { name: 'Dump' }))
+    expect(screen.getByRole('group', { name: 'Later thing' })).toBeInTheDocument()
+    await userEvent.click(within(row).getByLabelText('Drop'))
+    await userEvent.click(screen.getByRole('button', { name: 'Apply' }))
+    expect(api.answerDecisions).toHaveBeenCalledWith([{ itemId: 'u1', choice: 'drop' }])
+    await vi.waitFor(() => expect(screen.queryByRole('button', { name: 'Apply' })).toBeNull())
+  })
+
+  it('QuickAdd Ctrl+Enter switches to Today; plain Enter stays on Add', async () => {
+    api.view.mockResolvedValue(makeView())
+    api.addItems.mockResolvedValue(makeView())
+    render(<App />)
+    await userEvent.click(await screen.findByRole('tab', { name: 'Add' }))
+    await userEvent.type(screen.getByRole('textbox', { name: 'Quick add' }), 'Write report{Enter}')
+    await vi.waitFor(() => expect(api.addItems).toHaveBeenCalledTimes(1))
+    expect(screen.getByRole('textbox', { name: 'Quick add' })).toBeInTheDocument()
+    await userEvent.type(
+      screen.getByRole('textbox', { name: 'Quick add' }),
+      'Write more{Control>}{Enter}{/Control}'
+    )
+    expect(await screen.findByRole('list', { name: 'Timeline' })).toBeInTheDocument()
+  })
+
+  it("onFocus('nudge') opens Today and focuses the banner", async () => {
+    api.view.mockResolvedValue(makeView({ nudges: ['deep'] }))
+    render(<App />)
+    await userEvent.click(await screen.findByRole('tab', { name: 'Settings' }))
+    expect(screen.queryByRole('list', { name: 'Timeline' })).toBeNull()
+    act(() => pushFocus('nudge'))
+    expect(screen.getByRole('list', { name: 'Timeline' })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'Nudge: Payments refactor' })).toHaveFocus()
+  })
+})

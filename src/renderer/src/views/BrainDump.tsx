@@ -1,12 +1,11 @@
 import { useMemo, useState } from 'react'
 import { splitDumpLines } from '../../../core/brainDump'
 import { parseLine, toNewItem } from '../../../core/parser'
-import type { DateStr, Decision, Item, ItemType, NewItem, Settings } from '../../../core/types'
+import type { DateStr, ItemType, NewItem, Settings } from '../../../core/types'
 import { formatClock } from '../../../core/time'
 import { api } from '../api'
 import type { ViewState } from '../api'
 import { ItemFields } from './ItemFields'
-import { Review } from './Review'
 import { validateFields } from './validateFields'
 
 interface Props {
@@ -48,7 +47,6 @@ export function BrainDump({ settings, today, onPlanned }: Props): React.JSX.Elem
   const [open, setOpen] = useState<number | null>(null)
   const [saving, setSaving] = useState(false)
   const [failure, setFailure] = useState<string | null>(null)
-  const [review, setReview] = useState<{ decisions: Decision[]; items: Item[] } | null>(null)
 
   const rows = useMemo(
     () =>
@@ -74,27 +72,14 @@ export function BrainDump({ settings, today, onPlanned }: Props): React.JSX.Elem
       setText('')
       setEdits({})
       setOpen(null)
-      if (v.plan.decisions.length > 0)
-        setReview({ decisions: v.plan.decisions, items: [...v.items, ...v.upcoming] })
-      else onPlanned(v)
+      // App shows the Review overlay for any decisions in the new view.
+      onPlanned(v)
     } catch (e) {
       setFailure(e instanceof Error ? e.message : 'Could not plan the day')
     } finally {
       setSaving(false)
     }
   }
-
-  if (review)
-    return (
-      <Review
-        decisions={review.decisions}
-        items={review.items}
-        onDone={(v) => {
-          setReview(null)
-          onPlanned(v)
-        }}
-      />
-    )
 
   return (
     <div className="brain-dump">

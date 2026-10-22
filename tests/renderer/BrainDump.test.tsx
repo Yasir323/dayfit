@@ -87,21 +87,37 @@ describe('BrainDump', () => {
     expect(screen.getAllByRole('alert')).toHaveLength(2)
   })
 
-  it('shows Review for decisions; Apply needs every choice, then answers once', async () => {
-    const decisions = [
-      { kind: 'half-overflow', itemId: 'a', preferred: 'am' },
-      { kind: 'no-fit', itemId: 'b' }
-    ]
+  it('hands a view with decisions to onPlanned and shows no Review itself', async () => {
     const result = {
       today: TODAY,
-      plan: { decisions },
-      items: [item('a', 'Alpha'), item('b', 'Beta')],
+      plan: { decisions: [{ kind: 'no-fit', itemId: 'b' }] },
+      items: [item('b', 'Beta')],
       upcoming: []
     }
     addItems.mockResolvedValue(result)
-    const { onPlanned } = setup()
+    const { onPlanned, box } = setup()
     await userEvent.click(screen.getByRole('button', { name: 'Plan my day' }))
-    const rows = await screen.findAllByRole('group')
+    await vi.waitFor(() => expect(onPlanned).toHaveBeenCalledWith(result))
+    expect(box).toHaveValue('')
+    expect(screen.queryByRole('button', { name: 'Apply' })).toBeNull()
+  })
+})
+
+describe('Review', () => {
+  it('Apply needs every choice, then answers once', async () => {
+    const decisions = [
+      { kind: 'half-overflow', itemId: 'a', preferred: 'am' },
+      { kind: 'no-fit', itemId: 'b' }
+    ] as const
+    const onDone = vi.fn()
+    render(
+      <Review
+        decisions={[...decisions]}
+        items={[item('a', 'Alpha'), item('b', 'Beta')] as never}
+        onDone={onDone}
+      />
+    )
+    const rows = screen.getAllByRole('group')
     expect(rows).toHaveLength(2)
     const apply = screen.getByRole('button', { name: 'Apply' })
     expect(apply).toBeDisabled()
@@ -117,11 +133,9 @@ describe('BrainDump', () => {
       { itemId: 'a', choice: 'use-other-half' },
       { itemId: 'b', choice: 'drop' }
     ])
-    await vi.waitFor(() => expect(onPlanned).toHaveBeenCalledWith({ today: TODAY }))
+    await vi.waitFor(() => expect(onDone).toHaveBeenCalledWith({ today: TODAY }))
   })
-})
 
-describe('Review', () => {
   it('falls back to "Unknown item" when the item is missing', () => {
     render(<Review decisions={[{ kind: 'no-fit', itemId: 'zzz' }]} items={[]} onDone={vi.fn()} />)
     expect(screen.getByText('Unknown item')).toBeInTheDocument()
