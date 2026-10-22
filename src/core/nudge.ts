@@ -12,12 +12,13 @@ const EXTEND_MIN = 15
 /** Ids of open items whose block has ended and who are due a "did you finish?" nudge, sorted. */
 export function dueNudges(blocks: Block[], items: Item[], now: Minutes, st: NudgeState): string[] {
   const open = new Set(items.filter((i) => i.status === 'open').map((i) => i.id))
-  const ended = new Set<string>()
+  const lastEnd = new Map<string, Minutes>()
   for (const b of blocks) {
     if (b.itemId === null || b.kind === 'walk' || b.kind === 'fixed') continue
-    if (b.end <= now && open.has(b.itemId)) ended.add(b.itemId)
+    lastEnd.set(b.itemId, Math.max(lastEnd.get(b.itemId) ?? -Infinity, b.end))
   }
-  return [...ended]
+  const ended = [...lastEnd].filter(([id, end]) => end <= now && open.has(id)).map(([id]) => id)
+  return ended
     .filter((id) => {
       const s = st[id]
       return !s || (now - s.lastAt >= REPEAT_AFTER_MIN && s.count < MAX_NUDGES)

@@ -55,6 +55,11 @@ describe('dueNudges', () => {
     expect(dueNudges(b, items, 615, { x: { count: 1, lastAt: 600 } })).toEqual(['x'])
     expect(dueNudges(b, items, 700, { x: { count: 2, lastAt: 600 } })).toEqual([])
   })
+  it('waits for the last chunk of a split item', () => {
+    const b = [blk('x', 540, 600), blk('x', 740, 800)]
+    expect(dueNudges(b, items, 610, {})).toEqual([])
+    expect(dueNudges(b, items, 800, {})).toEqual(['x'])
+  })
   it('skips done items, fixed and walk blocks', () => {
     expect(dueNudges([blk('x', 570, 600)], [item('x', 'done')], 700, {})).toEqual([])
     expect(dueNudges([blk('x', 570, 600, 'fixed')], items, 700, {})).toEqual([])
@@ -86,5 +91,6 @@ describe('frozenBlocks', () => {
     const items = [item('p'), item('d', 'done'), item('o'), item('f')]
     const out = frozenBlocks(blocks, items, 550, new Set(['o'])).map((b) => b.itemId)
     expect(out).toEqual(['p', 'd', 'o'])
+    expect(frozenBlocks([blk(null, 900, 910, 'walk')], items, 550, new Set())).toEqual([])
   })
 })
