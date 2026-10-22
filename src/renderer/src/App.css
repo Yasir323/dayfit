@@ -1,0 +1,293 @@
+html,
+body {
+  margin: 0;
+}
+.app {
+  position: relative;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 380px;
+  height: 580px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #f7f7f8;
+  color: #1d1d1f;
+  font:
+    13px system-ui,
+    sans-serif;
+}
+.app button {
+  font: inherit;
+  cursor: pointer;
+}
+.tabs {
+  display: flex;
+  border-bottom: 1px solid #e5e7eb;
+  background: #fff;
+}
+.tabs button {
+  flex: 1;
+  padding: 8px 0;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: #6b7280;
+}
+.tabs button[aria-selected='true'] {
+  border-bottom-color: #3b82f6;
+  color: #1d1d1f;
+  font-weight: 600;
+}
+.tab-body {
+  flex: 1;
+  overflow-y: auto;
+}
+
+/* Nudge banner */
+.nudge {
+  margin: 8px 8px 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #fef3c7;
+  border: 1px solid #f59e0b;
+  outline: none;
+}
+.nudge:focus {
+  box-shadow: 0 0 0 2px #f59e0b;
+}
+.nudge-text {
+  margin: 0 0 6px;
+  font-weight: 600;
+}
+.nudge-actions {
+  display: flex;
+  gap: 6px;
+}
+.nudge-actions button {
+  flex: 1;
+  padding: 4px 6px;
+  border: 1px solid #d97706;
+  border-radius: 6px;
+  background: #fff;
+}
+
+/* Today */
+.today {
+  padding: 8px 12px 12px;
+}
+.today-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.water {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.water button,
+.busy-toggle button,
+.awaiting button,
+.upcoming-toggle {
+  padding: 3px 7px;
+  border: 1px solid #c9ccd1;
+  border-radius: 6px;
+  background: #fff;
+}
+.busy-toggle {
+  display: flex;
+}
+.busy-toggle button {
+  border-radius: 0;
+  margin-left: -1px;
+}
+.busy-toggle button:first-child {
+  border-radius: 6px 0 0 6px;
+}
+.busy-toggle button:last-child {
+  border-radius: 0 6px 6px 0;
+}
+.busy-toggle button[aria-pressed='true'] {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  color: #fff;
+}
+.timeline {
+  position: relative;
+  margin-left: 40px;
+}
+.hour {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-top: 1px solid #e5e7eb;
+}
+.hour span {
+  position: absolute;
+  left: -40px;
+  top: -7px;
+  font-size: 10px;
+  color: #9a9ca3;
+}
+.blocks {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.block {
+  position: absolute;
+  left: 4px;
+  right: 0;
+  box-sizing: border-box;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 1px 6px;
+  overflow: hidden;
+  border-left: 3px solid;
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+.block-fixed {
+  background: #ede9fe;
+  border-color: #7c3aed;
+}
+.block-deep {
+  background: #dbeafe;
+  border-color: #2563eb;
+}
+.block-task {
+  background: #dcfce7;
+  border-color: #16a34a;
+}
+.block-walk {
+  background: #ffedd5;
+  border-color: #ea580c;
+}
+.block.is-done {
+  opacity: 0.5;
+}
+.block.is-done .block-title {
+  text-decoration: line-through;
+}
+.block-time {
+  color: #6b7280;
+  font-variant-numeric: tabular-nums;
+}
+.block-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.chunk {
+  color: #1e40af;
+  font-weight: 600;
+}
+.block-actions {
+  display: flex;
+  gap: 2px;
+}
+.block-actions button {
+  padding: 0 3px;
+  border: 0;
+  background: none;
+  font-size: 11px;
+  line-height: 1.4;
+}
+.now-line {
+  position: absolute;
+  left: -6px;
+  right: 0;
+  height: 0;
+  border-top: 2px solid #dc2626;
+  pointer-events: none;
+}
+.now-line::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: -5px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #dc2626;
+}
+.awaiting,
+.upcoming {
+  margin-top: 12px;
+}
+.awaiting h3 {
+  margin: 0 0 6px;
+  font-size: 12px;
+  color: #6b7280;
+  text-transform: uppercase;
+}
+.awaiting-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+}
+.awaiting-title {
+  font-weight: 600;
+}
+.chips,
+.confirm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+.chip {
+  font-variant-numeric: tabular-nums;
+}
+.upcoming ul {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+}
+.upcoming li {
+  display: flex;
+  gap: 6px;
+  padding: 3px 0;
+}
+.upcoming li span:first-child {
+  flex: 1;
+}
+.meta {
+  color: #6b7280;
+  font-size: 12px;
+}
+
+/* Overlays */
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  overflow-y: auto;
+  padding: 12px;
+  background: #fff;
+}
+.toast {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  z-index: 20;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #1d1d1f;
+  color: #fff;
+  font-size: 12px;
+}
+.settings-placeholder {
+  padding: 12px;
+}

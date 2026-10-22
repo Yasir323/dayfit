@@ -32,6 +32,7 @@ export interface ViewState {
   awaitingCalls: Item[] // type call, not fixed, open, today
   nudges: string[]
   busy: boolean
+  manualBusy: boolean | null
   waterMl: number
 }
 
@@ -378,6 +379,7 @@ export class DayfitService {
       awaitingCalls: items.filter(isAwaitingCall).sort(byCreated),
       nudges: [...s.overdue],
       busy: isBusy(plan.blocks, now, s.manualBusy),
+      manualBusy: s.manualBusy,
       waterMl: s.waterMl[today] ?? 0
     })
   }
