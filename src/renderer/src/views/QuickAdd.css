@@ -1,0 +1,135 @@
+.quick-add {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  font:
+    13px system-ui,
+    sans-serif;
+}
+.syntax-box {
+  position: relative;
+  border: 1px solid #c9ccd1;
+  border-radius: 8px;
+  background: #fff;
+}
+.syntax-mirror,
+.syntax-input {
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
+  padding: 10px 12px;
+  font:
+    15px ui-monospace,
+    Menlo,
+    Consolas,
+    monospace;
+  letter-spacing: 0;
+  border: 0;
+  white-space: pre;
+  overflow: hidden;
+}
+.syntax-mirror {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  color: #1d1d1f;
+}
+.syntax-input {
+  position: relative;
+  background: transparent;
+  color: transparent;
+  caret-color: #1d1d1f;
+  outline: none;
+}
+.syntax-input::placeholder {
+  color: #9a9ca3;
+}
+.syntax-box:focus-within {
+  border-color: #3b82f6;
+}
+.tok {
+  border-radius: 3px;
+}
+.tok-duration {
+  color: #2563eb;
+  background: #dbeafe;
+}
+.tok-label {
+  color: #15803d;
+  background: #dcfce7;
+}
+.tok-priority {
+  color: #dc2626;
+  background: #fee2e2;
+}
+.tok-half,
+.tok-day {
+  color: #7c3aed;
+  background: #ede9fe;
+}
+.tok-at,
+.tok-by {
+  color: #c2410c;
+  background: #ffedd5;
+}
+.tok-type {
+  color: #4b5563;
+  background: #e5e7eb;
+}
+.fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.fields label {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 11px;
+  color: #6b7280;
+}
+.fields select,
+.fields input {
+  font:
+    13px system-ui,
+    sans-serif;
+  padding: 5px 6px;
+}
+.fields .repeat,
+.fields .error {
+  grid-column: 1 / -1;
+}
+.days {
+  display: flex;
+  gap: 4px;
+  margin-top: 6px;
+}
+.days button {
+  flex: 1;
+  padding: 4px 0;
+  border: 1px solid #c9ccd1;
+  border-radius: 6px;
+  background: #fff;
+}
+.days button[aria-pressed='true'] {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  color: #fff;
+}
+.error {
+  margin: 0;
+  color: #dc2626;
+  font-size: 12px;
+}
+.add {
+  padding: 8px;
+  border: 0;
+  border-radius: 8px;
+  background: #3b82f6;
+  color: #fff;
+  font-size: 14px;
+}
+.add:disabled {
+  background: #c9ccd1;
+}
