@@ -160,6 +160,107 @@ describe('DayfitService', () => {
     expect(blockOf(view, 'id1')).toMatchObject({ start: 540, end: 570 })
   })
 
+  it('extend is clipped before the next fixed item', () => {
+    svc.addItems([newItem(), newItem({ type: 'fixed', fixedStart: 585 })])
+    clock.set(26, 9, 30)
+    svc.tick(0)
+    const v = svc.answerNudge('id1', 'extend')
+    expect(blockOf(v, 'id1')).toMatchObject({ start: 540, end: 580 })
+  })
+
+  it('extend with no room before the next fixed item behaves like move', () => {
+    svc.addItems([newItem(), newItem({ type: 'fixed', fixedStart: 575 })])
+    clock.set(26, 9, 30)
+    svc.tick(0)
+    const v = svc.answerNudge('id1', 'extend')
+    expect(blockOf(v, 'id1')).toMatchObject({ start: 610, end: 640 })
+    expect(v.plan.moves).toContainEqual({ itemId: 'id1', from: 540, to: 610 })
+    expect(v.nudges).toEqual([])
+  })
+
+  it('answerNudge does nothing for an item that is not overdue', () => {
+    svc.addItems([newItem()])
+    const v = svc.answerNudge('id1', 'done')
+    expect(v.items[0].status).toBe('open')
+  })
+
+  it('drop on a repeating item skips it today only', () => {
+    svc.addItems([newItem({ durationMin: 600, repeat: { kind: 'daily' } })])
+    const v = svc.answerDecisions([{ itemId: 'id1', choice: 'drop' }])
+    expect(v.items[0]).toMatchObject({ status: 'open', date: D })
+    expect(v.plan.decisions).toEqual([])
+    expect(blockOf(v, 'id1')).toBeUndefined()
+  })
+
+  it('tomorrow on a repeating item skips it today only', () => {
+    svc.addItems([newItem({ durationMin: 600, repeat: { kind: 'daily' } })])
+    let v = svc.answerDecisions([{ itemId: 'id1', choice: 'tomorrow' }])
+    expect(v.items[0]).toMatchObject({ status: 'open', date: D })
+    expect(v.upcoming).toEqual([])
+    expect(v.plan.decisions).toEqual([])
+    clock.set(27, 9, 0)
+    v = svc.view()
+    expect(v.plan.decisions).toEqual([{ kind: 'no-fit', itemId: 'id1' }])
+  })
+
+  it('an unscheduled answer lives in memory for the day only', () => {
+    svc.addItems([newItem({ durationMin: 600 })])
+    let v = svc.answerDecisions([{ itemId: 'id1', choice: 'unscheduled' }])
+    expect(v.plan.unscheduled).toEqual(['id1'])
+    expect(v.plan.decisions).toEqual([])
+    v = new DayfitService(file, clock).replan()
+    expect(v.plan.unscheduled).toEqual([])
+    expect(v.plan.decisions).toEqual([{ kind: 'no-fit', itemId: 'id1' }])
+  })
+
+  it('a non-tick call rolls the day over lazily and resets nudges', () => {
+    svc.addItems([newItem()])
+    clock.set(26, 9, 30)
+    expect(svc.tick(0).nudges).toEqual(['id1'])
+    clock.set(27, 9, 0)
+    const v = svc.view()
+    expect(v.today).toBe(D1)
+    expect(v.nudges).toEqual([])
+    expect(v.items.map((i) => [i.id, i.date])).toEqual([['id1', D1]])
+    const s = loadState(file)
+    expect(s.lastDate).toBe(D1)
+    expect(s.nudges).toEqual({})
+    expect(s.overdue).toEqual([])
+  })
+
+  it('caps the minutes counted between ticks at 5', () => {
+    svc.tick(0)
+    expect(loadState(file).reminder.activeMin).toBe(0)
+    clock.set(26, 9, 30)
+    svc.tick(0)
+    expect(loadState(file).reminder.activeMin).toBe(5)
+  })
+
+  it('the first plan of the day reports no moves', () => {
+    svc.addItems([newItem()])
+    clock.set(27, 9, 0)
+    const v = svc.view()
+    expect(blockOf(v, 'id1')).toBeDefined()
+    expect(v.plan.moves).toEqual([])
+  })
+
+  it('keeps still-valid call slots on replan and tops them up to 3', () => {
+    const before = svc.addItems([newItem({ type: 'call', durationMin: 15 })]).awaitingCalls[0]
+      .suggestedSlots
+    clock.set(26, 9, 10)
+    const after = svc.replan().awaitingCalls[0].suggestedSlots
+    expect(after).toHaveLength(3)
+    expect(after).toEqual([...after].sort((a, b) => a - b))
+    for (const slot of before.filter((x) => x >= 550)) expect(after).toContain(slot)
+    expect(after.every((x) => x >= 550)).toBe(true)
+  })
+
+  it('a done patch on a repeating item still applies the rest of the patch', () => {
+    svc.addItems([newItem({ repeat: { kind: 'daily' } })])
+    const v = svc.updateItem('id1', { status: 'done', title: 'Renamed' })
+    expect(v.items[0]).toMatchObject({ status: 'open', title: 'Renamed' })
+  })
+
   it('logWater adds a 250 ml glass', () => {
     expect(svc.view().waterMl).toBe(0)
     expect(svc.logWater().waterMl).toBe(250)

@@ -36,6 +36,7 @@ export interface ViewState {
 }
 
 const MAX_ELAPSED_MIN = 5
+const CALL_SLOTS = 3
 /** Matches nudge.ts MAX_NUDGES: a nudge state at this count is never repeated. */
 const NUDGES_EXHAUSTED = 2
 
@@ -48,9 +49,12 @@ const sameBlock = (a: Block, b: Block): boolean =>
 /** Owns the app state and every mutation; glues the pure core modules to the JSON store. */
 export class DayfitService {
   private state: AppState
-  /** Decision answers other than tomorrow/drop: current day only, not persisted. */
+  /** Decision answers kept for the current day only (not persisted): everything except
+   *  tomorrow/drop on non-repeating items, which are applied to the item instead. */
   private answers: DecisionAnswer[] = []
   private lastTickAt: number | null = null
+  /** Clock snapshot taken once per public call, so date and minutes always agree. */
+  private at: Date
 
   constructor(
     private readonly file: string,
@@ -58,16 +62,17 @@ export class DayfitService {
     private readonly idGen: () => string = randomUUID
   ) {
     this.state = loadState(file)
+    this.at = clock.now()
   }
 
   view(): ViewState {
-    this.ensureDay()
+    this.begin()
     return this.buildView()
   }
 
   addItems(items: NewItem[]): ViewState {
-    this.ensureDay()
-    const createdAt = this.clock.now().getTime()
+    this.begin()
+    const createdAt = this.at.getTime()
     for (const n of items)
       this.state.items.push({
         ...n,
@@ -81,27 +86,30 @@ export class DayfitService {
   }
 
   updateItem(id: string, patch: Partial<Item>): ViewState {
-    this.ensureDay()
+    this.begin()
     const item = this.find(id)
     if (!item) return this.buildView()
+    const { status, ...rest } = patch
+    Object.assign(item, rest, { id: item.id, createdAt: item.createdAt })
     // Repeating items carry one status for every day, so they cannot be marked done.
-    if (patch.status === 'done' && item.repeat.kind !== 'none') return this.buildView()
-    Object.assign(item, patch, { id: item.id, createdAt: item.createdAt })
-    if (item.status !== 'open') this.state.overdue = this.state.overdue.filter((o) => o !== id)
+    if (status !== undefined && !(status === 'done' && item.repeat.kind !== 'none'))
+      item.status = status
     return this.replanAndSave()
   }
 
   replan(): ViewState {
-    this.ensureDay()
+    this.begin()
     return this.replanAndSave()
   }
 
   answerDecisions(answers: DecisionAnswer[]): ViewState {
-    this.ensureDay()
+    this.begin()
     const today = this.today()
     for (const a of answers) {
       const item = this.find(a.itemId)
-      if (a.choice === 'tomorrow' || a.choice === 'drop') {
+      const repeating = item !== undefined && item.repeat.kind !== 'none'
+      // Repeating items: tomorrow/drop skip today only, so the series is left untouched.
+      if ((a.choice === 'tomorrow' || a.choice === 'drop') && !repeating) {
         if (item && a.choice === 'tomorrow') {
           item.date = addDays(today, 1)
           item.lockedStart = null
@@ -117,15 +125,12 @@ export class DayfitService {
   }
 
   answerNudge(id: string, answer: NudgeAnswer): ViewState {
-    this.ensureDay()
+    this.begin()
+    const item = this.find(id)
+    if (!item || !this.state.overdue.includes(id)) return this.buildView()
     const now = this.nowMin()
     this.state.overdue = this.state.overdue.filter((o) => o !== id)
     delete this.state.nudges[id]
-    const item = this.find(id)
-    if (!item) {
-      this.save()
-      return this.buildView()
-    }
     const block = this.latestBlock(id)
     if (!block) {
       if (answer === 'done' && item.repeat.kind === 'none') item.status = 'done'
@@ -139,14 +144,22 @@ export class DayfitService {
       Object.assign(item, result.item)
     }
     return this.replanAndSave((frozen) => {
-      if (answer === 'move') return frozen.filter((b) => b.itemId !== id)
+      const moved = (): Block[] => frozen.filter((b) => b.itemId !== id)
+      if (answer === 'move') return moved()
       const kept = frozen.filter((b) => !sameBlock(b, block))
-      return result.frozen ? [...kept, result.frozen] : kept
+      if (!result.frozen) return kept
+      if (answer === 'extend') {
+        // Clip the extension before the next fixed, locked or frozen block; no room means move.
+        const end = Math.min(result.frozen.end, this.nextObstacle(block, kept))
+        if (end <= Math.max(block.end, now)) return moved()
+        return [...kept, { ...result.frozen, end }]
+      }
+      return [...kept, result.frozen]
     })
   }
 
   confirmCall(id: string, start: Minutes): ViewState {
-    this.ensureDay()
+    this.begin()
     const item = this.find(id)
     if (!item) return this.buildView()
     item.fixedStart = start
@@ -155,7 +168,7 @@ export class DayfitService {
   }
 
   setLock(id: string, locked: boolean): ViewState {
-    this.ensureDay()
+    this.begin()
     const item = this.find(id)
     if (!item) return this.buildView()
     const first = this.todayPlan()
@@ -167,7 +180,7 @@ export class DayfitService {
   }
 
   logWater(): ViewState {
-    this.ensureDay()
+    this.begin()
     const today = this.today()
     this.state.waterMl[today] = (this.state.waterMl[today] ?? 0) + this.state.settings.water.glassMl
     this.save()
@@ -175,21 +188,21 @@ export class DayfitService {
   }
 
   setManualBusy(v: boolean | null): ViewState {
-    this.ensureDay()
+    this.begin()
     this.state.manualBusy = v
     this.save()
     return this.buildView()
   }
 
   updateSettings(p: Partial<Settings>): ViewState {
-    this.ensureDay()
+    this.begin()
     this.state.settings = { ...this.state.settings, ...p }
     return this.replanAndSave()
   }
 
   tick(idleSec: number): { events: ReminderEvent[]; nudges: string[]; view: ViewState } {
-    this.ensureDay()
-    const at = this.clock.now().getTime()
+    this.begin()
+    const at = this.at.getTime()
     const elapsedMin =
       this.lastTickAt === null
         ? 0
@@ -228,12 +241,17 @@ export class DayfitService {
 
   // --- internals ---
 
+  private begin(): void {
+    this.at = this.clock.now()
+    this.ensureDay()
+  }
+
   private today(): DateStr {
-    return toDateStr(this.clock.now())
+    return toDateStr(this.at)
   }
 
   private nowMin(): Minutes {
-    return minutesOf(this.clock.now())
+    return minutesOf(this.at)
   }
 
   private find(id: string): Item | undefined {
@@ -242,6 +260,17 @@ export class DayfitService {
 
   private todayPlan(): DayPlan {
     return this.state.plans[this.today()] ?? emptyPlan()
+  }
+
+  /** Latest end allowed after `block`: buffer before the next fixed, locked or frozen block. */
+  private nextObstacle(block: Block, frozen: Block[]): Minutes {
+    const starts = [
+      ...frozen.map((b) => b.start),
+      ...itemsForDate(this.state.items, this.today()).flatMap((i) =>
+        i.id === block.itemId ? [] : (i.fixedStart ?? i.lockedStart ?? [])
+      )
+    ].filter((start) => start > block.start)
+    return Math.min(...starts) - this.state.settings.bufferMin
   }
 
   /** The item's latest-ending non-walk block in today's plan. */
@@ -274,14 +303,18 @@ export class DayfitService {
     const s = this.state
     const today = this.today()
     const now = this.nowMin()
+    const hadPlan = today in s.plans
     const prev = this.todayPlan().blocks
     let items = itemsForDate(s.items, today)
     const ids = new Set(items.map((i) => i.id))
     const done = new Set(items.filter((i) => i.status === 'done').map((i) => i.id))
+    const open = new Set(items.filter((i) => i.status === 'open').map((i) => i.id))
+    s.overdue = s.overdue.filter((id) => open.has(id))
+    for (const id of Object.keys(s.nudges)) if (!open.has(id)) delete s.nudges[id]
 
     let frozen = frozenBlocks(prev, items, now, new Set(s.overdue))
       .filter((b) => b.itemId === null || ids.has(b.itemId))
-      .filter((b) => !(b.itemId !== null && done.has(b.itemId) && b.start > now))
+      .filter((b) => !(b.itemId !== null && done.has(b.itemId) && b.start >= now))
       .map((b) =>
         b.itemId !== null && done.has(b.itemId) ? { ...b, end: Math.min(b.end, now) } : b
       )
@@ -289,16 +322,42 @@ export class DayfitService {
 
     const input = { date: today, now, settings: s.settings, frozen, answers: this.answers }
     const first = planDay({ ...input, items })
-    for (const item of items.filter(isAwaitingCall)) {
-      const stored = this.find(item.id) as Item
-      stored.suggestedSlots = suggestCallSlots(first.blocks, item.durationMin, now, s.settings)
-    }
+    for (const item of items.filter(isAwaitingCall))
+      (this.find(item.id) as Item).suggestedSlots = this.callSlots(item, first.blocks, now)
     items = itemsForDate(s.items, today)
     const next = planDay({ ...input, items })
 
-    s.plans[today] = { ...next, moves: diffMoves(prev, next.blocks) }
+    s.plans[today] = { ...next, moves: hadPlan ? diffMoves(prev, next.blocks) : [] }
     this.save()
     return this.buildView()
+  }
+
+  /** Keeps earlier suggestions that are still ahead and free, then fills up to CALL_SLOTS. */
+  private callSlots(item: Item, blocks: Block[], now: Minutes): Minutes[] {
+    const st = this.state.settings
+    const free = (start: Minutes): boolean =>
+      start >= Math.max(now, st.workStart) &&
+      start + item.durationMin <= st.workEnd &&
+      blocks.every(
+        (b) => start + item.durationMin + st.bufferMin <= b.start || start >= b.end + st.bufferMin
+      )
+    const kept = item.suggestedSlots.filter(free).slice(0, CALL_SLOTS)
+    const held: Block[] = kept.map((start) => ({
+      itemId: item.id,
+      kind: 'task',
+      start,
+      end: start + item.durationMin,
+      chunk: null,
+      reason: 'Suggested call slot'
+    }))
+    const extra = suggestCallSlots(
+      [...blocks, ...held],
+      item.durationMin,
+      now,
+      st,
+      CALL_SLOTS - kept.length
+    )
+    return [...kept, ...extra].sort((a, b) => a - b)
   }
 
   private buildView(): ViewState {
