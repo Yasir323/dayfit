@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { formatClock } from '../../../core/time'
 import type { NewItem, Settings } from '../../../core/types'
 import { api } from '../api'
@@ -23,6 +23,7 @@ export function FirstRun({ settings, today, onDone }: Props): React.JSX.Element 
   const [title, setTitle] = useState('Evening run')
   const [runStart, setRunStart] = useState('18:30')
   const [runDur, setRunDur] = useState('45')
+  const added = useRef(false)
   const [saving, setSaving] = useState(false)
   const [failure, setFailure] = useState<string | null>(null)
 
@@ -54,7 +55,7 @@ export function FirstRun({ settings, today, onDone }: Props): React.JSX.Element 
     setSaving(true)
     setFailure(null)
     try {
-      if (keep && rs.ok && rd.ok) {
+      if (keep && !added.current && rs.ok && rd.ok) {
         const item: NewItem = {
           title: title.trim(),
           type: 'fixed',
@@ -68,6 +69,7 @@ export function FirstRun({ settings, today, onDone }: Props): React.JSX.Element 
           repeat: { kind: 'daily' }
         }
         await api.addItems([item])
+        added.current = true
       }
       const v = await api.updateSettings({
         workStart: s.value,

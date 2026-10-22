@@ -3,7 +3,7 @@ import { formatClock } from '../../../core/time'
 import type { ItemType, Settings as SettingsShape } from '../../../core/types'
 import { api } from '../api'
 import type { ViewState } from '../api'
-import { checkEnd, parseLunch, parsePositive, parseTime } from './settingsValidation'
+import { LUNCH_ERROR, checkEnd, parseLunch, parsePositive, parseTime } from './settingsValidation'
 import type { Parsed } from './settingsValidation'
 import './Settings.css'
 
@@ -12,15 +12,16 @@ interface Props {
   onView?: (v: ViewState) => void
 }
 
-type Send = (patch: Partial<SettingsShape>) => void
+type Send = (patch: Partial<SettingsShape>) => Promise<boolean>
 
 interface FieldProps<T> {
   label: string
   value: string
   type?: 'text' | 'time' | 'number'
   parse: (draft: string) => Parsed<T>
-  onValid: (v: T) => void
-  /** Send on blur instead of on every valid change. */
+  /** Resolves false when saving failed; the draft then reverts to the saved value. */
+  onValid: (v: T) => Promise<boolean> | void
+  /** Send on blur (and only when changed) instead of on every valid change. */
   onBlurOnly?: boolean
 }
 
@@ -34,12 +35,22 @@ function Field<T>({
 }: FieldProps<T>): React.JSX.Element {
   const id = useId()
   const [draft, setDraft] = useState(value)
+  const [seen, setSeen] = useState(value)
   const [error, setError] = useState<string | null>(null)
+  // Resync from the saved value whenever it changes.
+  if (seen !== value) {
+    setSeen(value)
+    setDraft(value)
+    setError(null)
+  }
   const run = (d: string): void => {
     const r = parse(d)
     if (r.ok) {
       setError(null)
-      onValid(r.value)
+      if (onBlurOnly && d === value) return
+      void Promise.resolve(onValid(r.value)).then((saved) => {
+        if (saved === false) setDraft(value)
+      })
     } else {
       setError(r.error)
     }
@@ -67,13 +78,18 @@ function Field<T>({
   )
 }
 
-const num = (label: string, value: number, onValid: (n: number) => void): React.JSX.Element => (
+const num = (
+  label: string,
+  value: number,
+  onValid: (n: number) => Promise<boolean>
+): React.JSX.Element => (
   <Field
     label={label}
     type="number"
     value={String(value)}
     parse={parsePositive}
     onValid={onValid}
+    onBlurOnly
   />
 )
 
@@ -98,13 +114,29 @@ const DURATION_TYPES: ItemType[] = ['task', 'call', 'deep', 'household', 'fixed'
 
 export function Settings({ view, onView }: Props): React.JSX.Element {
   const s = view.settings
-  const send: Send = (patch) => {
-    void api.updateSettings(patch).then((v) => onView?.(v))
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const send: Send = async (patch) => {
+    try {
+      const v = await api.updateSettings(patch)
+      setSaveError(null)
+      onView?.(v)
+      return true
+    } catch {
+      setSaveError('Could not save')
+      return false
+    }
   }
+  const lunchOk = (start: number, end: number): boolean =>
+    s.lunch === null || (s.lunch > start && s.lunch < end)
 
   return (
     <section className="settings">
       <h2>Settings</h2>
+      {saveError && (
+        <p className="field-error" role="alert">
+          {saveError}
+        </p>
+      )}
 
       <fieldset>
         <legend>Working hours</legend>
@@ -116,7 +148,8 @@ export function Settings({ view, onView }: Props): React.JSX.Element {
             const t = parseTime(d)
             if (!t.ok) return t
             const e = checkEnd(t.value, s.workEnd)
-            return e ? { ok: false, error: e } : t
+            if (e) return { ok: false, error: e }
+            return lunchOk(t.value, s.workEnd) ? t : { ok: false, error: LUNCH_ERROR }
           }}
           onValid={(v) => send({ workStart: v })}
         />
@@ -128,7 +161,8 @@ export function Settings({ view, onView }: Props): React.JSX.Element {
             const t = parseTime(d)
             if (!t.ok) return t
             const e = checkEnd(s.workStart, t.value)
-            return e ? { ok: false, error: e } : t
+            if (e) return { ok: false, error: e }
+            return lunchOk(s.workStart, t.value) ? t : { ok: false, error: LUNCH_ERROR }
           }}
           onValid={(v) => send({ workEnd: v })}
         />
