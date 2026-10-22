@@ -28,9 +28,9 @@ Syntax is optional: every field can also be set by clicking. Tokens are case-ins
 | `today` | Plan for today | `today` |
 | `tomorrow` | Plan for tomorrow | `tomorrow` |
 | `mon`..`sun`, `monday`..`sunday` | Next such weekday (today counts) | `fri` |
-| `at <time>` | Fixed start time (makes the item fixed) | `at 14:30`, `at 2pm`, `at 9:15am` |
-| `by <day>` | Deadline on a day (`today`, `tomorrow` or a weekday) | `by friday` |
-| `by <time>` | Deadline today at a time | `by 5pm` |
+| `at <time>` | Fixed start time (makes the item fixed; household items stay household) | `at 14:30`, `at 2pm`, `at 9:15am` |
+| `by tomorrow`, `by <weekday>` | Deadline on that day | `by friday` |
+| `by <time>` | Deadline today at a time (there is no `by today`) | `by 5pm` |
 | `~call` | Item type: call | `~call` |
 | `~deep` | Item type: deep work | `~deep` |
 | `~home` | Item type: household | `~home` |
