@@ -14,6 +14,7 @@ vi.mock('../../src/renderer/src/api', () => ({
 }))
 
 import { BrainDump } from '../../src/renderer/src/views/BrainDump'
+import { Review } from '../../src/renderer/src/views/Review'
 
 const TODAY = '2026-10-23'
 const LINES = [
@@ -65,7 +66,14 @@ describe('BrainDump', () => {
     await userEvent.selectOptions(screen.getByLabelText('Priority'), 'high')
     await userEvent.click(screen.getByRole('button', { name: 'Plan my day' }))
     expect(addItems.mock.calls[0][0][0]).toMatchObject({ title: 'Call John', priority: 'high' })
-    expect(box).toBeDefined()
+
+    addItems.mockClear()
+    fireEvent.change(box, { target: { value: LINES } })
+    await userEvent.click(screen.getByText('Call John'))
+    await userEvent.selectOptions(screen.getByLabelText('Priority'), 'high')
+    fireEvent.change(box, { target: { value: LINES.replace('Call John 15m', 'Call John 20m') } })
+    await userEvent.click(screen.getByRole('button', { name: 'Plan my day' }))
+    expect(addItems.mock.calls[0][0][0]).toMatchObject({ durationMin: 20, priority: 'med' })
   })
 
   it('flags invalid lines and disables Plan my day', async () => {
@@ -76,7 +84,7 @@ describe('BrainDump', () => {
     await userEvent.click(screen.getByRole('button', { name: /Standup/ }))
     await userEvent.selectOptions(screen.getByLabelText('Type'), 'fixed')
     expect(screen.getByRole('button', { name: 'Plan my day' })).toBeDisabled()
-    expect(screen.getAllByText('Set a start time').length).toBeGreaterThan(0)
+    expect(screen.getAllByRole('alert')).toHaveLength(2)
   })
 
   it('shows Review for decisions; Apply needs every choice, then answers once', async () => {
@@ -110,5 +118,12 @@ describe('BrainDump', () => {
       { itemId: 'b', choice: 'drop' }
     ])
     await vi.waitFor(() => expect(onPlanned).toHaveBeenCalledWith({ today: TODAY }))
+  })
+})
+
+describe('Review', () => {
+  it('falls back to "Unknown item" when the item is missing', () => {
+    render(<Review decisions={[{ kind: 'no-fit', itemId: 'zzz' }]} items={[]} onDone={vi.fn()} />)
+    expect(screen.getByText('Unknown item')).toBeInTheDocument()
   })
 })

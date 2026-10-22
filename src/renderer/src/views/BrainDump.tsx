@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
-import { parseBrainDump } from '../../../core/brainDump'
-import { toNewItem } from '../../../core/parser'
+import { splitDumpLines } from '../../../core/brainDump'
+import { parseLine, toNewItem } from '../../../core/parser'
 import type { DateStr, Decision, Item, ItemType, NewItem, Settings } from '../../../core/types'
 import { formatClock } from '../../../core/time'
 import { api } from '../api'
@@ -43,24 +43,21 @@ function meta(it: NewItem): string[] {
 
 export function BrainDump({ settings, today, onPlanned }: Props): React.JSX.Element {
   const [text, setText] = useState('')
-  // edits are keyed by line index and only apply while that line's text is unchanged
-  const [edits, setEdits] = useState<Record<number, { line: string; item: NewItem }>>({})
+  // edits are keyed by line text, so changing a line's text drops its override
+  const [edits, setEdits] = useState<Record<string, NewItem>>({})
   const [open, setOpen] = useState<number | null>(null)
   const [saving, setSaving] = useState(false)
   const [failure, setFailure] = useState<string | null>(null)
   const [review, setReview] = useState<{ decisions: Decision[]; items: Item[] } | null>(null)
 
-  const rows = useMemo(() => {
-    const lines = text
-      .split('\n')
-      .map((l) => l.trim())
-      .filter((l) => l !== '')
-    return parseBrainDump(text, today).map((p, i) => {
-      const edit = edits[i]
-      const item = edit && edit.line === lines[i] ? edit.item : toNewItem(p, today, settings)
-      return { line: lines[i], item, error: validateFields(item) }
-    })
-  }, [text, edits, today, settings])
+  const rows = useMemo(
+    () =>
+      splitDumpLines(text).map((line) => {
+        const item = edits[line] ?? toNewItem(parseLine(line, today), today, settings)
+        return { line, item, error: validateFields(item) }
+      }),
+    [text, edits, today, settings]
+  )
 
   const total = rows.reduce(
     (s, r) => s + (Number.isFinite(r.item.durationMin) ? r.item.durationMin : 0),
@@ -130,7 +127,7 @@ export function BrainDump({ settings, today, onPlanned }: Props): React.JSX.Elem
             {open === i && (
               <ItemFields
                 value={r.item}
-                onChange={(next) => setEdits((s) => ({ ...s, [i]: { line: r.line, item: next } }))}
+                onChange={(next) => setEdits((s) => ({ ...s, [r.line]: next }))}
                 today={today}
                 defaultDurations={settings.defaultDurations}
               />
