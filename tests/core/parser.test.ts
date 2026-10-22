@@ -56,6 +56,10 @@ describe('parseLine', () => {
   test('case-insensitive', () => {
     expect(parseLine('x !HIGH @PM TODAY', D).fields).toMatchObject({ priority: 'high', half: 'pm', date: D })
   })
+  test('object prototype keys are not tokens', () => {
+    const p = parseLine('Fix constructor bug __proto__ toString by constructor', D)
+    expect(p).toEqual({ title: 'Fix constructor bug __proto__ toString by constructor', fields: {}, tokens: [] })
+  })
   test('title only', () =>
     expect(parseLine('Write docs', D)).toEqual({ title: 'Write docs', fields: {}, tokens: [] }))
 })

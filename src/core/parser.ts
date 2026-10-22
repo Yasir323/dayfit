@@ -19,6 +19,17 @@ const WEEKDAYS: Record<string, number> = {
 const TYPES: Record<string, ItemType> = { '~call': 'call', '~deep': 'deep', '~home': 'household' }
 const PRIORITIES: Record<string, Priority> = { '!high': 'high', '!med': 'med', '!low': 'low' }
 const HALVES: Record<string, Half> = { '@am': 'am', '@pm': 'pm' }
+function lookup<T>(map: Record<string, T>, key: string): T | undefined {
+  return Object.hasOwn(map, key) ? map[key] : undefined
+}
+
+// 'tomorrow' or a weekday name -> date (weekdays resolve on/after today)
+function resolveDay(w: string, today: DateStr): DateStr | null {
+  if (w === 'tomorrow') return addDays(today, 1)
+  const wd = lookup(WEEKDAYS, w)
+  return wd === undefined ? null : nextWeekday(today, wd)
+}
+
 const DURATION = /^(?:(\d+)h(?:(\d+)m)?|(\d+)m)$/
 
 function parseDuration(w: string): number | null {
@@ -49,23 +60,20 @@ export function parseLine(text: string, today: DateStr): ParsedLine {
     } else if (w.length > 1 && w[0] === '#') {
       fields.label = raw.slice(1)
       push('label')
-    } else if (w in PRIORITIES) {
+    } else if (lookup(PRIORITIES, w) !== undefined) {
       fields.priority = PRIORITIES[w]
       push('priority')
-    } else if (w in HALVES) {
+    } else if (lookup(HALVES, w) !== undefined) {
       fields.half = HALVES[w]
       push('half')
-    } else if (w in TYPES) {
+    } else if (lookup(TYPES, w) !== undefined) {
       fields.type = TYPES[w]
       push('type')
     } else if (w === 'today') {
       fields.date = today
       push('day')
-    } else if (w === 'tomorrow') {
-      fields.date = addDays(today, 1)
-      push('day')
-    } else if (w in WEEKDAYS) {
-      fields.date = nextWeekday(today, WEEKDAYS[w])
+    } else if (resolveDay(w, today) !== null) {
+      fields.date = resolveDay(w, today) as DateStr
       push('day')
     } else if ((w === 'at' || w === 'by') && i + 1 < words.length) {
       const next = words[i + 1]
@@ -79,13 +87,8 @@ export function parseLine(text: string, today: DateStr): ParsedLine {
           i++
           continue
         }
-      } else if (nw === 'tomorrow') {
-        fields.deadline = { date: addDays(today, 1), time: null }
-        push('by', nextEnd)
-        i++
-        continue
-      } else if (nw in WEEKDAYS) {
-        fields.deadline = { date: nextWeekday(today, WEEKDAYS[nw]), time: null }
+      } else if (resolveDay(nw, today) !== null) {
+        fields.deadline = { date: resolveDay(nw, today) as DateStr, time: null }
         push('by', nextEnd)
         i++
         continue
