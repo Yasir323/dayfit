@@ -302,23 +302,35 @@ function fitAround(
   )
 }
 
-const byDueThenPriority = (a: Task, b: Task): number =>
-  (a.due ?? Infinity) - (b.due ?? Infinity) || byPriorityThenAge(a.item, b.item)
+function byDueThenPriority(a: Task, b: Task): number {
+  const da = a.due ?? Infinity
+  const db = b.due ?? Infinity
+  return da !== db ? (da < db ? -1 : 1) : byPriorityThenAge(a.item, b.item)
+}
 
 /** Similar items: same label, or same type when unlabelled. Groups in order of first member. */
 function batches(tasks: Task[]): Task[][] {
   const groups = new Map<string, Task[]>()
   for (const t of tasks) {
     const key = t.item.label !== null ? `#${t.item.label}` : `~${t.item.type}`
-    groups.set(key, [...(groups.get(key) ?? []), t])
+    const group = groups.get(key)
+    if (group) group.push(t)
+    else groups.set(key, [t])
   }
   return [...groups.values()]
 }
 
+/** The half all members' preferences agree on (null: none set); undefined when they conflict. */
+function sharedHalf(group: Task[]): Half | undefined {
+  const halves = new Set(group.map((t) => t.item.half).filter((h) => h !== null))
+  return halves.size > 1 ? undefined : ([...halves][0] ?? null)
+}
+
 /** Places the group back to back in one gap, every member meeting its deadline. */
 function placeBatch(plan: Plan, holds: Interval[], group: Task[]): boolean {
-  const { half, label, type } = group[0].item
-  const shared = group.every((t) => t.item.half === half) ? half : null
+  const { label, type } = group[0].item
+  const shared = sharedHalf(group)
+  if (shared === undefined) return false
   // Walk back from the last member: the group may end no later than due + what follows it.
   let tail = 0
   let due: Minutes | null = null
@@ -339,7 +351,52 @@ function placeBatch(plan: Plan, holds: Interval[], group: Task[]): boolean {
   return true
 }
 
-// Step 5: tasks and household items: deadlines, then priority, batched when similar.
+function placeSingle(plan: Plan, holds: Interval[], { item, due }: Task): void {
+  placeWithHalf(plan, item, (area, half) => {
+    const slot = fitAround(plan, holds, item.durationMin, area, due)
+    return (
+      slot && [{ itemId: item.id, kind: 'task', ...slot, chunk: null, reason: slotReason(half) }]
+    )
+  })
+}
+
+const clonePlan = (p: Plan): Plan => ({
+  ...p,
+  blocks: [...p.blocks],
+  free: [...p.free],
+  decisions: [...p.decisions],
+  blocked: new Set(p.blocked)
+})
+
+/** Step 5 from `base`: the `batched` groups first, then every other task singly in rank order. */
+function simulateTasks(
+  base: Plan,
+  holds: Interval[],
+  tasks: Task[],
+  batched: Task[][]
+): Plan | null {
+  const p = clonePlan(base)
+  for (const g of batched) if (!placeBatch(p, holds, g)) return null
+  const inBatch = new Set(batched.flat().map((t) => t.item.id))
+  for (const t of tasks) if (!inBatch.has(t.item.id)) placeSingle(p, holds, t)
+  return p
+}
+
+/** True when `next` keeps every item `cur` placed and raises no new half-overflow. */
+function costsNothing(cur: Plan, next: Plan): boolean {
+  const overflow = (p: Plan): Set<string> =>
+    new Set(p.decisions.filter((d) => d.kind === 'half-overflow').map((d) => d.itemId))
+  const before = overflow(cur)
+  const after = overflow(next)
+  return (
+    [...cur.blocked].every((id) => next.blocked.has(id)) && [...after].every((id) => before.has(id))
+  )
+}
+
+/**
+ * Step 5: tasks and household items, by deadline then priority. Similar items are batched only
+ * when that costs nothing: every item placed unbatched stays placed, with no new half-overflow.
+ */
 function placeTasks(plan: Plan, input: PlanInput): void {
   const holds = softHolds(plan, input.items)
   const tasks = input.items
@@ -353,19 +410,17 @@ function placeTasks(plan: Plan, input: PlanInput): void {
         item.deadline?.date === input.date ? (item.deadline.time ?? input.settings.workEnd) : null
     }))
     .sort(byDueThenPriority)
+  const accepted: Task[][] = []
+  let current = simulateTasks(plan, holds, tasks, []) as Plan
   for (const group of batches(tasks)) {
-    if (group.length > 1 && placeBatch(plan, holds, group)) continue
-    for (const { item, due } of group) {
-      placeWithHalf(plan, item, (area, half) => {
-        const slot = fitAround(plan, holds, item.durationMin, area, due)
-        return (
-          slot && [
-            { itemId: item.id, kind: 'task', ...slot, chunk: null, reason: slotReason(half) }
-          ]
-        )
-      })
+    if (group.length < 2) continue
+    const next = simulateTasks(plan, holds, tasks, [...accepted, group])
+    if (next && costsNothing(current, next)) {
+      accepted.push(group)
+      current = next
     }
   }
+  Object.assign(plan, current)
 }
 
 /** Start, then end, then the item's createdAt, then itemId (item-less blocks last). */

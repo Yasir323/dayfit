@@ -113,6 +113,65 @@ describe('planDay part 2: tasks', () => {
     expect(blockOf(r.blocks, b.id)).toMatchObject({ start: 630, end: 660 })
   })
 
+  test('batch never bumps a higher-priority item in a later group', () => {
+    // exactly 65 min free: 10:05-11:10
+    const high = task(30, { priority: 'high', label: 'a' })
+    const med = task(30, { priority: 'med', label: 'b' })
+    const low = task(30, { priority: 'low', label: 'a' })
+    const r = planDay(input([fixed(540, 60), fixed(675, 405), high, med, low]))
+    expect(blockOf(r.blocks, high.id)).toMatchObject({ start: 605, end: 635 })
+    expect(blockOf(r.blocks, med.id)).toMatchObject({ start: 640, end: 670 })
+    expect(r.decisions).toEqual([{ kind: 'no-fit', itemId: low.id }])
+  })
+
+  test('batch never costs a later deadline item its slot', () => {
+    const a1 = task(25, { label: 'a', deadline: by(565) })
+    const a2 = task(60, { label: 'a' })
+    const b1 = task(30, { label: 'b', deadline: by(600) })
+    const r = planDay(input([a1, a2, b1]))
+    expect(r.decisions).toEqual([])
+    expect(blockOf(r.blocks, a1.id)).toMatchObject({ start: 540, end: 565 })
+    expect(blockOf(r.blocks, b1.id)).toMatchObject({ start: 570, end: 600 })
+    expect(blockOf(r.blocks, a2.id)?.reason).not.toMatch(/Batched/)
+  })
+
+  test('batch uses the half its members prefer', () => {
+    const a = task(20, { label: 'r' })
+    const pm = task(10, { label: 'r', half: 'pm' })
+    const r = planDay(input([a, pm]))
+    expect(r.decisions).toEqual([])
+    expect(blockOf(r.blocks, pm.id)?.start).toBeGreaterThanOrEqual(810)
+    expect(blockOf(r.blocks, a.id)?.reason).toBe('Batched with #r')
+  })
+
+  test('conflicting halves are not batched', () => {
+    const am = task(20, { label: 'r', half: 'am' })
+    const pm = task(10, { label: 'r', half: 'pm' })
+    const r = planDay(input([am, pm]))
+    expect(blockOf(r.blocks, am.id)).toMatchObject({
+      start: 540,
+      reason: 'Earliest free slot in first half'
+    })
+    expect(blockOf(r.blocks, pm.id)).toMatchObject({
+      start: 810,
+      reason: 'Earliest free slot in second half'
+    })
+  })
+
+  test('deadline item: other half asks if it meets the deadline, else no-fit', () => {
+    // first half full; boundary 13:30
+    const ok = task(30, { half: 'am', label: 'x', deadline: by(960) })
+    const late = task(30, { half: 'am', label: 'y', deadline: by(720) })
+    const items = [fixed(540, 270), ok, late]
+    const r = planDay(input(items))
+    expect(r.decisions).toEqual([
+      { kind: 'no-fit', itemId: late.id },
+      { kind: 'half-overflow', itemId: ok.id, preferred: 'am' }
+    ])
+    const r2 = planDay(input(items, { answers: [{ itemId: ok.id, choice: 'use-other-half' }] }))
+    expect(blockOf(r2.blocks, ok.id)).toMatchObject({ start: 815, end: 845 })
+  })
+
   test('priority order on overflow', () => {
     // exactly 65 min free: 10:05-11:10
     const low = task(30, { priority: 'low' })
