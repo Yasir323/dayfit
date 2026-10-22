@@ -6,8 +6,10 @@ import { api } from './api'
 import type { ViewState } from './api'
 import { BrainDump } from './views/BrainDump'
 import { NudgeBanner } from './views/NudgeBanner'
+import { FirstRun } from './views/FirstRun'
 import { QuickAdd } from './views/QuickAdd'
 import { Review } from './views/Review'
+import { Settings } from './views/Settings'
 import { Today } from './views/Today'
 import './App.css'
 
@@ -77,6 +79,7 @@ export function App(): React.JSX.Element {
   if (!view) return <div className="app">Dayfit</div>
 
   const titleOf = (id: string): string => view.items.find((i) => i.id === id)?.title ?? 'Item'
+  const firstRunDone = view.settings.firstRunDone
   const review = view.plan.decisions.length > 0
   const banners = view.nudges.map((id, k) => (
     <NudgeBanner
@@ -104,7 +107,7 @@ export function App(): React.JSX.Element {
         ))}
       </nav>
 
-      {!review && banners}
+      {!(review && firstRunDone) && banners}
 
       <main className="tab-body">
         {tab === 'today' && <Today view={view} onView={setView} />}
@@ -128,15 +131,10 @@ export function App(): React.JSX.Element {
             }}
           />
         )}
-        {tab === 'settings' && (
-          // Task 14 replaces this placeholder with <Settings />.
-          <section className="settings-placeholder">
-            <h2>Settings</h2>
-          </section>
-        )}
+        {tab === 'settings' && <Settings view={view} onView={setView} />}
       </main>
 
-      {review && (
+      {review && firstRunDone && (
         // Banners move inside the overlay so a nudge is never hidden behind Review.
         <div className="overlay">
           {banners}
@@ -148,7 +146,11 @@ export function App(): React.JSX.Element {
           />
         </div>
       )}
-      {/* Task 14: FirstRun overlay goes here (when !view.settings.firstRunDone). */}
+      {!firstRunDone && (
+        <div className="overlay">
+          <FirstRun settings={view.settings} today={view.today} onDone={setView} />
+        </div>
+      )}
 
       {toast && (
         <div className="toast" role="status">

@@ -65,7 +65,7 @@ function makeView(over: Partial<ViewState> = {}): ViewState {
   return {
     today: TODAY,
     now: 600,
-    settings: DEFAULT_SETTINGS,
+    settings: { ...DEFAULT_SETTINGS, firstRunDone: true },
     plan: {
       blocks: [
         block('standup', 'fixed', 540, 555, { reason: 'Fixed' }),

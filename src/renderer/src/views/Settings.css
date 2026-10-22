@@ -1,0 +1,63 @@
+.settings {
+  padding: 12px;
+}
+.settings fieldset {
+  margin: 0 0 12px;
+  padding: 8px 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+}
+.settings legend {
+  padding: 0 4px;
+  font-weight: 600;
+  font-size: 13px;
+}
+.settings .field {
+  display: grid;
+  grid-template-columns: 1fr 120px;
+  align-items: center;
+  gap: 2px 8px;
+  margin: 4px 0;
+  font-size: 13px;
+}
+.settings .field input {
+  min-width: 0;
+}
+.settings .field input[aria-invalid='true'] {
+  border-color: #dc2626;
+}
+.field-error {
+  grid-column: 1 / -1;
+  color: #dc2626;
+  font-size: 12px;
+}
+.settings .toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 0 2px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.firstrun h2 {
+  margin: 0 0 4px;
+}
+.firstrun .steps {
+  margin: 0 0 12px;
+  color: #6b7280;
+  font-size: 12px;
+}
+.firstrun .field {
+  display: grid;
+  grid-template-columns: 1fr 120px;
+  align-items: center;
+  gap: 2px 8px;
+  margin: 6px 0;
+  font-size: 13px;
+}
+.firstrun .actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
