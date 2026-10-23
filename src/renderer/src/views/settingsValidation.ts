@@ -1,3 +1,4 @@
+import { isPortalUrl } from '../../../core/portalUrl'
 import { parseClock } from '../../../core/time'
 import type { Minutes } from '../../../core/types'
 
@@ -11,6 +12,14 @@ export function parsePositive(s: string): Parsed<number> {
   const n = Number(s)
   if (s.trim() === '' || !Number.isInteger(n) || n <= 0) return { ok: false, error: POSITIVE_ERROR }
   return { ok: true, value: n }
+}
+
+export const URL_ERROR = 'Enter an http(s) link'
+
+/** Empty clears the link; anything else must be an http(s) URL. */
+export function parsePortalUrl(s: string): Parsed<string> {
+  if (s.trim() === '') return { ok: true, value: '' }
+  return isPortalUrl(s) ? { ok: true, value: s.trim() } : { ok: false, error: URL_ERROR }
 }
 
 export const SNOOZE_ERROR = 'Must be 1–60'

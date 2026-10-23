@@ -163,9 +163,38 @@ describe('Settings', () => {
     expect(api.updateSettings).not.toHaveBeenCalled()
   })
 
+  it('end of day group sends its section and validates the portal URL', async () => {
+    render(<Settings view={view()} />)
+    const eod = screen.getByRole('group', { name: 'End of day' })
+    for (const name of ['Attendance reminders', 'Check-out heads-up', 'Overtime nudge'])
+      expect(within(eod).getByRole('switch', { name })).toHaveAttribute('aria-checked', 'true')
+    await userEvent.click(within(eod).getByRole('switch', { name: 'Overtime nudge' }))
+    expect(api.updateSettings).toHaveBeenLastCalledWith({
+      endOfDay: { ...DEFAULT_SETTINGS.endOfDay, overtime: false }
+    })
+    api.updateSettings.mockClear()
+    const url = within(eod).getByLabelText('HRMS portal URL')
+    fireEvent.change(url, { target: { value: 'javascript:x' } })
+    fireEvent.blur(url)
+    expect(within(eod).getByRole('alert')).toHaveTextContent('Enter an http(s) link')
+    expect(api.updateSettings).not.toHaveBeenCalled()
+    fireEvent.change(url, { target: { value: 'https://hr.example.com' } })
+    fireEvent.blur(url)
+    expect(api.updateSettings).toHaveBeenLastCalledWith({
+      endOfDay: { ...DEFAULT_SETTINGS.endOfDay, portalUrl: 'https://hr.example.com' }
+    })
+    expect(within(eod).getByRole('spinbutton', { name: 'Lunch length (min)' })).toHaveValue(45)
+  })
+
   it('groups settings into titled sections', () => {
     render(<Settings view={view()} />)
-    for (const name of ['Working hours', 'Planning', 'Reminders', 'Shortcut and startup'])
+    for (const name of [
+      'Working hours',
+      'Planning',
+      'Reminders',
+      'End of day',
+      'Shortcut and startup'
+    ])
       expect(screen.getByRole('group', { name })).toBeInTheDocument()
   })
 })

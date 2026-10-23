@@ -7,6 +7,7 @@ import {
   LUNCH_ERROR,
   checkEnd,
   parseLunch,
+  parsePortalUrl,
   parsePositive,
   parseSnooze,
   parseTime
@@ -279,6 +280,39 @@ export function Settings({ view, onView }: Props): React.JSX.Element {
           {num('Meeting alert lead (min)', s.meetingAlert.leadMin, (n) =>
             send({ meetingAlert: { ...s.meetingAlert, leadMin: n } })
           )}
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>End of day</legend>
+        <div className="group-card">
+          <Toggle
+            label="Attendance reminders"
+            checked={s.endOfDay.attendance}
+            onChange={(b) => send({ endOfDay: { ...s.endOfDay, attendance: b } })}
+          />
+          <Field
+            label="HRMS portal URL"
+            value={s.endOfDay.portalUrl}
+            onBlurOnly
+            parse={parsePortalUrl}
+            onValid={(v) => send({ endOfDay: { ...s.endOfDay, portalUrl: v } })}
+          />
+        </div>
+        <div className="group-card">
+          {num('Lunch length (min)', s.endOfDay.lunchMin, (n) =>
+            send({ endOfDay: { ...s.endOfDay, lunchMin: n } })
+          )}
+          <Toggle
+            label="Check-out heads-up"
+            checked={s.endOfDay.headsUp}
+            onChange={(b) => send({ endOfDay: { ...s.endOfDay, headsUp: b } })}
+          />
+          <Toggle
+            label="Overtime nudge"
+            checked={s.endOfDay.overtime}
+            onChange={(b) => send({ endOfDay: { ...s.endOfDay, overtime: b } })}
+          />
         </div>
       </fieldset>
 

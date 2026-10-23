@@ -62,6 +62,13 @@ export interface Settings {
   walk: { enabled: boolean; intervalMin: number; durationMin: number }
   meetingAlert: { enabled: boolean; leadMin: number }
   breaks: { snoozeMin: number }
+  endOfDay: {
+    attendance: boolean
+    portalUrl: string // '' when not set; only http(s) links are kept
+    lunchMin: number
+    headsUp: boolean
+    overtime: boolean
+  }
   hotkey: string
   launchAtLogin: boolean
   firstRunDone: boolean
@@ -79,6 +86,7 @@ export const DEFAULT_SETTINGS: Settings = {
   walk: { enabled: true, intervalMin: 120, durationMin: 10 },
   meetingAlert: { enabled: true, leadMin: 5 },
   breaks: { snoozeMin: 10 },
+  endOfDay: { attendance: true, portalUrl: '', lunchMin: 45, headsUp: true, overtime: true },
   hotkey: 'CommandOrControl+Shift+Space',
   launchAtLogin: true,
   firstRunDone: false

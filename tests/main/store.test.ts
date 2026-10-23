@@ -72,6 +72,14 @@ describe('store', () => {
     expect(loaded.water.intervalMin).toBe(60)
   })
 
+  it('fills endOfDay defaults for an older settings file', () => {
+    const s = defaultState()
+    const older: Record<string, unknown> = { ...s.settings }
+    delete older.endOfDay
+    fs.writeFileSync(file, JSON.stringify({ ...s, settings: older }))
+    expect(loadState(file).settings.endOfDay).toEqual(DEFAULT_SETTINGS.endOfDay)
+  })
+
   it('returns defaults for a missing file', () => {
     expect(loadState(file)).toEqual(defaultState())
   })
