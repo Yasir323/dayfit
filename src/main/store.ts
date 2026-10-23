@@ -1,6 +1,14 @@
 import fs from 'node:fs'
 import path from 'node:path'
-import type { Block, DateStr, Decision, Item, LunchClash, Settings } from '../core/types'
+import type {
+  Block,
+  DateStr,
+  Decision,
+  Item,
+  LunchAnswer,
+  LunchClash,
+  Settings
+} from '../core/types'
 import { DEFAULT_SETTINGS, defaultDnd } from '../core/types'
 import type { Move } from '../core/replan'
 import type { NudgeState } from '../core/nudge'
@@ -27,6 +35,8 @@ export interface AppState {
   waterMl: Record<DateStr, number>
   reminder: ReminderState
   endOfDay: EndOfDayState
+  /** Today's lunch-clash answer; ignored once the date moves on. */
+  lunchAnswer: { date: DateStr; answer: LunchAnswer } | null
   nudges: NudgeState
   overdue: string[]
   manualBusy: boolean | null
@@ -43,6 +53,7 @@ export const defaultState = (): AppState => ({
   waterMl: {},
   reminder: clone(EMPTY_REMINDER_STATE),
   endOfDay: clone(EMPTY_END_OF_DAY_STATE),
+  lunchAnswer: null,
   nudges: {},
   overdue: [],
   manualBusy: null,

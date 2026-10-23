@@ -442,6 +442,58 @@ describe('DayfitService', () => {
   })
 })
 
+describe('DayfitService lunch clash', () => {
+  const lunchStarts = (v: ViewState): number[] =>
+    v.plan.blocks.filter((b) => b.kind === 'lunch').map((b) => b.start)
+  const meeting = (start: number, durationMin: number): NewItem =>
+    newItem({ title: 'Client call', type: 'fixed', fixedStart: start, durationMin })
+  beforeEach(() => {
+    svc.updateSettings({ lunch: 780 })
+    svc.addItems([meeting(800, 60)])
+  })
+
+  it('a clash shows in the view and an answer resolves it', () => {
+    expect(svc.view().plan.lunchClash?.move).toBe(865)
+    const v = svc.answerDecisions([], { kind: 'at', start: 865, len: 45 })
+    expect(lunchStarts(v)).toEqual([865])
+    expect(v.plan.lunchClash).toBeNull()
+    expect(loadState(file).lunchAnswer).toEqual({
+      date: D,
+      answer: { kind: 'at', start: 865, len: 45 }
+    })
+  })
+
+  it('skip today', () => {
+    const v = svc.answerDecisions([], { kind: 'skip' })
+    expect(lunchStarts(v)).toEqual([])
+    expect(v.plan.lunchClash).toBeNull()
+  })
+
+  it('an invalid pick throws and changes nothing', () => {
+    expect(() => svc.answerDecisions([], { kind: 'at', start: 830, len: 45 })).toThrow(
+      'Clashes with Client call'
+    )
+    expect(svc.view().plan.lunchClash?.reason).toBe('clash')
+    expect(loadState(file).lunchAnswer).toBeNull()
+  })
+
+  it('a new fixed item on the answered lunch clears the answer and asks again', () => {
+    svc.answerDecisions([], { kind: 'at', start: 865, len: 45 })
+    const v = svc.addItems([meeting(870, 30)])
+    expect(loadState(file).lunchAnswer).toBeNull()
+    expect(v.plan.lunchClash?.reason).toBe('clash')
+  })
+
+  it('answer survives a restart and clears at rollover', () => {
+    svc.answerDecisions([], { kind: 'at', start: 865, len: 45 })
+    const again = new DayfitService(file, clock)
+    expect(lunchStarts(again.replan())).toEqual([865])
+    clock.set(27, 9, 0)
+    again.view()
+    expect(loadState(file).lunchAnswer).toBeNull()
+  })
+})
+
 describe('DayfitService view: tomorrow and week', () => {
   it('tomorrow includes repeating fixed items and dated tasks; upcoming excludes repeating', () => {
     const v = svc.addItems([

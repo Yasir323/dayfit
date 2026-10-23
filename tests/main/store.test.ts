@@ -88,6 +88,13 @@ describe('store', () => {
     expect(loadState(file).endOfDay).toEqual(EMPTY_END_OF_DAY_STATE)
   })
 
+  it('older state without lunchAnswer loads with null', () => {
+    const older: Record<string, unknown> = { ...defaultState() }
+    delete older.lunchAnswer
+    fs.writeFileSync(file, JSON.stringify(older))
+    expect(loadState(file).lunchAnswer).toBeNull()
+  })
+
   it('returns defaults for a missing file', () => {
     expect(loadState(file)).toEqual(defaultState())
   })

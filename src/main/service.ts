@@ -13,7 +13,7 @@ import {
   EMPTY_END_OF_DAY_STATE,
   type AttendanceKind
 } from '../core/endOfDay'
-import { planDay } from '../core/scheduler'
+import { lunchPickError, planDay } from '../core/scheduler'
 import { addDays, minutesOf, toDateStr, weekday } from '../core/time'
 import {
   isFixed,
@@ -21,6 +21,7 @@ import {
   type DateStr,
   type DecisionAnswer,
   type Item,
+  type LunchAnswer,
   type Minutes,
   type NewItem,
   type Settings
@@ -136,9 +137,23 @@ export class DayfitService {
     return this.replanAndSave()
   }
 
-  answerDecisions(answers: DecisionAnswer[]): ViewState {
+  answerDecisions(answers: DecisionAnswer[], lunch?: LunchAnswer): ViewState {
     this.begin()
     const today = this.today()
+    if (lunch) {
+      if (lunch.kind === 'at') {
+        const error = lunchPickError(
+          lunch.start,
+          lunch.len,
+          this.todayPlan().blocks,
+          itemsForDate(this.state.items, today),
+          this.state.settings,
+          this.nowMin()
+        )
+        if (error) throw new Error(error)
+      }
+      this.state.lunchAnswer = { date: today, answer: lunch }
+    }
     for (const a of answers) {
       const item = this.find(a.itemId)
       const repeating = item !== undefined && item.repeat.kind !== 'none'
@@ -412,6 +427,7 @@ export class DayfitService {
     s.items = rolloverItems(s.items, today)
     s.reminder = structuredClone(EMPTY_REMINDER_STATE)
     s.endOfDay = structuredClone(EMPTY_END_OF_DAY_STATE)
+    s.lunchAnswer = null
     s.nudges = {}
     s.overdue = []
     s.lastDate = today
@@ -441,13 +457,16 @@ export class DayfitService {
       )
     if (adjustFrozen) frozen = adjustFrozen(frozen)
 
-    const input = { date: today, now, settings: s.settings, frozen, answers: this.answers }
+    const lunch = s.lunchAnswer?.date === today ? s.lunchAnswer.answer : null
+    const input = { date: today, now, settings: s.settings, frozen, answers: this.answers, lunch }
     const first = planDay({ ...input, items })
     for (const item of items.filter(isAwaitingCall))
       (this.find(item.id) as Item).suggestedSlots = this.callSlots(item, first.blocks, now)
     items = itemsForDate(s.items, today)
     const next = planDay({ ...input, items })
 
+    // A saved lunch answer that a new fixed item now covers is dropped; the clash is asked again.
+    if (next.lunchAnswerRejected) s.lunchAnswer = null
     s.plans[today] = { ...next, moves: hadPlan ? diffMoves(prev, next.blocks) : [] }
     this.save()
     return this.buildView()
@@ -496,7 +515,7 @@ export class DayfitService {
       today,
       now,
       settings: s.settings,
-      plan,
+      plan: { ...plan, lunchClash: plan.lunchClash ?? null },
       items,
       upcoming: s.items
         .filter((i) => i.status === 'open' && i.date > today)
