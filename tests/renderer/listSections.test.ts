@@ -32,6 +32,40 @@ describe('buildSections', () => {
     expect(section(v, 'today')?.summary).toBe('3 · 2h 35m')
   })
 
+  it('the today summary leaves out done items', () => {
+    const base = makeView()
+    const v = makeView({
+      plan: { ...base.plan, blocks: [block('a', 'task', 600, 630), block('b', 'task', 640, 670)] },
+      items: [item('a', 'A'), item('b', 'B', { status: 'done' })]
+    })
+    expect(section(v, 'today')?.summary).toBe('1 · 30m')
+  })
+
+  it('a household item with a fixed start keeps its label and deadline', () => {
+    const base = makeView()
+    const h = item('h', 'Pay bill', {
+      type: 'household',
+      fixedStart: 840,
+      durationMin: 15,
+      label: 'home',
+      deadline: { date: base.today, time: 1080 }
+    })
+    const v = makeView({
+      plan: { ...base.plan, blocks: [block('h', 'fixed', 840, 855)] },
+      items: [h]
+    })
+    expect(section(v, 'today')?.rows[0].detail).toBe('14:00 · 15m · #home · by 18:00')
+  })
+
+  it('later shows the date and the due day', () => {
+    const later = item('l', 'Taxes', {
+      date: '2026-10-26',
+      deadline: { date: '2026-10-30', time: null }
+    })
+    const v = makeView({ upcoming: [later] })
+    expect(section(v, 'later')?.rows[0].detail).toBe('Mon 26 Oct · due Fri')
+  })
+
   it('shows a split deep item as one row listing every chunk', () => {
     const row = section(makeView(), 'today')?.rows.find((r) => r.item.id === 'deep')
     expect(row?.blocks).toHaveLength(2)
@@ -98,7 +132,7 @@ describe('buildSections', () => {
     expect(s.rows.map((r) => r.item.id)).toEqual(['a'])
     expect(s.rows[0].detail).toBe('Mon 26 Oct')
     const d = item('d', 'D', { date: '2026-10-27', deadline: { date: '2026-10-26', time: null } })
-    expect(section(makeView({ upcoming: [d] }), 'later')!.rows[0].detail).toBe('due Mon')
+    expect(section(makeView({ upcoming: [d] }), 'later')!.rows[0].detail).toBe('Tue 27 Oct · due Mon')
   })
 
   it('empty sections are hidden', () => {

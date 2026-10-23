@@ -17,6 +17,23 @@ const WEEK = [
   { date: '2026-10-25', count: 1 }
 ]
 
+describe('CalendarView labels', () => {
+  it('names each day with its item count', () => {
+    render(
+      <CalendarView
+        view={makeView({
+          week: WEEK.map((d) => (d.date === '2026-10-23' ? { ...d, count: 1 } : d))
+        })}
+        onShowList={vi.fn()}
+        onAddTask={vi.fn()}
+      />
+    )
+    const strip = screen.getByRole('list', { name: 'This week' })
+    expect(within(strip).getByLabelText('Fri 23 Oct, 1 item')).toBeInTheDocument()
+    expect(within(strip).getByLabelText('Wed 21 Oct, 5 items')).toBeInTheDocument()
+  })
+})
+
 describe('CalendarView', () => {
   it('shows a Monday–Sunday strip with only today active', async () => {
     render(

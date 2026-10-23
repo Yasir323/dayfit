@@ -41,7 +41,7 @@ function todayDetail(item: Item, blocks: Block[]): string {
   }
   const first = blocks[0]
   const parts = [`${formatClock(first.start)} · ${formatLength(first.end - first.start)}`]
-  if (item.fixedStart === null) {
+  if (item.fixedStart === null || item.type === 'household') {
     if (item.label) parts.push(`#${item.label}`)
     if (item.deadline?.time != null) parts.push(`by ${formatClock(item.deadline.time)}`)
   }
@@ -54,7 +54,7 @@ const tomorrowDetail = (i: Item): string =>
     : formatLength(i.durationMin)
 
 const laterDetail = (i: Item): string =>
-  i.deadline ? `due ${weekdayShort(i.deadline.date)}` : dayHeader(i.date)
+  i.deadline ? `${dayHeader(i.date)} · due ${weekdayShort(i.deadline.date)}` : dayHeader(i.date)
 
 /** What the List view shows, in order; empty sections are omitted. */
 export function buildSections(view: ViewState): Section[] {
@@ -83,7 +83,9 @@ export function buildSections(view: ViewState): Section[] {
       const sb = b.blocks[0]?.start ?? Infinity
       return sa === sb ? a.item.createdAt - b.item.createdAt : sa - sb
     })
-  const plannedMin = todayRows.reduce(
+  // Done items stay listed but no longer count toward what's left today.
+  const openRows = todayRows.filter((r) => r.item.status !== 'done')
+  const plannedMin = openRows.reduce(
     (sum, r) => sum + r.blocks.reduce((s, b) => s + (b.end - b.start), 0),
     0
   )
@@ -105,7 +107,7 @@ export function buildSections(view: ViewState): Section[] {
       title: 'Today',
       rows: todayRows,
       collapsedByDefault: false,
-      summary: `${todayRows.length} · ${formatLength(plannedMin)}`
+      summary: `${openRows.length} · ${formatLength(plannedMin)}`
     },
     {
       key: 'unscheduled',

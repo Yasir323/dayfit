@@ -107,7 +107,9 @@ export function ListView({ view, onView, onAddTask }: Props): React.JSX.Element 
           {failure}
         </p>
       )}
-      {sections.length === 0 && <p className="empty muted">Nothing planned today</p>}
+      {!sections.some(
+        (s) => s.key === 'overdue' || s.key === 'today' || s.key === 'unscheduled'
+      ) && <p className="empty muted">Nothing planned today</p>}
       {sections.map((s) => {
         const collapsible = s.collapsedByDefault
         return (

@@ -116,7 +116,9 @@ export function Review({ decisions, items, onDone, view }: Props): React.JSX.Ele
           <p className="review-why">
             {clash.reason === 'passed'
               ? 'Lunch time has passed'
-              : `Lunch ${formatClock(clash.usual)} clashes with ${clash.clashWith ?? 'Busy'}`}
+              : clash.outOfHours
+                ? `Lunch ${formatClock(clash.usual)} runs past working hours`
+                : `Lunch ${formatClock(clash.usual)} clashes with ${clash.clashWith ?? 'Busy'}`}
           </p>
           <div className="choice-seg">
             {(

@@ -81,6 +81,25 @@ describe('alert banners', () => {
     expect(api.dismissAlert).toHaveBeenCalledWith('heads-up:1065:0')
   })
 
+  it('Check out does not dismiss when a review blocks the check-out screen', async () => {
+    const heads = alert({
+      id: 'heads-up:1065:0',
+      kind: 'heads-up',
+      title: 'Wrapping up in 15 min',
+      parts: []
+    })
+    api.view.mockResolvedValue(
+      makeView({
+        alerts: [heads],
+        plan: { ...makeView().plan, decisions: [{ kind: 'no-fit', itemId: 'standup' }] }
+      })
+    )
+    render(<App />)
+    const banner = await screen.findByRole('region', { name: 'Wrapping up in 15 min' })
+    await userEvent.click(within(banner).getByRole('button', { name: 'Check out' }))
+    expect(api.dismissAlert).not.toHaveBeenCalled()
+  })
+
   it('lunch banner only dismisses', async () => {
     await show([alert({ id: 'lunch:780:0', kind: 'lunch', title: 'Lunch time', parts: [] })])
     const banner = screen.getByRole('region', { name: 'Lunch time' })

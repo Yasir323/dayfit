@@ -1,7 +1,7 @@
 import { formatClock } from '../../../core/time'
 import type { ViewState } from '../api'
 import { agendaRows, looseCounts } from '../lib/agenda'
-import { weekdayShort } from '../lib/dates'
+import { dayHeader, weekdayShort } from '../lib/dates'
 import { Icon } from '../ui/Icon'
 
 interface Props {
@@ -34,10 +34,11 @@ export function CalendarView({ view, onShowList, onAddTask }: Props): React.JSX.
               className={`day${isToday ? ' is-today' : ''}`}
               aria-current={isToday ? 'date' : undefined}
               aria-disabled={isToday ? undefined : 'true'}
+              aria-label={`${dayHeader(date)}, ${count} ${count === 1 ? 'item' : 'items'}`}
             >
               <span className="day-name">{weekdayShort(date)}</span>
               <span className="day-num">{Number(date.slice(8))}</span>
-              <span className="dots" aria-label={`${count} items`}>
+              <span className="dots" aria-hidden="true">
                 {Array.from({ length: Math.min(count, MAX_DOTS) }, (_, k) => (
                   <i key={k} className="dot" />
                 ))}

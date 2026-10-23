@@ -12,7 +12,7 @@
   --border: #e6e6e6;
   --border-strong: #cfcfcf;
 
-  --accent: #e4572e;
+  --accent: #c9431c;
   --accent-soft: color-mix(in srgb, var(--accent) 12%, transparent);
   --on-accent: #ffffff;
   --danger: #d1453b;
@@ -68,7 +68,7 @@
     --border-strong: #4d4d4d;
 
     --accent: #f06a43;
-    --on-accent: #ffffff;
+    --on-accent: #1e1e1e;
     --danger: #e8685f;
     --warn: #f0a03a;
 

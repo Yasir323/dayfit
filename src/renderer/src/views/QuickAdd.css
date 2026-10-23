@@ -66,6 +66,7 @@
 }
 .tok-dnd {
   color: var(--tok-priority);
+  background: color-mix(in srgb, var(--tok-priority) 14%, transparent);
 }
 .tok-priority {
   color: var(--tok-priority);

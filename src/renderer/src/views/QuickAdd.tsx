@@ -7,6 +7,7 @@ import { api } from '../api'
 import type { ViewState } from '../api'
 import { ItemChips } from './ItemChips'
 import { validateFields } from './validateFields'
+import { modKey } from '../lib/platform'
 import './QuickAdd.css'
 
 interface Props {
@@ -110,6 +111,7 @@ export function QuickAdd({ settings, today, onAdded }: Props): React.JSX.Element
   const canAdd = !saving && error === null && text.trim() !== ''
 
   const reset = (): void => {
+    setFailure(null)
     parsed.current = parseLine('', today)
     setText('')
     setFormKey((k) => k + 1)
@@ -199,7 +201,8 @@ export function QuickAdd({ settings, today, onAdded }: Props): React.JSX.Element
       </div>
       <p className="qa-hint muted">
         Type <code>15m</code> <code>#label</code> <code>!high</code> <code>@am</code>{' '}
-        <code>at 14:00</code> <code>~call</code> · ↵ add · ⌘↵ add &amp; open Today
+        <code>at 14:00</code> <code>~call</code> · ↵ add · {modKey(navigator.userAgent)}↵ add &amp;
+        open Today
       </p>
     </form>
   )

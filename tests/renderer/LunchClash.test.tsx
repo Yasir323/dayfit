@@ -72,6 +72,11 @@ describe('lunch clash row', () => {
     expect(screen.getByRole('radio', { name: 'Shorten to 35 min' })).toBeInTheDocument()
   })
 
+  it('out-of-hours reason', () => {
+    showReview({ ...CLASH, clashWith: null, outOfHours: true })
+    expect(screen.getByText('Lunch 13:00 runs past working hours')).toBeInTheDocument()
+  })
+
   it('passed reason', () => {
     showReview({ ...CLASH, reason: 'passed', clashWith: null })
     expect(screen.getByText('Lunch time has passed')).toBeInTheDocument()

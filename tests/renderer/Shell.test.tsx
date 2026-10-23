@@ -122,5 +122,6 @@ describe('App shell', () => {
     const dialog = await screen.findByRole('dialog', { name: 'Review your plan' })
     expect(dialog).toHaveAttribute('aria-modal', 'true')
     expect(screen.getByRole('navigation', { name: 'Main', hidden: true })).toHaveAttribute('inert')
+    expect(document.querySelector('main')).toHaveAttribute('inert')
   })
 })

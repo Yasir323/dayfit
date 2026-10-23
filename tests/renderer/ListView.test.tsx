@@ -34,6 +34,20 @@ const withTask = (extra: Partial<Item> = {}): ViewState => {
   })
 }
 
+describe('ListView empty state', () => {
+  it('says nothing is planned today even when tomorrow has items', () => {
+    const base = makeView()
+    const v = makeView({
+      items: [],
+      plan: { ...base.plan, blocks: [] },
+      tomorrow: [item('t', 'Tomorrow thing')]
+    })
+    render(<ListView view={v} onView={vi.fn()} onAddTask={vi.fn()} />)
+    expect(screen.getByText('Nothing planned today')).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Tomorrow' })).toBeInTheDocument()
+  })
+})
+
 describe('ListView', () => {
   it('renders sections with headings and the Today summary', () => {
     render(<ListView view={withTask()} onView={vi.fn()} onAddTask={vi.fn()} />)

@@ -71,6 +71,13 @@ export function App(): React.JSX.Element {
 
   if (!view) return <div className="app">Dayfit</div>
 
+  // The check-out screen can't open over first-run setup or a pending review.
+  const openCheckout = (): boolean => {
+    if (!view.settings.firstRunDone || view.plan.decisions.length > 0 || view.plan.lunchClash)
+      return false
+    setCheckout(true)
+    return true
+  }
   const titleOf = (id: string): string => view.items.find((i) => i.id === id)?.title ?? 'Item'
   const firstRunDone = view.settings.firstRunDone
   const review = view.plan.decisions.length > 0 || (view.plan.lunchClash ?? null) !== null
@@ -89,7 +96,7 @@ export function App(): React.JSX.Element {
           alert={a}
           snoozeMin={view.settings.breaks.snoozeMin}
           onView={setView}
-          onCheckOut={() => setCheckout(true)}
+          onCheckOut={openCheckout}
         />
       )),
     ...view.nudges.map((id, k) => (
@@ -103,6 +110,7 @@ export function App(): React.JSX.Element {
     ))
   ]
   const wrapUp = checkout && firstRunDone && !review
+  const overlay = !firstRunDone || review || wrapUp
 
   return (
     <div className="app">
@@ -113,13 +121,13 @@ export function App(): React.JSX.Element {
           {toast.text}
         </div>
       )}
-      <main className="tab-body">
+      <main className="tab-body" inert={overlay}>
         {tab === 'today' && (
           <TodayTab
             view={view}
             onView={setView}
             onAddTask={() => setTab('add')}
-            onCheckOut={() => setCheckout(true)}
+            onCheckOut={openCheckout}
           />
         )}
         {tab === 'add' && (
@@ -145,7 +153,7 @@ export function App(): React.JSX.Element {
         {tab === 'settings' && <Settings view={view} onView={setView} />}
       </main>
 
-      <TabBar value={tab} onChange={setTab} inert={!firstRunDone || review || wrapUp} />
+      <TabBar value={tab} onChange={setTab} inert={overlay} />
 
       {wrapUp && (
         <div className="overlay" role="dialog" aria-modal="true" aria-label="Wrap up today">

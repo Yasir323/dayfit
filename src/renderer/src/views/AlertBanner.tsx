@@ -8,7 +8,8 @@ interface Props {
   alert: Alert
   snoozeMin: number
   onView: (v: ViewState) => void
-  onCheckOut: () => void
+  /** Opens the check-out screen; false when something else (a review) blocks it. */
+  onCheckOut: () => boolean
 }
 
 /** A reminder the user may have missed (notifications can be dropped): act on it or dismiss it. */
@@ -50,8 +51,7 @@ export function AlertBanner({ alert, snoozeMin, onView, onCheckOut }: Props): Re
             type="button"
             className="btn-primary"
             onClick={() => {
-              onCheckOut()
-              void run(dismiss)
+              if (onCheckOut()) void run(dismiss)
             }}
           >
             Check out

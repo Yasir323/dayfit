@@ -81,6 +81,20 @@ describe('QuickAdd', () => {
     expect(chip('DND')).toHaveAccessibleName('DND: on')
   })
 
+  it('shows Ctrl in the hint off a Mac', () => {
+    setup()
+    expect(screen.getByText(/Ctrl↵ add & open Today/)).toBeInTheDocument()
+  })
+
+  it('Cancel clears an earlier error', async () => {
+    addItems.mockRejectedValueOnce(new Error('Disk full'))
+    const { box } = setup()
+    await userEvent.type(box, 'Write report{Enter}')
+    expect(await screen.findByRole('alert')).toHaveTextContent('Disk full')
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
+
   it('keeps a hand-changed field when later text does not touch that token', async () => {
     const { box } = setup()
     await userEvent.type(box, 'Write report !high')
