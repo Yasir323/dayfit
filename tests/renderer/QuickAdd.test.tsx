@@ -224,4 +224,14 @@ describe('QuickAdd', () => {
     expect(chip('Priority')).toHaveAccessibleName('Priority: Med')
     expect(addItems).not.toHaveBeenCalled()
   })
+
+  it('returns focus to the chip when its picker closes', async () => {
+    const { box } = setup()
+    await userEvent.type(box, 'Thing')
+    await userEvent.selectOptions(await control('Duration'), '45')
+    expect(chip('Duration')).toHaveFocus()
+    await userEvent.click(chip('Label'))
+    await userEvent.keyboard('{Escape}')
+    expect(chip('Label')).toHaveFocus()
+  })
 })

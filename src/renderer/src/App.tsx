@@ -83,6 +83,11 @@ export function App(): React.JSX.Element {
     <div className="app">
       {!(review && firstRunDone) && banners.length > 0 && <div className="banners">{banners}</div>}
 
+      {toast && (
+        <div className="toast" role="status">
+          {toast.text}
+        </div>
+      )}
       <main className="tab-body">
         {tab === 'today' && (
           <TodayTab view={view} onView={setView} onAddTask={() => setTab('add')} />
@@ -127,12 +132,6 @@ export function App(): React.JSX.Element {
       {!firstRunDone && (
         <div className="overlay" role="dialog" aria-modal="true" aria-label="Set up Dayfit">
           <FirstRun settings={view.settings} today={view.today} onDone={setView} />
-        </div>
-      )}
-
-      {toast && (
-        <div className="toast" role="status">
-          {toast.text}
         </div>
       )}
     </div>

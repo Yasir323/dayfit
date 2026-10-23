@@ -52,6 +52,9 @@ body {
 
 .banners {
   flex: none;
+  max-height: 40%;
+  overflow-y: auto;
+  padding-bottom: var(--s1);
 }
 
 /* Today tab */
@@ -318,9 +321,10 @@ body {
 }
 .toast {
   position: absolute;
+  top: 48px;
   left: var(--s3);
   right: var(--s3);
-  bottom: 62px;
+  pointer-events: none;
   z-index: 20;
   padding: 9px var(--s3);
   border-radius: 999px;

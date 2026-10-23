@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom/vitest'
-import { cleanup, render, screen, within } from '@testing-library/react'
+import { act, cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ViewState } from '../../src/main/service'
@@ -9,8 +9,14 @@ const api = vi.hoisted(() => ({
   addItems: vi.fn(),
   answerDecisions: vi.fn(),
   hide: vi.fn(),
-  onState: vi.fn(() => () => {}),
-  onFocus: vi.fn(() => () => {})
+  onState: vi.fn((cb?: (v: ViewState) => void) => {
+    void cb
+    return () => {}
+  }),
+  onFocus: vi.fn((cb?: (t: string) => void) => {
+    void cb
+    return () => {}
+  })
 }))
 vi.mock('../../src/renderer/src/api', () => ({ api }))
 
@@ -80,6 +86,24 @@ describe('TodayTab', () => {
 })
 
 describe('App shell', () => {
+  it('shows the moves toast at the top, ahead of the content', async () => {
+    let push: (v: ViewState) => void = () => {}
+    api.onState.mockImplementation((cb?: (v: ViewState) => void) => {
+      if (cb) push = cb
+      return () => {}
+    })
+    const base = makeView()
+    api.view.mockResolvedValue(base)
+    const { container } = render(<App />)
+    await screen.findByRole('heading', { name: 'Today' })
+    act(() =>
+      push({ ...base, plan: { ...base.plan, moves: [{ itemId: 'deep', from: 560, to: 600 }] } })
+    )
+    const toast = screen.getByRole('status')
+    const body = container.querySelector('.tab-body') as HTMLElement
+    expect(toast.compareDocumentPosition(body) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
   it('the tab bar switches to quick-add', async () => {
     api.view.mockResolvedValue(makeView())
     render(<App />)

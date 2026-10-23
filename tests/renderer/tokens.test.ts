@@ -25,4 +25,12 @@ describe('design tokens', () => {
     expect(css).toContain('--accent: #e4572e')
     expect(css).toContain('prefers-color-scheme: dark')
   })
+
+  it('banners cap their height and scroll, and the toast never blocks clicks', () => {
+    const css = fs.readFileSync(path.join(ROOT, 'App.css'), 'utf8')
+    const rule = (sel: string): string => css.slice(css.indexOf(`${sel} {`)).split('}')[0]
+    expect(rule('.banners')).toMatch(/max-height:/)
+    expect(rule('.banners')).toMatch(/overflow-y: auto/)
+    expect(rule('.toast')).toMatch(/pointer-events: none/)
+  })
 })

@@ -73,12 +73,19 @@ export function ItemChips({ value, onChange, today, defaultDurations }: Props): 
   useEffect(() => {
     if (openField === null) return
     const onDown = (e: MouseEvent): void => {
+      // a click elsewhere closes without stealing focus back
       if (root.current && !root.current.contains(e.target as Node)) setOpenField(null)
     }
     document.addEventListener('mousedown', onDown)
     return () => document.removeEventListener('mousedown', onDown)
   }, [openField])
-  const close = (): void => setOpenField(null)
+  const chipRefs = useRef<Partial<Record<Field, HTMLButtonElement | null>>>({})
+  /** Closes the picker and hands keyboard focus back to its chip. */
+  const close = (): void => {
+    const field = openField
+    setOpenField(null)
+    if (field) chipRefs.current[field]?.focus()
+  }
   const fromCustomInput = useRef(false)
   const set = (patch: Partial<NewItem>): void => {
     // the deadline's date follows the Day field while they matched
@@ -370,6 +377,9 @@ export function ItemChips({ value, onChange, today, defaultDurations }: Props): 
           .map(([field, icon, text]) => (
             <button
               key={field}
+              ref={(el) => {
+                chipRefs.current[field] = el
+              }}
               type="button"
               className={`chip${openField === field ? ' is-open' : ''}${text === 'none' ? ' is-empty' : ''}`}
               aria-label={`${field}: ${text}`}
