@@ -1,63 +1,133 @@
 .settings {
-  padding: 12px;
+  padding: var(--s3) var(--s3) var(--s4);
+}
+.settings h2 {
+  margin: 2px var(--s1) var(--s3);
+  font-size: 18px;
 }
 .settings fieldset {
-  margin: 0 0 12px;
-  padding: 8px 10px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  margin: 0 0 var(--s4);
+  padding: 0;
+  border: 0;
+  min-width: 0;
 }
 .settings legend {
-  padding: 0 4px;
+  padding: 0 var(--s1) 6px;
+  color: var(--muted);
+  font-size: 11px;
   font-weight: 600;
-  font-size: 13px;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
 }
-.settings .field {
+.group-card {
+  border-radius: var(--r-md);
+  background: var(--bg-2);
+  border: 1px solid var(--hairline);
+  overflow: hidden;
+}
+.group-card + .group-card {
+  margin-top: var(--s2);
+}
+.settings .field,
+.firstrun .field {
   display: grid;
   grid-template-columns: 1fr 120px;
   align-items: center;
-  gap: 2px 8px;
-  margin: 4px 0;
+  gap: 2px var(--s2);
+  margin: 0;
+  padding: 7px var(--s3);
+  border-bottom: 1px solid var(--hairline);
   font-size: 13px;
 }
-.settings .field input {
+.group-card > :last-child,
+.group-card > div:last-child .field {
+  border-bottom: 0;
+}
+.settings .field input,
+.firstrun .field input {
   min-width: 0;
+  padding: 3px 6px;
+  text-align: right;
 }
 .settings .field input[aria-invalid='true'] {
   border-color: var(--danger);
 }
 .field-error {
   grid-column: 1 / -1;
+  margin: 2px 0 0;
   color: var(--danger);
   font-size: 12px;
 }
-.settings .toggle {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin: 8px 0 2px;
-  font-size: 13px;
+.toggle-row {
   font-weight: 600;
 }
+.toggle-row .switch {
+  justify-self: end;
+}
+.switch {
+  position: relative;
+  width: 34px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--border-strong);
+  transition: background 0.15s;
+}
+.switch[aria-checked='true'] {
+  background: var(--accent);
+}
+.switch .knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--on-accent);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  transition: transform 0.15s;
+}
+.switch[aria-checked='true'] .knob {
+  transform: translateX(14px);
+}
+
 .firstrun h2 {
   margin: 0 0 4px;
+  font-size: 17px;
 }
 .firstrun .steps {
-  margin: 0 0 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 0 var(--s3);
   color: var(--muted);
   font-size: 12px;
 }
+.step-dots {
+  display: flex;
+  gap: 4px;
+}
+.step-dots i {
+  width: 18px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border);
+}
+.step-dots i.is-on {
+  background: var(--accent);
+}
 .firstrun .field {
-  display: grid;
-  grid-template-columns: 1fr 120px;
-  align-items: center;
-  gap: 2px 8px;
-  margin: 6px 0;
-  font-size: 13px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-sm);
+  margin-bottom: 6px;
+}
+.firstrun .small {
+  font-size: 12px;
 }
 .firstrun .actions {
   display: flex;
-  gap: 8px;
+  gap: var(--s2);
   justify-content: flex-end;
-  margin-top: 16px;
+  margin-top: var(--s4);
 }

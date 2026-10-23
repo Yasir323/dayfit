@@ -127,6 +127,30 @@ describe('Settings', () => {
     render(<App />)
     expect(await screen.findByText('Welcome to Dayfit')).toBeInTheDocument()
   })
+
+  it('reminder enable controls are switches that send their whole section', async () => {
+    render(<Settings view={view()} />)
+    const water = screen.getByRole('switch', { name: 'Water' })
+    expect(water).toHaveAttribute('aria-checked', 'true')
+    await userEvent.click(water)
+    expect(api.updateSettings).toHaveBeenCalledWith({
+      water: { ...DEFAULT_SETTINGS.water, enabled: false }
+    })
+    expect(screen.getByRole('switch', { name: 'Launch at login' })).toBeInTheDocument()
+    expect(screen.queryAllByRole('checkbox')).toHaveLength(0)
+  })
+
+  it('groups settings into titled sections', () => {
+    render(<Settings view={view()} />)
+    for (const name of [
+      'Working hours',
+      'Planning',
+      'Reminders',
+      'Busy mode',
+      'Shortcut and startup'
+    ])
+      expect(screen.getByRole('group', { name })).toBeInTheDocument()
+  })
 })
 
 async function toStep3(): Promise<void> {
@@ -135,6 +159,16 @@ async function toStep3(): Promise<void> {
 }
 
 describe('FirstRun', () => {
+  it('shows the step indicator with progress dots and a primary Next', () => {
+    render(<FirstRun settings={DEFAULT_SETTINGS} today={TODAY} onDone={vi.fn()} />)
+    expect(screen.getByText('Step 1 of 3')).toBeInTheDocument()
+    expect(screen.getByRole('progressbar', { name: 'Setup progress' })).toHaveAttribute(
+      'aria-valuenow',
+      '1'
+    )
+    expect(screen.getByRole('button', { name: 'Next' })).toHaveClass('btn-primary')
+  })
+
   it('adds the evening run then marks first run done', async () => {
     const onDone = vi.fn()
     render(<FirstRun settings={DEFAULT_SETTINGS} today={TODAY} onDone={onDone} />)

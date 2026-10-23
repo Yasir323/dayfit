@@ -103,10 +103,19 @@ function Toggle({
   onChange: (b: boolean) => void
 }): React.JSX.Element {
   return (
-    <label className="toggle">
-      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
+    <div className="field toggle-row">
       <span>{label}</span>
-    </label>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        aria-label={label}
+        className="switch"
+        onClick={() => onChange(!checked)}
+      >
+        <span className="knob" />
+      </button>
+    </div>
   )
 }
 
@@ -140,143 +149,156 @@ export function Settings({ view, onView }: Props): React.JSX.Element {
 
       <fieldset>
         <legend>Working hours</legend>
-        <Field
-          label="Start"
-          type="time"
-          value={formatClock(s.workStart)}
-          parse={(d) => {
-            const t = parseTime(d)
-            if (!t.ok) return t
-            const e = checkEnd(t.value, s.workEnd)
-            if (e) return { ok: false, error: e }
-            return lunchOk(t.value, s.workEnd) ? t : { ok: false, error: LUNCH_ERROR }
-          }}
-          onValid={(v) => send({ workStart: v })}
-        />
-        <Field
-          label="End"
-          type="time"
-          value={formatClock(s.workEnd)}
-          parse={(d) => {
-            const t = parseTime(d)
-            if (!t.ok) return t
-            const e = checkEnd(s.workStart, t.value)
-            if (e) return { ok: false, error: e }
-            return lunchOk(s.workStart, t.value) ? t : { ok: false, error: LUNCH_ERROR }
-          }}
-          onValid={(v) => send({ workEnd: v })}
-        />
-        <Field
-          label="Lunch (optional)"
-          type="time"
-          value={s.lunch === null ? '' : formatClock(s.lunch)}
-          parse={(d) => parseLunch(d, s.workStart, s.workEnd)}
-          onValid={(v) => send({ lunch: v })}
-        />
+        <div className="group-card">
+          <Field
+            label="Start"
+            type="time"
+            value={formatClock(s.workStart)}
+            parse={(d) => {
+              const t = parseTime(d)
+              if (!t.ok) return t
+              const e = checkEnd(t.value, s.workEnd)
+              if (e) return { ok: false, error: e }
+              return lunchOk(t.value, s.workEnd) ? t : { ok: false, error: LUNCH_ERROR }
+            }}
+            onValid={(v) => send({ workStart: v })}
+          />
+          <Field
+            label="End"
+            type="time"
+            value={formatClock(s.workEnd)}
+            parse={(d) => {
+              const t = parseTime(d)
+              if (!t.ok) return t
+              const e = checkEnd(s.workStart, t.value)
+              if (e) return { ok: false, error: e }
+              return lunchOk(s.workStart, t.value) ? t : { ok: false, error: LUNCH_ERROR }
+            }}
+            onValid={(v) => send({ workEnd: v })}
+          />
+          <Field
+            label="Lunch (optional)"
+            type="time"
+            value={s.lunch === null ? '' : formatClock(s.lunch)}
+            parse={(d) => parseLunch(d, s.workStart, s.workEnd)}
+            onValid={(v) => send({ lunch: v })}
+          />
+        </div>
       </fieldset>
 
       <fieldset>
-        <legend>Buffer</legend>
-        {num('Buffer (min)', s.bufferMin, (n) => send({ bufferMin: n }))}
-      </fieldset>
-
-      <fieldset>
-        <legend>Default durations (min)</legend>
-        {DURATION_TYPES.map((t) => (
-          <div key={t}>
-            {num(`Default ${t} (min)`, s.defaultDurations[t], (n) =>
-              send({ defaultDurations: { ...s.defaultDurations, [t]: n } })
-            )}
-          </div>
-        ))}
+        <legend>Planning</legend>
+        <div className="group-card">
+          {num('Buffer (min)', s.bufferMin, (n) => send({ bufferMin: n }))}
+          {DURATION_TYPES.map((t) => (
+            <div key={t}>
+              {num(`Default ${t} (min)`, s.defaultDurations[t], (n) =>
+                send({ defaultDurations: { ...s.defaultDurations, [t]: n } })
+              )}
+            </div>
+          ))}
+        </div>
       </fieldset>
 
       <fieldset>
         <legend>Reminders</legend>
-        <Toggle
-          label="Water"
-          checked={s.water.enabled}
-          onChange={(b) => send({ water: { ...s.water, enabled: b } })}
-        />
-        {num('Water target (ml)', s.water.targetMl, (n) =>
-          send({ water: { ...s.water, targetMl: n } })
-        )}
-        {num('Glass size (ml)', s.water.glassMl, (n) =>
-          send({ water: { ...s.water, glassMl: n } })
-        )}
-
-        <Toggle
-          label="Eye break"
-          checked={s.eye.enabled}
-          onChange={(b) => send({ eye: { ...s.eye, enabled: b } })}
-        />
-        {num('Eye interval (min)', s.eye.intervalMin, (n) =>
-          send({ eye: { ...s.eye, intervalMin: n } })
-        )}
-        {num('Eye idle reset (min)', s.eye.idleResetMin, (n) =>
-          send({ eye: { ...s.eye, idleResetMin: n } })
-        )}
-
-        <Toggle
-          label="Stretch"
-          checked={s.stretch.enabled}
-          onChange={(b) => send({ stretch: { ...s.stretch, enabled: b } })}
-        />
-        {num('Stretch interval (min)', s.stretch.intervalMin, (n) =>
-          send({ stretch: { ...s.stretch, intervalMin: n } })
-        )}
-
-        <Toggle
-          label="Walk"
-          checked={s.walk.enabled}
-          onChange={(b) => send({ walk: { ...s.walk, enabled: b } })}
-        />
-        {num('Walk interval (min)', s.walk.intervalMin, (n) =>
-          send({ walk: { ...s.walk, intervalMin: n } })
-        )}
-        {num('Walk duration (min)', s.walk.durationMin, (n) =>
-          send({ walk: { ...s.walk, durationMin: n } })
-        )}
-
-        <Toggle
-          label="Meeting alert"
-          checked={s.meetingAlert.enabled}
-          onChange={(b) => send({ meetingAlert: { ...s.meetingAlert, enabled: b } })}
-        />
-        {num('Meeting alert lead (min)', s.meetingAlert.leadMin, (n) =>
-          send({ meetingAlert: { ...s.meetingAlert, leadMin: n } })
-        )}
-
-        <Toggle
-          label="Gentle reminders during busy mode"
-          checked={s.busy.allowGentle}
-          onChange={(b) => send({ busy: { allowGentle: b } })}
-        />
+        <div className="group-card">
+          <Toggle
+            label="Water"
+            checked={s.water.enabled}
+            onChange={(b) => send({ water: { ...s.water, enabled: b } })}
+          />
+          {num('Water target (ml)', s.water.targetMl, (n) =>
+            send({ water: { ...s.water, targetMl: n } })
+          )}
+          {num('Glass size (ml)', s.water.glassMl, (n) =>
+            send({ water: { ...s.water, glassMl: n } })
+          )}
+        </div>
+        <div className="group-card">
+          <Toggle
+            label="Eye break"
+            checked={s.eye.enabled}
+            onChange={(b) => send({ eye: { ...s.eye, enabled: b } })}
+          />
+          {num('Eye interval (min)', s.eye.intervalMin, (n) =>
+            send({ eye: { ...s.eye, intervalMin: n } })
+          )}
+          {num('Eye idle reset (min)', s.eye.idleResetMin, (n) =>
+            send({ eye: { ...s.eye, idleResetMin: n } })
+          )}
+        </div>
+        <div className="group-card">
+          <Toggle
+            label="Stretch"
+            checked={s.stretch.enabled}
+            onChange={(b) => send({ stretch: { ...s.stretch, enabled: b } })}
+          />
+          {num('Stretch interval (min)', s.stretch.intervalMin, (n) =>
+            send({ stretch: { ...s.stretch, intervalMin: n } })
+          )}
+        </div>
+        <div className="group-card">
+          <Toggle
+            label="Walk"
+            checked={s.walk.enabled}
+            onChange={(b) => send({ walk: { ...s.walk, enabled: b } })}
+          />
+          {num('Walk interval (min)', s.walk.intervalMin, (n) =>
+            send({ walk: { ...s.walk, intervalMin: n } })
+          )}
+          {num('Walk duration (min)', s.walk.durationMin, (n) =>
+            send({ walk: { ...s.walk, durationMin: n } })
+          )}
+        </div>
+        <div className="group-card">
+          <Toggle
+            label="Meeting alert"
+            checked={s.meetingAlert.enabled}
+            onChange={(b) => send({ meetingAlert: { ...s.meetingAlert, enabled: b } })}
+          />
+          {num('Meeting alert lead (min)', s.meetingAlert.leadMin, (n) =>
+            send({ meetingAlert: { ...s.meetingAlert, leadMin: n } })
+          )}
+        </div>
       </fieldset>
 
       <fieldset>
-        <legend>System</legend>
-        <Field
-          label="Hotkey"
-          value={s.hotkey}
-          onBlurOnly
-          parse={(d) =>
-            d.trim() === ''
-              ? { ok: false, error: 'Hotkey is required' }
-              : { ok: true, value: d.trim() }
-          }
-          onValid={(v) => send({ hotkey: v })}
-        />
-        {!view.hotkeyOk && (
-          <p className="field-error" role="alert">
-            Shortcut unavailable — pick another
-          </p>
-        )}
-        <Toggle
-          label="Launch at login"
-          checked={s.launchAtLogin}
-          onChange={(b) => send({ launchAtLogin: b })}
-        />
+        <legend>Busy mode</legend>
+        <div className="group-card">
+          <Toggle
+            label="Gentle reminders during busy mode"
+            checked={s.busy.allowGentle}
+            onChange={(b) => send({ busy: { allowGentle: b } })}
+          />
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Shortcut and startup</legend>
+        <div className="group-card">
+          <Field
+            label="Hotkey"
+            value={s.hotkey}
+            onBlurOnly
+            parse={(d) =>
+              d.trim() === ''
+                ? { ok: false, error: 'Hotkey is required' }
+                : { ok: true, value: d.trim() }
+            }
+            onValid={(v) => send({ hotkey: v })}
+          />
+          {!view.hotkeyOk && (
+            <p className="field-error" role="alert">
+              Shortcut unavailable — pick another
+            </p>
+          )}
+          <Toggle
+            label="Launch at login"
+            checked={s.launchAtLogin}
+            onChange={(b) => send({ launchAtLogin: b })}
+          />
+        </div>
       </fieldset>
     </section>
   )

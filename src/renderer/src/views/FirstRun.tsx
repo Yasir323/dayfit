@@ -86,11 +86,25 @@ export function FirstRun({ settings, today, onDone }: Props): React.JSX.Element 
   }
 
   return (
-    <section className="firstrun" aria-label="First run setup">
+    <section className="firstrun card" aria-label="First run setup">
       <h2>Welcome to Dayfit</h2>
-      <p className="steps">
-        Step {step} of {STEPS}
-      </p>
+      <div className="steps">
+        <span>
+          Step {step} of {STEPS}
+        </span>
+        <span
+          className="step-dots"
+          role="progressbar"
+          aria-label="Setup progress"
+          aria-valuemin={1}
+          aria-valuemax={STEPS}
+          aria-valuenow={step}
+        >
+          {Array.from({ length: STEPS }, (_, k) => (
+            <i key={k} className={k < step ? 'is-on' : undefined} />
+          ))}
+        </span>
+      </div>
 
       {step === 1 && (
         <div>
@@ -131,7 +145,7 @@ export function FirstRun({ settings, today, onDone }: Props): React.JSX.Element 
             <span>Duration (min)</span>
             <input type="number" value={runDur} onChange={(ev) => setRunDur(ev.target.value)} />
           </label>
-          <p className="meta">Repeats daily.</p>
+          <p className="muted small">Repeats daily.</p>
         </div>
       )}
 
@@ -148,22 +162,33 @@ export function FirstRun({ settings, today, onDone }: Props): React.JSX.Element 
 
       <div className="actions">
         {step > 1 && (
-          <button type="button" onClick={() => setStep(step - 1)} disabled={saving}>
+          <button type="button" className="btn" onClick={() => setStep(step - 1)} disabled={saving}>
             Back
           </button>
         )}
         {step < STEPS && (
-          <button type="button" onClick={() => setStep(step + 1)} disabled={!canNext}>
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={() => setStep(step + 1)}
+            disabled={!canNext}
+          >
             Next
           </button>
         )}
         {step === STEPS && (
           <>
-            <button type="button" onClick={() => void finish(false)} disabled={saving}>
+            <button
+              type="button"
+              className="btn"
+              onClick={() => void finish(false)}
+              disabled={saving}
+            >
               Skip
             </button>
             <button
               type="button"
+              className="btn-primary"
               onClick={() => void finish(true)}
               disabled={saving || runError !== null}
             >

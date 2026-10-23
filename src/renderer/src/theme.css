@@ -143,10 +143,6 @@ button:focus-visible {
   color: var(--muted);
 }
 
-.hairline {
-  border-bottom: 1px solid var(--hairline);
-}
-
 .section-title {
   display: flex;
   justify-content: space-between;
@@ -154,14 +150,6 @@ button:focus-visible {
   padding: var(--s2) var(--s4) var(--s1);
   font-size: 12px;
   font-weight: 700;
-  border-bottom: 1px solid var(--hairline);
-}
-
-.row {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 9px var(--s4);
   border-bottom: 1px solid var(--hairline);
 }
 
