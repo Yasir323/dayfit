@@ -208,6 +208,9 @@ export function Settings({ view, onView }: Props): React.JSX.Element {
             checked={s.water.enabled}
             onChange={(b) => send({ water: { ...s.water, enabled: b } })}
           />
+          {num('Water interval (min)', s.water.intervalMin, (n) =>
+            send({ water: { ...s.water, intervalMin: n } })
+          )}
           {num('Water target (ml)', s.water.targetMl, (n) =>
             send({ water: { ...s.water, targetMl: n } })
           )}
@@ -247,8 +250,13 @@ export function Settings({ view, onView }: Props): React.JSX.Element {
           {num('Walk interval (min)', s.walk.intervalMin, (n) =>
             send({ walk: { ...s.walk, intervalMin: n } })
           )}
-          {num('Walk duration (min)', s.walk.durationMin, (n) =>
+          {num('Walk length (min)', s.walk.durationMin, (n) =>
             send({ walk: { ...s.walk, durationMin: n } })
+          )}
+        </div>
+        <div className="group-card">
+          {num('Snooze length (min)', s.breaks.snoozeMin, (n) =>
+            send({ breaks: { snoozeMin: n } })
           )}
         </div>
         <div className="group-card">

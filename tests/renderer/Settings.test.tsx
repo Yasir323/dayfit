@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom/vitest'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { DEFAULT_SETTINGS } from '../../src/core/types'
@@ -138,6 +138,20 @@ describe('Settings', () => {
     })
     expect(screen.getByRole('switch', { name: 'Launch at login' })).toBeInTheDocument()
     expect(screen.queryAllByRole('checkbox')).toHaveLength(0)
+  })
+
+  it('shows water interval, walk length and snooze length; no busy-mode group', async () => {
+    render(<Settings view={view()} />)
+    expect(screen.getByRole('spinbutton', { name: 'Water interval (min)' })).toBeInTheDocument()
+    expect(screen.getByRole('spinbutton', { name: 'Walk length (min)' })).toBeInTheDocument()
+    const reminders = screen.getByRole('group', { name: 'Reminders' })
+    const snooze = within(reminders).getByRole('spinbutton', { name: 'Snooze length (min)' })
+    expect(snooze).toHaveValue(10)
+    expect(screen.queryByRole('group', { name: 'Busy mode' })).toBeNull()
+    await userEvent.clear(snooze)
+    await userEvent.type(snooze, '15')
+    fireEvent.blur(snooze)
+    expect(api.updateSettings).toHaveBeenCalledWith({ breaks: { snoozeMin: 15 } })
   })
 
   it('groups settings into titled sections', () => {

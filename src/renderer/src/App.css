@@ -91,6 +91,18 @@ body {
   color: var(--muted);
   font-size: 12px;
 }
+.water-bar {
+  width: 64px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--hairline);
+  overflow: hidden;
+}
+.water-bar span {
+  display: block;
+  height: 100%;
+  background: var(--p-low);
+}
 .water .btn-ghost {
   color: var(--accent);
   font-size: 12px;

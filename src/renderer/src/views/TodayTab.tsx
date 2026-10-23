@@ -76,6 +76,16 @@ export function TodayTab({ view, onView, onAddTask = () => {} }: Props): React.J
         {water.enabled && (
           <div className="water">
             <Icon name="drop" size={14} />
+            <div
+              role="progressbar"
+              aria-label="Water today"
+              aria-valuenow={view.waterMl}
+              aria-valuemin={0}
+              aria-valuemax={water.targetMl}
+              className="water-bar"
+            >
+              <span style={{ width: `${Math.min(100, (view.waterMl / water.targetMl) * 100)}%` }} />
+            </div>
             <span>
               {view.waterMl} / {water.targetMl} ml
             </span>

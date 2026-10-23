@@ -200,6 +200,17 @@ describe('Today details', () => {
     expect(screen.getByText('08:00')).toBeInTheDocument()
   })
 
+  it('water progress bar reflects ml today', () => {
+    const { rerender } = render(<TodayTab view={makeView({ waterMl: 750 })} onView={vi.fn()} />)
+    const bar = screen.getByRole('progressbar', { name: 'Water today' })
+    expect(bar).toHaveAttribute('aria-valuenow', '750')
+    expect(bar).toHaveAttribute('aria-valuemax', '2000')
+    rerender(<TodayTab view={makeView({ waterMl: 2500 })} onView={vi.fn()} />)
+    expect(screen.getByText('2500 / 2000 ml')).toBeInTheDocument()
+    const fill = screen.getByRole('progressbar', { name: 'Water today' }).firstElementChild
+    expect(fill).toHaveStyle({ width: '100%' })
+  })
+
   it('+ glass logs water', async () => {
     api.logWater.mockResolvedValue(makeView())
     render(<TodayTab view={makeView()} onView={vi.fn()} />)
