@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { NudgeAnswer } from '../../../core/nudge'
 import { api } from '../api'
 import type { ViewState } from '../api'
+import { Icon } from '../ui/Icon'
 
 interface Props {
   id: string
@@ -35,10 +36,19 @@ export function NudgeBanner({ id, title, onView, ref }: Props): React.JSX.Elemen
 
   return (
     <div className="nudge" role="group" aria-label={`Nudge: ${title}`} ref={ref} tabIndex={-1}>
-      <p className="nudge-text">{title} — time&apos;s up</p>
+      <p className="nudge-text">
+        <Icon name="clock" size={15} />
+        <span>{title} — time&apos;s up</span>
+      </p>
       <div className="nudge-actions">
         {BUTTONS.map(([a, label]) => (
-          <button key={a} type="button" disabled={busy} onClick={() => void answer(a)}>
+          <button
+            key={a}
+            type="button"
+            className={a === 'done' ? 'btn-primary' : 'btn'}
+            disabled={busy}
+            onClick={() => void answer(a)}
+          >
             {label}
           </button>
         ))}

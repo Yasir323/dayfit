@@ -5,6 +5,7 @@ import type { DateStr, ItemType, NewItem, Settings } from '../../../core/types'
 import { formatClock } from '../../../core/time'
 import { api } from '../api'
 import type { ViewState } from '../api'
+import { Icon, type IconName } from '../ui/Icon'
 import { ItemChips } from './ItemChips'
 import { validateFields } from './validateFields'
 
@@ -14,12 +15,12 @@ interface Props {
   onPlanned: (v: ViewState) => void
 }
 
-const ICONS: Record<ItemType, string> = {
-  task: '✅',
-  call: '📞',
-  deep: '🧠',
-  fixed: '📌',
-  household: '🏠'
+const ICONS: Record<ItemType, IconName> = {
+  task: 'check',
+  call: 'phone',
+  deep: 'clock',
+  fixed: 'pin',
+  household: 'home'
 }
 
 function formatTotal(minutes: number): string {
@@ -85,53 +86,73 @@ export function BrainDump({ settings, today, onPlanned }: Props): React.JSX.Elem
 
   return (
     <div className="brain-dump">
-      <textarea
-        aria-label="Brain dump"
-        value={text}
-        rows={6}
-        spellCheck={false}
-        placeholder={'One item per line\nCall John 15m ~call\nPayments refactor 2h ~deep'}
-        onChange={(e) => setText(e.target.value)}
-      />
-      <ul className="preview">
-        {rows.map((r, i) => (
-          <li key={i}>
-            <button type="button" onClick={() => setOpen(open === i ? null : i)}>
-              <span aria-hidden="true">{ICONS[r.item.type]}</span>
-              <span>{r.item.title}</span>
-              <span>{durationText(r.item.durationMin)}</span>
-              {meta(r.item).map((m) => (
-                <span key={m} className="meta">
-                  {m}
+      <div className="qa-card">
+        <textarea
+          aria-label="Brain dump"
+          className="dump-input"
+          value={text}
+          rows={6}
+          spellCheck={false}
+          placeholder={
+            'Dump your day, one item per line\nCall John 15m ~call\nPayments refactor 2h ~deep'
+          }
+          onChange={(e) => setText(e.target.value)}
+        />
+      </div>
+      {rows.length > 0 && (
+        <ul className="rows preview">
+          {rows.map((r, i) => (
+            <li key={i} className="dump-row">
+              <button
+                type="button"
+                className="dump-row-head"
+                aria-expanded={open === i}
+                onClick={() => setOpen(open === i ? null : i)}
+              >
+                <span className="row-lead">
+                  <Icon name={ICONS[r.item.type]} size={14} />
                 </span>
-              ))}
-            </button>
-            {r.error && (
-              <p className="error" role="alert">
-                {r.error}
-              </p>
-            )}
-            {open === i && (
-              <ItemChips
-                value={r.item}
-                onChange={(next) => setEdits((s) => ({ ...s, [r.line]: next }))}
-                today={today}
-                defaultDurations={settings.defaultDurations}
-              />
-            )}
-          </li>
-        ))}
-      </ul>
+                <span className="row-main">
+                  <span className="row-title ellipsis">{r.item.title}</span>
+                  <span className="row-detail">
+                    {[durationText(r.item.durationMin), ...meta(r.item)].join(' · ')}
+                  </span>
+                </span>
+              </button>
+              {r.error && (
+                <p className="error" role="alert">
+                  {r.error}
+                </p>
+              )}
+              {open === i && (
+                <div className="dump-editor">
+                  <ItemChips
+                    value={r.item}
+                    onChange={(next) => setEdits((s) => ({ ...s, [r.line]: next }))}
+                    today={today}
+                    defaultDurations={settings.defaultDurations}
+                  />
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
       {failure && (
         <p className="error" role="alert">
           {failure}
         </p>
       )}
-      <footer>
-        <span>
+      <footer className="dump-footer">
+        <span className="muted">
           {rows.length} {rows.length === 1 ? 'item' : 'items'} · {formatTotal(total)}
         </span>
-        <button type="button" disabled={!canPlan} onClick={() => void plan()}>
+        <button
+          type="button"
+          className="btn-primary"
+          disabled={!canPlan}
+          onClick={() => void plan()}
+        >
           Plan my day
         </button>
       </footer>

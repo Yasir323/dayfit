@@ -42,8 +42,9 @@ export function Review({ decisions, items, onDone }: Props): React.JSX.Element {
   }
 
   return (
-    <div className="review">
-      <h2>Review</h2>
+    <div className="review card">
+      <h2>Review your plan</h2>
+      <p className="muted review-intro">Some items don&apos;t fit as planned. Choose what to do.</p>
       {decisions.map((d) => {
         const title = items.find((i) => i.id === d.itemId)?.title ?? 'Unknown item'
         const options = d.kind === 'half-overflow' ? HALF_CHOICES : NO_FIT_CHOICES
@@ -52,20 +53,22 @@ export function Review({ decisions, items, onDone }: Props): React.JSX.Element {
             <p className="review-title">{title}</p>
             <p className="review-why">
               {d.kind === 'half-overflow'
-                ? `Does not fit the ${d.preferred === 'am' ? 'first' : 'second'} half`
-                : 'Does not fit today'}
+                ? `${d.preferred === 'am' ? 'Morning' : 'Afternoon'} is full`
+                : "Doesn't fit today"}
             </p>
-            {options.map((c) => (
-              <label key={c}>
-                <input
-                  type="radio"
-                  name={`decision-${d.itemId}`}
-                  checked={choices[d.itemId] === c}
-                  onChange={() => setChoices((s) => ({ ...s, [d.itemId]: c }))}
-                />
-                {LABELS[c]}
-              </label>
-            ))}
+            <div className="choice-seg">
+              {options.map((c) => (
+                <label key={c} className={choices[d.itemId] === c ? 'is-on' : undefined}>
+                  <input
+                    type="radio"
+                    name={`decision-${d.itemId}`}
+                    checked={choices[d.itemId] === c}
+                    onChange={() => setChoices((s) => ({ ...s, [d.itemId]: c }))}
+                  />
+                  {LABELS[c]}
+                </label>
+              ))}
+            </div>
           </div>
         )
       })}
@@ -74,9 +77,16 @@ export function Review({ decisions, items, onDone }: Props): React.JSX.Element {
           {failure}
         </p>
       )}
-      <button type="button" disabled={!complete || saving} onClick={() => void apply()}>
-        Apply
-      </button>
+      <div className="review-actions">
+        <button
+          type="button"
+          className="btn-primary"
+          disabled={!complete || saving}
+          onClick={() => void apply()}
+        >
+          Apply
+        </button>
+      </div>
     </div>
   )
 }

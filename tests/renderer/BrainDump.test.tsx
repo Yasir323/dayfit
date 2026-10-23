@@ -118,6 +118,22 @@ describe('BrainDump', () => {
     expect(box).toHaveValue('')
     expect(screen.queryByRole('button', { name: 'Apply' })).toBeNull()
   })
+
+  it('opening a second row editor closes the first', async () => {
+    setup()
+    await userEvent.click(screen.getByRole('button', { name: /Call John/ }))
+    expect(screen.getAllByRole('button', { name: /^Duration: / })).toHaveLength(1)
+    await userEvent.click(screen.getByRole('button', { name: /Payments refactor/ }))
+    expect(screen.getAllByRole('button', { name: /^Duration: / })).toHaveLength(1)
+    expect(screen.getByRole('button', { name: /Payments refactor/ })).toHaveAttribute(
+      'aria-expanded',
+      'true'
+    )
+    expect(screen.getByRole('button', { name: /Call John/ })).toHaveAttribute(
+      'aria-expanded',
+      'false'
+    )
+  })
 })
 
 describe('Review', () => {
@@ -151,6 +167,24 @@ describe('Review', () => {
       { itemId: 'b', choice: 'drop' }
     ])
     await vi.waitFor(() => expect(onDone).toHaveBeenCalledWith({ today: TODAY }))
+  })
+
+  it('titles the card and explains each decision', () => {
+    render(
+      <Review
+        decisions={[
+          { kind: 'half-overflow', itemId: 'a', preferred: 'am' },
+          { kind: 'half-overflow', itemId: 'b', preferred: 'pm' },
+          { kind: 'no-fit', itemId: 'c' }
+        ]}
+        items={[item('a', 'Alpha'), item('b', 'Beta'), item('c', 'Gamma')] as never}
+        onDone={vi.fn()}
+      />
+    )
+    expect(screen.getByRole('heading', { name: 'Review your plan' })).toBeInTheDocument()
+    expect(screen.getByText('Morning is full')).toBeInTheDocument()
+    expect(screen.getByText('Afternoon is full')).toBeInTheDocument()
+    expect(screen.getByText("Doesn't fit today")).toBeInTheDocument()
   })
 
   it('falls back to "Unknown item" when the item is missing', () => {
