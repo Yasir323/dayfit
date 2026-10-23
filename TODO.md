@@ -58,6 +58,8 @@ Everything below "Full backlog" is unprioritised beyond the v1 / later split.
 - [x] Lunch clash says "clashes with Busy" when lunch only overflows working hours
 - [ ] Review selection resets if the lunch clash changes while it is open
 - [ ] Lunch pick validated against a possibly stale `now` in the renderer
+- [ ] Banners behind check-out / first-run overlays are keyboard-reachable
+- [ ] Banner "Check out" silently does nothing during a review (no feedback)
 - [x] Alert banner "Check out" dismisses even if a pending review blocks the check-out screen
 - [x] `markSeen` exposed over IPC but unused by the renderer
 - [x] No test for popover show → markSeen wiring (first-run order depends on line order in index.ts)
