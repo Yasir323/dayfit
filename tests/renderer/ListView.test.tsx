@@ -60,9 +60,10 @@ describe('ListView', () => {
     render(<ListView view={withTask()} onView={vi.fn()} onAddTask={vi.fn()} />)
     await userEvent.click(screen.getByRole('checkbox', { name: /Done: Write the quarterly/ }))
     expect(api.updateItem).toHaveBeenCalledWith('t', { status: 'done' })
+    expect(screen.getAllByTitle('Repeats').length).toBeGreaterThan(0)
   })
 
-  it('repeating items have no checkbox; fixed items show a pin', () => {
+  it('a repeating task can be checked off for today; fixed items show a pin', async () => {
     render(
       <ListView
         view={withTask({ repeat: { kind: 'daily' } })}
@@ -70,8 +71,9 @@ describe('ListView', () => {
         onAddTask={vi.fn()}
       />
     )
-    expect(screen.queryByRole('checkbox', { name: /Write the quarterly/ })).toBeNull()
     expect(screen.queryByRole('checkbox', { name: /Standup/ })).toBeNull()
+    await userEvent.click(screen.getByRole('checkbox', { name: /Write the quarterly/ }))
+    expect(api.updateItem).toHaveBeenCalledWith('t', { status: 'done' })
   })
 
   it('offers lock only for single-block flexible items', async () => {

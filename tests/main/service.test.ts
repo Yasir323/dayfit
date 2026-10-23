@@ -138,11 +138,12 @@ describe('DayfitService', () => {
     expect(blockOf(v, 'id1')).toMatchObject({ start: 540, end: 560 })
   })
 
-  it('ignores marking a repeating item done', () => {
+  it('marking a repeating item done marks today only; the series stays open', () => {
     svc.addItems([newItem({ repeat: { kind: 'daily' } })])
     const v = svc.updateItem('id1', { status: 'done' })
-    expect(v.items[0].status).toBe('open')
+    expect(v.items[0].status).toBe('done')
     expect(loadState(file).items[0].status).toBe('open')
+    expect(loadState(file).items[0].doneDates).toEqual([D])
   })
 
   it('tick across midnight rolls over and replans', () => {
@@ -348,7 +349,8 @@ describe('DayfitService', () => {
   it('a done patch on a repeating item still applies the rest of the patch', () => {
     svc.addItems([newItem({ repeat: { kind: 'daily' } })])
     const v = svc.updateItem('id1', { status: 'done', title: 'Renamed' })
-    expect(v.items[0]).toMatchObject({ status: 'open', title: 'Renamed' })
+    expect(v.items[0]).toMatchObject({ status: 'done', title: 'Renamed' })
+    expect(loadState(file).items[0].status).toBe('open')
   })
 
   it('logWater adds a 250 ml glass', () => {
@@ -514,6 +516,21 @@ describe('DayfitService in-app alerts', () => {
     const v = svc.view()
     expect(v.alerts).toEqual([])
     expect(v.trayLabel).toBeNull()
+  })
+})
+
+describe('DayfitService repeating tasks', () => {
+  it('a daily task is planned each day and done counts for one day only', () => {
+    svc.addItems([newItem({ title: 'Water plants', repeat: { kind: 'daily' } })])
+    expect(svc.view().plan.blocks.some((b) => b.itemId === 'id1')).toBe(true)
+    const v = svc.updateItem('id1', { status: 'done' })
+    expect(v.items.find((i) => i.id === 'id1')?.status).toBe('done')
+    expect(loadState(file).items[0].doneDates).toEqual([D])
+    clock.set(27, 9, 0)
+    const next = svc.view()
+    expect(next.items.find((i) => i.id === 'id1')?.status).toBe('open')
+    expect(next.plan.blocks.some((b) => b.itemId === 'id1')).toBe(true)
+    expect(loadState(file).items).toHaveLength(1)
   })
 })
 

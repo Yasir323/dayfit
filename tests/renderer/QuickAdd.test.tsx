@@ -81,6 +81,12 @@ describe('QuickAdd', () => {
     expect(chip('DND')).toHaveAccessibleName('DND: on')
   })
 
+  it('repeat works for any type: every day sets the Repeat chip', async () => {
+    const { box } = setup()
+    await userEvent.type(box, 'Water plants every day')
+    expect(chip('Repeat')).toHaveAccessibleName('Repeat: Daily')
+  })
+
   it('shows Ctrl in the hint off a Mac', () => {
     setup()
     expect(screen.getByText(/Ctrl↵ add & open Today/)).toBeInTheDocument()

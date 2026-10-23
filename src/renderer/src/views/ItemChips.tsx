@@ -125,7 +125,6 @@ export function ItemChips({ value, onChange, today, defaultDurations }: Props): 
     if (value.durationMin === defaultDurations[value.type])
       patch.durationMin = defaultDurations[type]
     if (type !== 'fixed' && type !== 'household') patch.fixedStart = null
-    if (type !== 'fixed') patch.repeat = { kind: 'none' }
     set(patch)
   }
   const setRepeatKind = (kind: Repeat['kind']): void =>
@@ -164,7 +163,7 @@ export function ItemChips({ value, onChange, today, defaultDurations }: Props): 
       value.deadline?.time == null ? 'none' : `by ${formatClock(value.deadline.time)}`,
       true
     ],
-    ['Repeat', 'calendar', REPEAT_NAMES[value.repeat.kind], value.type === 'fixed'],
+    ['Repeat', 'calendar', REPEAT_NAMES[value.repeat.kind], true],
     ['DND', 'lock', value.dnd ? 'on' : 'off', true]
   ]
 

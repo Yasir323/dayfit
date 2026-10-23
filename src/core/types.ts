@@ -25,9 +25,14 @@ export interface Item {
   lockedStart: Minutes | null // user-locked planned block
   suggestedSlots: Minutes[] // calls awaiting a time
   dnd: boolean // holds break reminders while this item runs
+  /** Repeating items: the dates they were marked done (a one-off uses `status`). */
+  doneDates?: DateStr[]
   createdAt: number
 }
-export type NewItem = Omit<Item, 'id' | 'status' | 'lockedStart' | 'suggestedSlots' | 'createdAt'>
+export type NewItem = Omit<
+  Item,
+  'id' | 'status' | 'lockedStart' | 'suggestedSlots' | 'createdAt' | 'doneDates'
+>
 export type BlockKind = 'fixed' | 'deep' | 'task' | 'lunch'
 export interface Block {
   itemId: string | null

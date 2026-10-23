@@ -85,6 +85,24 @@ describe('parseLine', () => {
     expect(parseLine('Write docs', D)).toEqual({ title: 'Write docs', fields: {}, tokens: [] }))
 })
 
+describe('repeat tokens', () => {
+  test('every day, weekdays, every mon,wed', () => {
+    expect(parseLine('Water plants every day', D)).toMatchObject({
+      title: 'Water plants',
+      fields: { repeat: { kind: 'daily' } }
+    })
+    expect(parseLine('Inbox zero weekdays 15m', D).fields.repeat).toEqual({ kind: 'weekdays' })
+    const w = parseLine('Gym every mon,wed', D)
+    expect(w.title).toBe('Gym')
+    expect(w.fields.repeat).toEqual({ kind: 'weekly', days: [1, 3] })
+    expect(w.tokens.map((t) => t.kind)).toEqual(['repeat'])
+  })
+
+  test('every alone or with junk stays in the title', () => {
+    expect(parseLine('Call every person', D).title).toBe('Call every person')
+  })
+})
+
 describe('dnd', () => {
   test('!dnd sets dnd and is a token', () => {
     const p = parseLine('Write report 1h !high !dnd', D)

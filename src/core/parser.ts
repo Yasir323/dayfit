@@ -1,11 +1,11 @@
 import { addDays, nextWeekday, parseClock } from './time'
 import { defaultDnd } from './types'
-import type { DateStr, Half, ItemType, NewItem, Priority, Settings } from './types'
+import type { DateStr, Half, ItemType, NewItem, Priority, Repeat, Settings } from './types'
 
 export interface TokenSpan {
   start: number
   end: number
-  kind: 'duration' | 'label' | 'priority' | 'half' | 'day' | 'at' | 'by' | 'type' | 'dnd'
+  kind: 'duration' | 'label' | 'priority' | 'half' | 'day' | 'at' | 'by' | 'type' | 'dnd' | 'repeat'
 }
 export interface ParsedLine {
   title: string
@@ -43,6 +43,15 @@ function resolveDay(w: string, today: DateStr): DateStr | null {
   return wd === undefined ? null : nextWeekday(today, wd)
 }
 
+/** 'day' → daily; 'mon,wed' → weekly on those days; anything else → null. */
+function repeatOf(word: string): Repeat | null {
+  const w = word.toLowerCase()
+  if (w === 'day') return { kind: 'daily' }
+  const days = w.split(',').map((d) => lookup(WEEKDAYS, d))
+  if (days.length === 0 || days.some((d) => d === undefined)) return null
+  return { kind: 'weekly', days: [...new Set(days as number[])].sort((a, b) => a - b) }
+}
+
 const DURATION = /^(?:(\d+)h(?:(\d+)m)?|(\d+)m)$/
 
 function parseDuration(w: string): number | null {
@@ -73,6 +82,14 @@ export function parseLine(text: string, today: DateStr): ParsedLine {
     } else if (w.length > 1 && w[0] === '#') {
       fields.label = raw.slice(1)
       push('label')
+    } else if (w === 'weekdays') {
+      fields.repeat = { kind: 'weekdays' }
+      push('repeat')
+    } else if (w === 'every' && i + 1 < words.length && repeatOf(words[i + 1].text) !== null) {
+      const next = words[i + 1]
+      fields.repeat = repeatOf(next.text) as Repeat
+      push('repeat', next.start + next.text.length)
+      i++
     } else if (w === '!dnd') {
       fields.dnd = true
       push('dnd')

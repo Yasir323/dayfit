@@ -39,7 +39,7 @@ export function ItemActions({ item, run, withDone, chunked }: Props): React.JSX.
 
   return (
     <span className="item-actions">
-      {withDone && item.repeat.kind === 'none' && item.status === 'open' && (
+      {withDone && item.fixedStart === null && item.status === 'open' && (
         <button
           type="button"
           aria-label="Done"

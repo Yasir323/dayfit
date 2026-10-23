@@ -26,7 +26,8 @@ const FIELD_KEYS = [
   'date',
   'fixedStart',
   'deadline',
-  'dnd'
+  'dnd',
+  'repeat'
 ] as const
 
 function highlight(text: string, tokens: TokenSpan[]): React.ReactNode[] {

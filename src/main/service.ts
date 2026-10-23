@@ -138,9 +138,11 @@ export class DayfitService {
     if (!item) return this.buildView()
     const { status, ...rest } = patch
     Object.assign(item, rest, { id: item.id, createdAt: item.createdAt })
-    // Repeating items carry one status for every day, so they cannot be marked done.
-    if (status !== undefined && !(status === 'done' && item.repeat.kind !== 'none'))
-      item.status = status
+    // A repeating item is done for today only: the series stays open.
+    if (status === 'done' && item.repeat.kind !== 'none') {
+      const today = this.today()
+      item.doneDates = [...new Set([...(item.doneDates ?? []), today])]
+    } else if (status !== undefined) item.status = status
     return this.replanAndSave()
   }
 

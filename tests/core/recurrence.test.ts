@@ -52,6 +52,19 @@ describe('itemsForDate', () => {
   })
 })
 
+describe('repeating tasks done for a day', () => {
+  it('done on one day shows done that day only', () => {
+    const daily = mk({ repeat: { kind: 'daily' }, date: Y, doneDates: [D] })
+    expect(itemsForDate([daily], D)[0].status).toBe('done')
+    expect(itemsForDate([daily], '2026-10-24')[0].status).toBe('open')
+    expect(itemsForDate([daily], Y)[0].status).toBe('open')
+  })
+
+  it('an item without doneDates is open', () => {
+    expect(itemsForDate([mk({ repeat: { kind: 'daily' } })], D)[0].status).toBe('open')
+  })
+})
+
 describe('rolloverItems', () => {
   it('moves open task from yesterday to today and clears lock', () => {
     const t = mk({ date: Y, lockedStart: 600, suggestedSlots: [540] })

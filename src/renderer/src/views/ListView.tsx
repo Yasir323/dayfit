@@ -41,7 +41,7 @@ export function ListView({ view, onView, onAddTask }: Props): React.JSX.Element 
   const renderRow = (s: Section, r: ListRow): React.JSX.Element => {
     const { item } = r
     const readOnly = s.key === 'tomorrow' || s.key === 'later'
-    const checkable = !readOnly && item.repeat.kind === 'none' && item.fixedStart === null
+    const checkable = !readOnly && item.fixedStart === null
     const done = item.status === 'done'
     return (
       <li key={item.id} className={`list-row${done ? ' is-done' : ''}`} aria-label={item.title}>
@@ -64,6 +64,11 @@ export function ListView({ view, onView, onAddTask }: Props): React.JSX.Element 
         <div className="row-main">
           <span className="row-title ellipsis">{item.title}</span>
           <span className="row-detail">
+            {item.repeat.kind !== 'none' && (
+              <span title="Repeats" aria-label="Repeats">
+                <Icon name="calendar" size={12} />
+              </span>
+            )}
             {item.type === 'household' && <Icon name="home" size={12} />}
             {item.type === 'call' && <Icon name="phone" size={12} />}
             <span className={s.key === 'overdue' ? 'overdue-text' : undefined}>

@@ -82,6 +82,10 @@
   color: var(--tok-time);
   background: color-mix(in srgb, var(--tok-time) 14%, transparent);
 }
+.tok-repeat {
+  color: var(--tok-day);
+  background: color-mix(in srgb, var(--tok-day) 14%, transparent);
+}
 .tok-type {
   color: var(--tok-type);
   background: color-mix(in srgb, var(--tok-type) 14%, transparent);

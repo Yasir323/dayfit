@@ -17,8 +17,15 @@ function repeatMatches(item: Item, date: DateStr): boolean {
   }
 }
 
+/** Items that apply on `date`; a repeating item done that day reads as done for that day. */
 export function itemsForDate(items: Item[], date: DateStr): Item[] {
-  return items.filter((i) => i.status !== 'dropped' && repeatMatches(i, date))
+  return items
+    .filter((i) => i.status !== 'dropped' && repeatMatches(i, date))
+    .map((i) =>
+      i.repeat.kind !== 'none' && i.status === 'open' && (i.doneDates ?? []).includes(date)
+        ? { ...i, status: 'done' as const }
+        : i
+    )
 }
 
 export function rolloverItems(items: Item[], today: DateStr): Item[] {
