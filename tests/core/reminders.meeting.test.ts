@@ -42,6 +42,23 @@ const kinds = (status: Item['status'], now: number): string[] =>
     state: structuredClone(EMPTY_REMINDER_STATE)
   }).events.map((e) => e.kind)
 
+describe('meeting prep', () => {
+  it('the heads-up body is a prep note with the meeting title', () => {
+    const e = dueReminders({
+      now: 596,
+      elapsedMin: 0,
+      idleSec: 0,
+      blocks: [block],
+      items: [meeting('open')],
+      settings: DEFAULT_SETTINGS,
+      waterMlToday: 0,
+      manualBusy: null,
+      state: structuredClone(EMPTY_REMINDER_STATE)
+    }).events.find((x) => x.kind === 'meeting-soon')
+    expect(e?.body).toBe(`Prep: ${meeting('open').title} in 5 min`)
+  })
+})
+
 describe('meeting alerts', () => {
   it('fire for an open fixed item', () => {
     expect(kinds('open', 596)).toContain('meeting-soon')

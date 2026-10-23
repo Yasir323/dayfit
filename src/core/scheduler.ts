@@ -272,12 +272,24 @@ interface Task {
 const TASK_TYPES: ItemType[] = ['task', 'household']
 
 /** Unconfirmed calls keep their suggested slots free, best effort. */
-function softHolds(plan: Plan, items: Item[]): Interval[] {
-  return items
+/** Meetings this close together count as back to back. */
+const BACK_TO_BACK_MIN = 5
+
+function softHolds(plan: Plan, items: Item[], s: Settings): Interval[] {
+  const callSlots = items
     .filter(
       (i) => i.type === 'call' && i.status === 'open' && !isFixed(i) && !plan.blocked.has(i.id)
     )
-    .flatMap((i) => i.suggestedSlots.map((s) => ({ start: s, end: s + i.durationMin })))
+    .flatMap((i) => i.suggestedSlots.map((st) => ({ start: st, end: st + i.durationMin })))
+  // A breather after back-to-back meetings: tasks avoid it when they can.
+  const fixed = plan.blocks.filter((b) => b.kind === 'fixed').sort((a, b) => a.start - b.start)
+  const gaps: Interval[] = []
+  for (let k = 1; k < fixed.length; k++) {
+    const gap = fixed[k].start - fixed[k - 1].end
+    if (gap >= 0 && gap <= BACK_TO_BACK_MIN && s.meetingGapMin > 0)
+      gaps.push({ start: fixed[k].end, end: fixed[k].end + s.meetingGapMin })
+  }
+  return [...callSlots, ...gaps]
 }
 
 /** Earliest `len` slot in `area` ending by `due`: clear of the holds if possible, else over them. */
@@ -391,7 +403,7 @@ function costsNothing(cur: Plan, next: Plan): boolean {
  * when that costs nothing: every item placed unbatched stays placed, with no new half-overflow.
  */
 function placeTasks(plan: Plan, input: PlanInput): void {
-  const holds = softHolds(plan, input.items)
+  const holds = softHolds(plan, input.items, input.settings)
   const tasks = input.items
     .filter(
       (i) =>

@@ -60,7 +60,7 @@ export function dueReminders(input: {
           kind: 'meeting-soon',
           itemId: b.itemId,
           title: `${title} in ${lead} min`,
-          body: 'Heads up, wrap up what you are doing.',
+          body: `Prep: ${title} in ${lead} min`,
           silent: false,
           parts: []
         })

@@ -199,6 +199,9 @@ export function Settings({ view, onView }: Props): React.JSX.Element {
         <legend>Planning</legend>
         <div className="group-card">
           {num('Buffer (min)', s.bufferMin, (n) => send({ bufferMin: n }))}
+          {num('Gap after back-to-back meetings (min)', s.meetingGapMin, (n) =>
+            send({ meetingGapMin: n })
+          )}
           {DURATION_TYPES.map((t) => (
             <div key={t}>
               {num(`Default ${t} (min)`, s.defaultDurations[t], (n) =>

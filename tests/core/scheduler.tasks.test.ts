@@ -409,3 +409,17 @@ describe('planDay: lunch', () => {
     expect(err(830)).toBe('Clashes with Client call')
   })
 })
+
+describe('planDay: gap after back-to-back meetings', () => {
+  test('tasks keep clear of the gap after back-to-back meetings', () => {
+    const t = task(30)
+    const r = planDay(input([fixed(600, 30), fixed(630, 30), t], { now: 660 }))
+    expect(blockOf(r.blocks, t.id)!.start).toBeGreaterThanOrEqual(670)
+  })
+
+  test('meetings that are not back to back get no gap', () => {
+    const t = task(30)
+    const r = planDay(input([fixed(600, 30), fixed(700, 30), t], { now: 630 }))
+    expect(blockOf(r.blocks, t.id)!.start).toBe(635)
+  })
+})

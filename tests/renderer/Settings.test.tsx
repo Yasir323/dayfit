@@ -190,6 +190,15 @@ describe('Settings', () => {
     expect(within(eod).getByRole('spinbutton', { name: 'Lunch length (min)' })).toHaveValue(45)
   })
 
+  it('sends the meeting gap', () => {
+    render(<Settings view={view()} />)
+    const gap = screen.getByLabelText('Gap after back-to-back meetings (min)')
+    expect(gap).toHaveValue(10)
+    fireEvent.change(gap, { target: { value: '15' } })
+    fireEvent.blur(gap)
+    expect(api.updateSettings).toHaveBeenLastCalledWith({ meetingGapMin: 15 })
+  })
+
   it('groups settings into titled sections', () => {
     render(<Settings view={view()} />)
     for (const name of [

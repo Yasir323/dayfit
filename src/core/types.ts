@@ -77,6 +77,8 @@ export interface Settings {
   workEnd: Minutes
   lunch: Minutes | null
   bufferMin: number
+  /** Kept free of tasks after back-to-back meetings. */
+  meetingGapMin: number
   defaultDurations: Record<ItemType, number>
   water: { enabled: boolean; intervalMin: number; targetMl: number; glassMl: number }
   eye: { enabled: boolean; intervalMin: number; idleResetMin: number }
@@ -101,6 +103,7 @@ export const DEFAULT_SETTINGS: Settings = {
   workEnd: 1080,
   lunch: null,
   bufferMin: 5,
+  meetingGapMin: 10,
   defaultDurations: { task: 30, call: 15, deep: 120, household: 15, fixed: 30 },
   water: { enabled: true, intervalMin: 60, targetMl: 2000, glassMl: 250 },
   eye: { enabled: true, intervalMin: 20, idleResetMin: 5 },
