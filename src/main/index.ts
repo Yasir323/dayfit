@@ -45,7 +45,9 @@ if (!app.requestSingleInstanceLock()) {
     }
 
     registerIpc(service, publish, { hide: () => popover.hide() })
-    publish(service.view())
+    const initial = publish(service.view())
+    // A menu bar app shows nothing at launch; open the popover once so first-run setup is seen.
+    if (!initial.settings.firstRunDone) popover.show()
 
     const handlers = {
       onDrank: guarded('water action', () => {
