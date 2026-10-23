@@ -41,6 +41,7 @@ if (!app.requestSingleInstanceLock()) {
         launchAtLogin = s.launchAtLogin
         app.setLoginItemSettings({ openAtLogin: launchAtLogin })
       }
+      popover.setLabel(view.trayLabel)
       popover.send('dayfit:state', view)
       return view
     }
@@ -51,6 +52,12 @@ if (!app.requestSingleInstanceLock()) {
       if (isPortalUrl(url)) void shell.openExternal(url)
     })
     registerIpc(service, publish, { hide: () => popover.hide(), openPortal })
+    // Opening the popover means the latest reminder has been seen: clear the menu-bar label.
+    popover.onShow(
+      guarded('seen', () => {
+        publish(service.markSeen())
+      })
+    )
     const initial = publish(service.view())
     // A menu bar app shows nothing at launch; open the popover once so first-run setup is seen.
     if (!initial.settings.firstRunDone) popover.show()

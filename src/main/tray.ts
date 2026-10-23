@@ -4,6 +4,7 @@ import { is } from '@electron-toolkit/utils'
 import trayTemplate from '../../resources/trayTemplate.png?asset'
 import trayIco from '../../resources/tray.ico?asset'
 import { createBlurGuard } from './blurGuard'
+import { trayDisplay } from './trayLabel'
 import type { ViewState } from './service'
 
 export type FocusTarget = 'quick-add' | 'nudge' | 'review' | 'checkout'
@@ -17,6 +18,10 @@ export interface Popover {
   toggle(): void
   send(channel: 'dayfit:state', view: ViewState): void
   focus(target: FocusTarget): void
+  /** Latest unseen reminder next to the icon (macOS) or in the tooltip; null clears it. */
+  setLabel(label: string | null): void
+  /** Runs every time the popover is shown. */
+  onShow(cb: () => void): void
 }
 
 export function createPopover(): Popover {
@@ -69,10 +74,12 @@ export function createPopover(): Popover {
     )
   }
 
+  const shown: (() => void)[] = []
   const show = (): void => {
     position()
     win.show()
     win.focus()
+    for (const cb of shown) cb()
   }
   // A tray click on the open popover blurs (hides) it first; don't let the click reopen it.
   const toggle = (): void => {
@@ -91,6 +98,14 @@ export function createPopover(): Popover {
     hide: () => win.hide(),
     toggle,
     send: (channel, view) => whenLoaded(() => win.webContents.send(channel, view)),
+    setLabel: (label) => {
+      const { title, tooltip } = trayDisplay(label, process.platform)
+      if (title !== null) tray.setTitle(title)
+      tray.setToolTip(tooltip)
+    },
+    onShow: (cb) => {
+      shown.push(cb)
+    },
     focus: (target) => {
       show()
       whenLoaded(() => win.webContents.send('dayfit:focus', target))
