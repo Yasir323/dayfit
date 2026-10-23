@@ -74,6 +74,11 @@ export function loadState(file: string): AppState {
   const defaults = defaultState()
   const state = { ...defaults, ...parsed } as AppState
   state.settings = deepMerge(defaults.settings, parsed.settings)
+  // Walks are reminders now; plans saved before that may still hold walk blocks.
+  for (const d of Object.keys(state.plans)) {
+    const plan = state.plans[d]
+    state.plans[d] = { ...plan, blocks: plan.blocks.filter((b) => (b.kind as string) !== 'walk') }
+  }
   // Items saved before per-item DND existed get the type-based default.
   state.items = state.items.map((i) =>
     typeof i.dnd === 'boolean' ? i : { ...i, dnd: defaultDnd(i.type, i.fixedStart) }

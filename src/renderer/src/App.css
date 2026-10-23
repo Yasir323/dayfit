@@ -221,10 +221,6 @@ body {
   background: var(--k-task-soft);
   border-color: var(--k-task);
 }
-.block-walk {
-  background: var(--k-walk-soft);
-  border-color: var(--k-walk);
-}
 .block.is-done {
   opacity: 0.5;
 }
@@ -658,9 +654,6 @@ body {
 }
 .kind-task {
   background: var(--k-task);
-}
-.kind-walk {
-  background: var(--k-walk);
 }
 .agenda-main {
   flex: 1;

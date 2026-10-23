@@ -9,7 +9,7 @@ export interface Move {
 function firstStarts(blocks: Block[]): Map<string, Minutes> {
   const m = new Map<string, Minutes>()
   for (const b of blocks) {
-    if (b.itemId === null || b.kind === 'walk') continue
+    if (b.itemId === null) continue
     const cur = m.get(b.itemId)
     if (cur === undefined || b.start < cur) m.set(b.itemId, b.start)
   }

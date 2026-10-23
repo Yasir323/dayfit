@@ -14,7 +14,7 @@ export function dueNudges(blocks: Block[], items: Item[], now: Minutes, st: Nudg
   const open = new Set(items.filter((i) => i.status === 'open').map((i) => i.id))
   const lastEnd = new Map<string, Minutes>()
   for (const b of blocks) {
-    if (b.itemId === null || b.kind === 'walk' || b.kind === 'fixed') continue
+    if (b.itemId === null || b.kind === 'fixed') continue
     lastEnd.set(b.itemId, Math.max(lastEnd.get(b.itemId) ?? -Infinity, b.end))
   }
   const ended = [...lastEnd].filter(([id, end]) => end <= now && open.has(id)).map(([id]) => id)

@@ -45,15 +45,12 @@ describe('suggestCallSlots', () => {
     expect(suggestCallSlots([], 15, 1060, S)).toEqual([1060])
     expect(suggestCallSlots([], 15, 1070, S)).toEqual([])
   })
-  it('treats walks as busy', () => {
-    expect(suggestCallSlots([blk(null, 540, 550, 'walk')], 15, 0, S, 1)).toEqual([555])
-  })
 })
 
 describe('diffMoves', () => {
-  it('reports moved and dropped items, ignoring walks', () => {
-    const before = [blk('a', 600, 630), blk('b', 700, 730), blk(null, 800, 810, 'walk')]
-    const after = [blk('a', 660, 690), blk(null, 900, 910, 'walk')]
+  it('reports moved and dropped items', () => {
+    const before = [blk('a', 600, 630), blk('b', 700, 730)]
+    const after = [blk('a', 660, 690)]
     expect(diffMoves(before, after)).toEqual([
       { itemId: 'a', from: 600, to: 660 },
       { itemId: 'b', from: 700, to: null }
@@ -83,10 +80,9 @@ describe('dueNudges', () => {
     expect(dueNudges(b, items, 610, {})).toEqual([])
     expect(dueNudges(b, items, 800, {})).toEqual(['x'])
   })
-  it('skips done items, fixed and walk blocks', () => {
+  it('skips done items and fixed blocks', () => {
     expect(dueNudges([blk('x', 570, 600)], [item('x', 'done')], 700, {})).toEqual([])
     expect(dueNudges([blk('x', 570, 600, 'fixed')], items, 700, {})).toEqual([])
-    expect(dueNudges([blk('x', 570, 600, 'walk')], items, 700, {})).toEqual([])
   })
 })
 
@@ -114,6 +110,5 @@ describe('frozenBlocks', () => {
     const items = [item('p'), item('d', 'done'), item('o'), item('f')]
     const out = frozenBlocks(blocks, items, 550, new Set(['o'])).map((b) => b.itemId)
     expect(out).toEqual(['p', 'd', 'o'])
-    expect(frozenBlocks([blk(null, 900, 910, 'walk')], items, 550, new Set())).toEqual([])
   })
 })

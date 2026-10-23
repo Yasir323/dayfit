@@ -170,28 +170,9 @@ describe('planDay part 1', () => {
     expect(flex.every((x) => x.start >= 560 && x.end <= 1045)).toBe(true)
   })
 
-  test('walks every 2h in gaps', () => {
-    const r = planDay(input([]))
-    const walks = r.blocks.filter((b) => b.kind === 'walk')
-    const targets = [660, 780, 900, 1020]
-    expect(walks).toHaveLength(targets.length)
-    walks.forEach((w, k) => {
-      expect(Math.abs(w.start - targets[k])).toBeLessThanOrEqual(30)
-      expect(w.end - w.start).toBe(10)
-      expect(w.reason).toBe('Walk break')
-      expect(w.itemId).toBeNull()
-    })
-  })
-
-  test('walk moves to the nearest gap and skips when none is within 30 min', () => {
-    // busy 10:30-11:20 (padded 10:25-11:25): 11:00 target moves to 11:25; 13:00 target blocked entirely
-    const r = planDay(input([fixed(630, 50), fixed(720, 120)]))
-    const walks = r.blocks.filter((b) => b.kind === 'walk').map((w) => w.start)
-    expect(walks).toEqual([685, 900, 1020])
-  })
-
-  test('walks are skipped when disabled', () => {
-    expect(planDay(input([], { settings: noWalks })).blocks).toEqual([])
+  test('never places walk blocks, even with walks enabled', () => {
+    const r = planDay(input([], { settings: DEFAULT_SETTINGS }))
+    expect(r.blocks.map((b) => b.kind)).not.toContain('walk')
   })
 
   test('placements never start before now', () => {
@@ -260,21 +241,6 @@ describe('planDay part 1', () => {
     expect(r.decisions).toEqual([])
     expect(deepBlocks(r.blocks)).toEqual([])
     expect(r.unscheduled).toEqual([b.id])
-  })
-
-  test('frozen walk is not duplicated on replan', () => {
-    const walk: Block = {
-      itemId: null,
-      kind: 'walk',
-      start: 660,
-      end: 670,
-      chunk: null,
-      reason: 'Walk break'
-    }
-    const r = planDay(input([], { now: 665, frozen: [walk] }))
-    expect(r.blocks.filter((b) => b.kind === 'walk').map((b) => b.start)).toEqual([
-      660, 780, 900, 1020
-    ])
   })
 
   test('half preference falls back to a gap straddling the boundary', () => {

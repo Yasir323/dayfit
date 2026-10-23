@@ -48,7 +48,7 @@ describe('CalendarView', () => {
       <CalendarView view={makeView({ week: WEEK })} onShowList={vi.fn()} onAddTask={vi.fn()} />
     )
     const agenda = screen.getByRole('list', { name: 'Agenda' })
-    expect(within(agenda).getAllByRole('listitem')).toHaveLength(4)
+    expect(within(agenda).getAllByRole('listitem')).toHaveLength(3)
     expect(within(agenda).getByText('Standup')).toBeInTheDocument()
     expect(within(agenda).getByText('1h · deep work · 2/2')).toBeInTheDocument()
   })

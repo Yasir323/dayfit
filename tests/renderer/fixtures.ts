@@ -54,8 +54,7 @@ export function makeView(over: Partial<ViewState> = {}): ViewState {
         block('deep', 'deep', 625, 685, {
           chunk: { index: 1, of: 2 },
           reason: 'Split: no 120m gap'
-        }),
-        block(null, 'walk', 690, 700, { reason: 'Walk break' })
+        })
       ],
       decisions: [],
       unscheduled: [],

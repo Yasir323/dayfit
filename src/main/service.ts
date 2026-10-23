@@ -201,7 +201,7 @@ export class DayfitService {
     if (!item) return this.buildView()
     if (locked) {
       // Only a single, unchunked block can be locked: a lock stores one start for the whole item.
-      const own = this.todayPlan().blocks.filter((b) => b.itemId === id && b.kind !== 'walk')
+      const own = this.todayPlan().blocks.filter((b) => b.itemId === id)
       if (own.length !== 1 || own[0].chunk !== null) return this.buildView()
       item.lockedStart = own[0].start
     } else {
@@ -318,10 +318,10 @@ export class DayfitService {
     return Math.min(...starts) - this.state.settings.bufferMin
   }
 
-  /** The item's latest-ending non-walk block in today's plan. */
+  /** The item's latest-ending block in today's plan. */
   private latestBlock(id: string): Block | undefined {
     return this.todayPlan()
-      .blocks.filter((b) => b.itemId === id && b.kind !== 'walk')
+      .blocks.filter((b) => b.itemId === id)
       .reduce<Block | undefined>((best, b) => (!best || b.end > best.end ? b : best), undefined)
   }
 

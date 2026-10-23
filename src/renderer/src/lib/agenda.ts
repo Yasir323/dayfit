@@ -25,7 +25,7 @@ export function agendaRows(view: ViewState): AgendaRow[] {
       return {
         start: b.start,
         kind: b.kind,
-        title: b.kind === 'walk' ? 'Walk' : (item?.title ?? 'Busy'),
+        title: item?.title ?? 'Busy',
         detail: parts.join(' · ')
       }
     })
@@ -36,13 +36,12 @@ export function looseCounts(view: ViewState): { unscheduled: number; awaiting: n
   return { unscheduled: view.plan.unscheduled.length, awaiting: view.awaitingCalls.length }
 }
 
-/** 'Next: walk 11:00' / 'Next: Standup 11:40' — the next walk or fixed item after now. */
+/** 'Next: Standup 11:40' — the next fixed item after now. */
 export function nextUp(view: ViewState): string | null {
   const next = [...view.plan.blocks]
-    .filter((b) => (b.kind === 'walk' || b.kind === 'fixed') && b.start > view.now)
+    .filter((b) => b.kind === 'fixed' && b.start > view.now)
     .sort((a, b) => a.start - b.start)[0]
   if (!next) return null
-  if (next.kind === 'walk') return `Next: walk ${formatClock(next.start)}`
   const title = view.items.find((i) => i.id === next.itemId)?.title ?? 'meeting'
   return `Next: ${title} ${formatClock(next.start)}`
 }

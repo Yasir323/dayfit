@@ -133,22 +133,5 @@ export function dueReminders(input: {
     }
   }
 
-  // Walk: once at the start of each walk block; never while busy.
-  if (settings.walk.enabled && !busy) {
-    for (const b of blocks) {
-      const key = `walk:${b.start}`
-      if (b.kind === 'walk' && inside(b, now) && !state.fired.includes(key)) {
-        state.fired.push(key)
-        events.push({
-          kind: 'walk',
-          itemId: b.itemId,
-          title: 'Time for a walk',
-          body: `${b.end - b.start} minutes away from the screen.`,
-          silent: false
-        })
-      }
-    }
-  }
-
   return { events, state }
 }

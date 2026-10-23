@@ -186,21 +186,3 @@ describe('busy mode', () => {
     expect(kinds(r)).toEqual([])
   })
 })
-
-describe('walk', () => {
-  const blocks = [block('walk', 660, 670, null)]
-  it('fires at the start of a walk block, once', () => {
-    const a = run(660, { blocks, state: quiet(660) })
-    expect(a.events).toHaveLength(1)
-    expect(a.events[0]).toMatchObject({ kind: 'walk', itemId: null, title: 'Time for a walk' })
-    expect(a.state.fired).toContain('walk:660')
-    expect(
-      kinds(
-        run(661, {
-          blocks,
-          state: { ...a.state, ...{ lastWaterAt: 661, lastStretchAt: 661, lastEyeAt: 661 } }
-        })
-      )
-    ).toEqual([])
-  })
-})

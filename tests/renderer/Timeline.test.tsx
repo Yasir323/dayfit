@@ -45,10 +45,10 @@ beforeEach(() => {
 afterEach(cleanup)
 
 describe('Today timeline', () => {
-  it('shows 4 blocks and labels the first deep chunk "1/2"', () => {
+  it('shows 3 blocks and labels the first deep chunk "1/2"', () => {
     render(<TimelineView view={makeView()} onView={vi.fn()} />)
     const blocks = within(screen.getByRole('list', { name: 'Timeline' })).getAllByRole('listitem')
-    expect(blocks).toHaveLength(4)
+    expect(blocks).toHaveLength(3)
     expect(within(blocks[1]).getByText('1/2')).toBeInTheDocument()
     expect(within(blocks[2]).getByText('2/2')).toBeInTheDocument()
     expect(blocks[1]).toHaveAttribute('title', 'Split: no 120m gap')
@@ -219,7 +219,7 @@ describe('Today details', () => {
     const blocks = within(screen.getByRole('list', { name: 'Timeline' })).getAllByRole('listitem')
     expect(within(blocks[0]).queryByRole('button', { name: 'Lock' })).toBeNull()
     expect(within(blocks[1]).queryByRole('button', { name: 'Lock' })).toBeNull()
-    await userEvent.click(within(blocks[4]).getByRole('button', { name: 'Lock' }))
+    await userEvent.click(within(blocks[3]).getByRole('button', { name: 'Lock' }))
     expect(api.setLock).toHaveBeenCalledWith('t1', true)
   })
 

@@ -84,11 +84,11 @@ export function TimelineView({ view, onView }: Props): React.JSX.Element {
         <ol className="blocks" aria-label="Timeline">
           {blocks.map((b, k) => {
             const item = b.itemId === null ? undefined : byId.get(b.itemId)
-            const title = b.kind === 'walk' ? 'Walk' : (item?.title ?? 'Busy')
+            const title = item?.title ?? 'Busy'
             const done = item !== undefined && item.status !== 'open'
             return (
               <li
-                key={`${b.itemId ?? 'walk'}-${b.start}-${k}`}
+                key={`${b.itemId ?? 'busy'}-${b.start}-${k}`}
                 className={`block block-${b.kind}${done ? ' is-done' : ''}`}
                 style={{
                   top: top(b.start),

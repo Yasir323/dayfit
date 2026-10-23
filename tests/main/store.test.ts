@@ -40,6 +40,15 @@ describe('store', () => {
     expect(loadState(file).items.map((i) => i.dnd)).toEqual([true, false])
   })
 
+  it('drops walk blocks from stored plans on load', () => {
+    const s = defaultState()
+    const task = { itemId: 'a', kind: 'task', start: 600, end: 630, chunk: null, reason: '' }
+    const walk = { itemId: null, kind: 'walk', start: 690, end: 700, chunk: null, reason: '' }
+    const plan = { blocks: [task, walk], decisions: [], unscheduled: [], moves: [] }
+    fs.writeFileSync(file, JSON.stringify({ ...s, plans: { '2026-10-23': plan } }))
+    expect(loadState(file).plans['2026-10-23'].blocks).toEqual([task])
+  })
+
   it('returns defaults for a missing file', () => {
     expect(loadState(file)).toEqual(defaultState())
   })

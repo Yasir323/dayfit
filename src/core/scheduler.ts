@@ -27,7 +27,6 @@ export interface PlanInput {
 }
 
 const DEEP_CHUNK_MIN = 60
-const WALK_SLACK_MIN = 30
 const PRIORITY_RANK: Record<Priority, number> = { high: 0, med: 1, low: 2 }
 const NOT_PLACED: DecisionChoice[] = ['tomorrow', 'unscheduled', 'drop']
 
@@ -260,45 +259,6 @@ function placeDeepWork(plan: Plan, items: Item[], frozen: Block[]): void {
   }
 }
 
-/** Start nearest `target` (ties: earlier) where `len` fits in free time, within ±WALK_SLACK_MIN. */
-function nearestStart(free: Interval[], len: number, target: Minutes): Minutes | null {
-  let best: Minutes | null = null
-  for (const f of free) {
-    if (f.end - f.start < len) continue
-    const s = Math.min(Math.max(target, f.start), f.end - len)
-    const d = Math.abs(s - target)
-    if (d > WALK_SLACK_MIN) continue
-    if (best === null || d < Math.abs(best - target) || (d === Math.abs(best - target) && s < best))
-      best = s
-  }
-  return best
-}
-
-// Step 4: walks.
-function placeWalks(plan: Plan, s: Settings): void {
-  if (!s.walk.enabled) return
-  const len = s.walk.durationMin
-  for (
-    let target = s.workStart + s.walk.intervalMin;
-    target + len <= s.workEnd;
-    target += s.walk.intervalMin
-  ) {
-    // A walk already near this target (e.g. frozen on replan) covers it.
-    if (plan.blocks.some((b) => b.kind === 'walk' && Math.abs(b.start - target) <= WALK_SLACK_MIN))
-      continue
-    const start = nearestStart(plan.free, len, target)
-    if (start === null) continue
-    commit(plan, {
-      itemId: null,
-      kind: 'walk',
-      start,
-      end: start + len,
-      chunk: null,
-      reason: 'Walk break'
-    })
-  }
-}
-
 /** A task or household item with its latest allowed end today (null: no deadline today). */
 interface Task {
   item: Item
@@ -469,7 +429,6 @@ export function planDay(raw: PlanInput): PlanResult {
   const input = { ...raw, items: releaseBlockedLocks(raw) }
   const plan = startPlan(input)
   placeDeepWork(plan, input.items, input.frozen)
-  placeWalks(plan, input.settings)
   placeTasks(plan, input)
   return {
     blocks: [...plan.blocks].sort(blockOrder(input.items)),

@@ -27,11 +27,9 @@
   --k-fixed: #808080;
   --k-deep: #692fc2;
   --k-task: var(--accent);
-  --k-walk: #058527;
   --k-fixed-soft: color-mix(in srgb, var(--k-fixed) 12%, transparent);
   --k-deep-soft: color-mix(in srgb, var(--k-deep) 12%, transparent);
   --k-task-soft: color-mix(in srgb, var(--k-task) 12%, transparent);
-  --k-walk-soft: color-mix(in srgb, var(--k-walk) 12%, transparent);
 
   --tok-duration: #246fe0;
   --tok-label: #058527;
@@ -78,7 +76,6 @@
 
     --k-fixed: #9a9a9a;
     --k-deep: #9d6ee6;
-    --k-walk: #3fae5c;
 
     --tok-duration: #5a93ee;
     --tok-label: #3fae5c;

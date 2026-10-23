@@ -13,23 +13,22 @@ describe('agendaRows', () => {
       [540, 'fixed', 'Standup', '15m · fixed'],
       [560, 'deep', 'Payments refactor', '1h · deep work · 1/2'],
       [625, 'deep', 'Payments refactor', '1h · deep work · 2/2'],
-      [690, 'walk', 'Walk', '10m'],
       [755, 'task', 'Review', '20m · #review']
     ])
   })
 })
 
 describe('nextUp', () => {
-  it('names the next walk or fixed item after now', () => {
+  it('names the next fixed item after now', () => {
     const base = makeView()
     const v = makeView({
       now: 600,
       plan: {
         ...base.plan,
-        blocks: [block(null, 'walk', 660, 670), block('standup', 'fixed', 700, 715)]
+        blocks: [block('t', 'task', 660, 670), block('standup', 'fixed', 700, 715)]
       }
     })
-    expect(nextUp(v)).toBe('Next: walk 11:00')
+    expect(nextUp(v)).toBe('Next: Standup 11:40')
     expect(nextUp({ ...v, now: 665 })).toBe('Next: Standup 11:40')
     expect(nextUp({ ...v, now: 720 })).toBeNull()
   })
