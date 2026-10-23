@@ -562,8 +562,21 @@ export function planDay(raw: PlanInput): PlanResult {
   const input = { ...raw, items: releaseBlockedLocks(raw) }
   const plan = startPlan(input)
   const lunch = placeLunch(plan, input)
+  // While lunch waits on the user, plan the rest as if it moved: answering Move then raises no
+  // second review. The tentative lunch block itself isn't shown.
+  const move = lunch.clash?.move ?? null
+  if (move !== null)
+    commit(plan, {
+      itemId: null,
+      kind: 'lunch',
+      start: move,
+      end: move + input.settings.endOfDay.lunchMin,
+      chunk: null,
+      reason: 'Lunch'
+    })
   placeDeepWork(plan, input.items, input.frozen)
   placeTasks(plan, input)
+  if (move !== null) plan.blocks = plan.blocks.filter((b) => b.kind !== 'lunch')
   return {
     blocks: [...plan.blocks].sort(blockOrder(input.items)),
     decisions: plan.decisions,

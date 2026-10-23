@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom/vitest'
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { LunchClash } from '../../src/core/types'
@@ -110,6 +110,16 @@ describe('lunch clash row', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Apply' }))
     expect(api.answerDecisions).toHaveBeenCalledWith([], { kind: 'at', start: 900, len: 45 })
   })
+
+  it('the pick is checked against the latest now from each published view', async () => {
+    const v = viewWith(CLASH)
+    const { rerender } = render(<Review decisions={[]} items={v.items} onDone={vi.fn()} view={v} />)
+    await userEvent.click(screen.getByRole('radio', { name: 'Pick a time' }))
+    fireEvent.change(screen.getByLabelText('Lunch start'), { target: { value: '15:00' } })
+    expect(screen.queryByRole('alert')).toBeNull()
+    rerender(<Review decisions={[]} items={v.items} onDone={vi.fn()} view={{ ...v, now: 905 }} />)
+    expect(screen.getByRole('alert')).toHaveTextContent('That time has passed')
+  })
 })
 
 describe('App', () => {
@@ -117,5 +127,19 @@ describe('App', () => {
     api.view.mockResolvedValue(viewWith(CLASH))
     render(<App />)
     expect(await screen.findByRole('dialog', { name: 'Review your plan' })).toBeInTheDocument()
+  })
+
+  it('keeps the lunch pick when the clash changes but the option remains', async () => {
+    let push: ((v: ViewState) => void) | undefined
+    api.onState.mockImplementation((cb?: (v: ViewState) => void) => {
+      push = cb
+      return () => {}
+    })
+    api.view.mockResolvedValue(viewWith(CLASH))
+    render(<App />)
+    await screen.findByRole('dialog', { name: 'Review your plan' })
+    await userEvent.click(screen.getByRole('radio', { name: 'Move to 14:25' }))
+    act(() => push?.(viewWith({ ...CLASH, reason: 'passed', clashWith: null })))
+    expect(screen.getByRole('radio', { name: 'Move to 14:25' })).toBeChecked()
   })
 })

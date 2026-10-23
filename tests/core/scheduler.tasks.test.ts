@@ -354,6 +354,20 @@ describe('planDay: lunch', () => {
     expect(r.lunchClash).toBeNull()
   })
 
+  test('answering Move raises no new decisions (no second review)', () => {
+    for (let k = 1; k <= 8; k++) {
+      const items = [call(790, 45), ...Array.from({ length: k }, () => task(45, { half: 'pm' }))]
+      const before = plan(items)
+      const move = before.lunchClash?.move ?? null
+      expect(move).not.toBeNull()
+      // The service turns a Move answer into lunch at that time.
+      const len = S.endOfDay.lunchMin
+      const after = plan(items, { lunch: { kind: 'at', start: move!, len } })
+      const asked = new Set(before.decisions.map((d) => d.itemId))
+      expect(after.decisions.filter((d) => !asked.has(d.itemId))).toEqual([])
+    }
+  })
+
   test('skip answer means no lunch and no clash', () => {
     const r = plan([call(800, 60)], { lunch: { kind: 'skip' } })
     expect(lunchOf(r.blocks)).toEqual([])

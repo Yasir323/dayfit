@@ -102,6 +102,7 @@ export function App(): React.JSX.Element {
           snoozeMin={view.settings.breaks.snoozeMin}
           onView={setView}
           onCheckOut={openCheckout}
+          canCheckOut={!review}
         />
       )),
     ...view.nudges.map((id, k) => (
@@ -122,7 +123,9 @@ export function App(): React.JSX.Element {
     <EditContext.Provider value={setEditing}>
       <div className="app">
         {!(review && firstRunDone) && banners.length > 0 && (
-          <div className="banners">{banners}</div>
+          <div className="banners" inert={overlay}>
+            {banners}
+          </div>
         )}
 
         {toast && (
@@ -188,7 +191,8 @@ export function App(): React.JSX.Element {
           <div className="overlay" role="dialog" aria-modal="true" aria-label="Review your plan">
             {banners}
             <Review
-              key={JSON.stringify([view.plan.decisions, view.plan.lunchClash ?? null])}
+              // New decisions start a fresh review; a changed lunch clash keeps the answers so far.
+              key={JSON.stringify(view.plan.decisions)}
               decisions={view.plan.decisions}
               items={[...view.items, ...view.upcoming]}
               onDone={setView}

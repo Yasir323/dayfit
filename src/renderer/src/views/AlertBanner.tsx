@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import type { Alert } from '../../../core/alerts'
 import { clampSnooze } from '../../../core/breaks'
 import { api } from '../api'
@@ -10,10 +10,19 @@ interface Props {
   onView: (v: ViewState) => void
   /** Opens the check-out screen; false when something else (a review) blocks it. */
   onCheckOut: () => boolean
+  /** False while a review is open: Check out is disabled with a hint. */
+  canCheckOut?: boolean
 }
 
 /** A reminder the user may have missed (notifications can be dropped): act on it or dismiss it. */
-export function AlertBanner({ alert, snoozeMin, onView, onCheckOut }: Props): React.JSX.Element {
+export function AlertBanner({
+  alert,
+  snoozeMin,
+  onView,
+  onCheckOut,
+  canCheckOut = true
+}: Props): React.JSX.Element {
+  const hintId = useId()
   const [failure, setFailure] = useState<string | null>(null)
   const run = async (p: () => Promise<ViewState>): Promise<void> => {
     setFailure(null)
@@ -50,6 +59,8 @@ export function AlertBanner({ alert, snoozeMin, onView, onCheckOut }: Props): Re
           <button
             type="button"
             className="btn-primary"
+            disabled={!canCheckOut}
+            aria-describedby={canCheckOut ? undefined : hintId}
             onClick={() => {
               if (onCheckOut()) void run(dismiss)
             }}
@@ -61,6 +72,11 @@ export function AlertBanner({ alert, snoozeMin, onView, onCheckOut }: Props): Re
           Dismiss
         </button>
       </div>
+      {alert.kind === 'heads-up' && !canCheckOut && (
+        <p id={hintId} className="muted nudge-hint">
+          Finish the review first
+        </p>
+      )}
       {failure && (
         <p className="error" role="alert">
           {failure}

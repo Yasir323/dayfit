@@ -96,8 +96,28 @@ describe('alert banners', () => {
     )
     render(<App />)
     const banner = await screen.findByRole('region', { name: 'Wrapping up in 15 min' })
-    await userEvent.click(within(banner).getByRole('button', { name: 'Check out' }))
+    const button = within(banner).getByRole('button', { name: 'Check out' })
+    expect(button).toBeDisabled()
+    expect(button).toHaveAccessibleDescription('Finish the review first')
+    await userEvent.click(button)
     expect(api.dismissAlert).not.toHaveBeenCalled()
+  })
+
+  it('banners behind the first-run overlay are inert', async () => {
+    const base = makeView()
+    api.view.mockResolvedValue(
+      makeView({ alerts: [alert({})], settings: { ...base.settings, firstRunDone: false } })
+    )
+    render(<App />)
+    await screen.findByRole('dialog')
+    const banners = document.querySelector('.banners')
+    expect(banners).not.toBeNull()
+    expect(banners).toHaveAttribute('inert')
+  })
+
+  it('banners stay usable with no overlay open', async () => {
+    await show([alert({})])
+    expect(document.querySelector('.banners')).not.toHaveAttribute('inert')
   })
 
   it('lunch banner only dismisses', async () => {

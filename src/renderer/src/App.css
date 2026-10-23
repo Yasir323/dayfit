@@ -171,6 +171,10 @@ body {
 .nudge-text .icon {
   color: var(--warn);
 }
+.nudge-hint {
+  margin: var(--s1) 0 0;
+  font-size: 12px;
+}
 .nudge-actions {
   display: flex;
   gap: 6px;
