@@ -442,6 +442,48 @@ describe('DayfitService', () => {
   })
 })
 
+describe('DayfitService in-app alerts', () => {
+  const firstBreak = (): void => {
+    svc.markPunched('in')
+    svc.tick(0)
+    for (let m = 1; m <= 20; m++) {
+      clock.set(26, 9, m)
+      if (svc.tick(0).events.some((e) => e.kind === 'break')) return
+    }
+    throw new Error('no break fired')
+  }
+
+  it('a break tick records a label and a banner; markSeen clears only the label', () => {
+    firstBreak()
+    expect(svc.view().trayLabel).toBe('Break')
+    expect(svc.view().alerts.map((a) => a.kind)).toEqual(['break'])
+    const v = svc.markSeen()
+    expect(v.trayLabel).toBeNull()
+    expect(v.alerts).toHaveLength(1)
+  })
+
+  it('dismissAlert removes one alert; unknown id is a no-op', () => {
+    firstBreak()
+    const id = svc.view().alerts[0].id
+    expect(() => svc.dismissAlert('nope')).not.toThrow()
+    expect(svc.view().alerts).toHaveLength(1)
+    expect(svc.dismissAlert(id).alerts).toEqual([])
+  })
+
+  it('snoozeBreak removes the break banner', () => {
+    firstBreak()
+    expect(svc.snoozeBreak().alerts).toEqual([])
+  })
+
+  it('rollover clears alerts and label', () => {
+    firstBreak()
+    clock.set(27, 8, 0)
+    const v = svc.view()
+    expect(v.alerts).toEqual([])
+    expect(v.trayLabel).toBeNull()
+  })
+})
+
 describe('DayfitService lunch clash', () => {
   const lunchStarts = (v: ViewState): number[] =>
     v.plan.blocks.filter((b) => b.kind === 'lunch').map((b) => b.start)

@@ -36,7 +36,9 @@ const view = (over: Partial<ViewState['settings']> = {}): ViewState =>
     waterMl: 0,
     hotkeyOk: true,
     attendance: { in: false, out: false },
-    checkedOut: false
+    checkedOut: false,
+    alerts: [],
+    trayLabel: null
   }) as ViewState
 
 beforeEach(() => {

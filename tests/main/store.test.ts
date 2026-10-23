@@ -95,6 +95,16 @@ describe('store', () => {
     expect(loadState(file).lunchAnswer).toBeNull()
   })
 
+  it('older state without alerts loads with [] and null', () => {
+    const older: Record<string, unknown> = { ...defaultState() }
+    delete older.alerts
+    delete older.unseen
+    fs.writeFileSync(file, JSON.stringify(older))
+    const s = loadState(file)
+    expect(s.alerts).toEqual([])
+    expect(s.unseen).toBeNull()
+  })
+
   it('returns defaults for a missing file', () => {
     expect(loadState(file)).toEqual(defaultState())
   })

@@ -4,6 +4,7 @@ import { applyNudgeAnswer, dueNudges, type NudgeAnswer } from '../core/nudge'
 import { itemsForDate, rolloverItems } from '../core/recurrence'
 import { dueReminders, EMPTY_REMINDER_STATE, isBusy, type ReminderEvent } from '../core/reminders'
 import { diffMoves, frozenBlocks } from '../core/replan'
+import { recordAlerts, type Alert } from '../core/alerts'
 import { snoozeBreak } from '../core/breaks'
 import {
   attendanceDue,
@@ -51,6 +52,10 @@ export interface ViewState {
   attendance: { in: boolean; out: boolean }
   /** "Done for today" pressed on the check-out screen. */
   checkedOut: boolean
+  /** Reminder banners not yet acted on. */
+  alerts: Alert[]
+  /** Short label for the menu bar, or null once seen. */
+  trayLabel: string | null
   /** False when the quick-add shortcut could not be registered (set by the shell). */
   hotkeyOk: boolean
 }
@@ -245,11 +250,31 @@ export class DayfitService {
   snoozeBreak(): ViewState {
     this.begin()
     const s = this.state
+    s.alerts = s.alerts.filter((a) => a.kind !== 'break')
     s.reminder = {
       ...s.reminder,
       breaks: snoozeBreak(s.reminder.breaks, this.nowMin(), s.settings.breaks.snoozeMin)
     }
     this.save()
+    return this.buildView()
+  }
+
+  /** The popover was opened: the menu-bar label has been seen. */
+  markSeen(): ViewState {
+    this.begin()
+    if (this.state.unseen !== null) {
+      this.state.unseen = null
+      this.save()
+    }
+    return this.buildView()
+  }
+
+  /** Closes one reminder banner; an id that is already gone is ignored. */
+  dismissAlert(id: string): ViewState {
+    this.begin()
+    const before = this.state.alerts.length
+    this.state.alerts = this.state.alerts.filter((a) => a.id !== id)
+    if (this.state.alerts.length !== before) this.save()
     return this.buildView()
   }
 
@@ -336,7 +361,7 @@ export class DayfitService {
     const now = this.nowMin()
     const blocks = this.todayPlan().blocks
     const items = itemsForDate(s.items, today)
-    const before = JSON.stringify([s.reminder, s.endOfDay])
+    const before = JSON.stringify([s.reminder, s.endOfDay, s.alerts, s.unseen])
 
     const r = dueReminders({
       now,
@@ -374,10 +399,14 @@ export class DayfitService {
     const nudges = busy ? [] : due
     for (const id of nudges) s.nudges[id] = { count: (s.nudges[id]?.count ?? 0) + 1, lastAt: now }
 
+    const rec = recordAlerts(s.alerts, s.unseen, events, nudges.length, now, s.settings)
+    s.alerts = rec.alerts
+    s.unseen = rec.unseen
+
     if (
       nudges.length > 0 ||
       s.overdue.length !== overdueBefore ||
-      JSON.stringify([s.reminder, s.endOfDay]) !== before
+      JSON.stringify([s.reminder, s.endOfDay, s.alerts, s.unseen]) !== before
     )
       this.save()
     return { events, nudges, view: this.buildView() }
@@ -437,6 +466,8 @@ export class DayfitService {
     s.reminder = structuredClone(EMPTY_REMINDER_STATE)
     s.endOfDay = structuredClone(EMPTY_END_OF_DAY_STATE)
     s.lunchAnswer = null
+    s.alerts = []
+    s.unseen = null
     s.nudges = {}
     s.overdue = []
     s.lastDate = today
@@ -559,6 +590,8 @@ export class DayfitService {
       waterMl: s.waterMl[today] ?? 0,
       attendance: attendanceDue(s.endOfDay, now, s.settings),
       checkedOut: s.endOfDay.checkedOut,
+      alerts: s.alerts,
+      trayLabel: s.unseen,
       hotkeyOk: this.hotkeyOk
     })
   }

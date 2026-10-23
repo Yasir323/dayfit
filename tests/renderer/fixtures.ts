@@ -80,6 +80,8 @@ export function makeView(over: Partial<ViewState> = {}): ViewState {
     hotkeyOk: true,
     attendance: { in: false, out: false },
     checkedOut: false,
+    alerts: [],
+    trayLabel: null,
     ...over
   }
 }

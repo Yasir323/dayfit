@@ -14,6 +14,7 @@ import type { Move } from '../core/replan'
 import type { NudgeState } from '../core/nudge'
 import type { ReminderState } from '../core/reminders'
 import { EMPTY_REMINDER_STATE } from '../core/reminders'
+import type { Alert } from '../core/alerts'
 import { EMPTY_BREAK_STATE } from '../core/breaks'
 import { EMPTY_END_OF_DAY_STATE, type EndOfDayState } from '../core/endOfDay'
 
@@ -37,6 +38,10 @@ export interface AppState {
   endOfDay: EndOfDayState
   /** Today's lunch-clash answer; ignored once the date moves on. */
   lunchAnswer: { date: DateStr; answer: LunchAnswer } | null
+  /** Reminder banners not yet acted on (in-app fallback for dropped notifications). */
+  alerts: Alert[]
+  /** Label next to the menu-bar icon until the popover is opened. */
+  unseen: string | null
   nudges: NudgeState
   overdue: string[]
   manualBusy: boolean | null
@@ -54,6 +59,8 @@ export const defaultState = (): AppState => ({
   reminder: clone(EMPTY_REMINDER_STATE),
   endOfDay: clone(EMPTY_END_OF_DAY_STATE),
   lunchAnswer: null,
+  alerts: [],
+  unseen: null,
   nudges: {},
   overdue: [],
   manualBusy: null,
