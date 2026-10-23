@@ -1,6 +1,7 @@
 import { app, globalShortcut, powerMonitor } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
+import { APP_ID } from './appId'
 import { registerIpc } from './ipc'
 import { showNotification } from './notify'
 import { DayfitService, type ViewState } from './service'
@@ -12,7 +13,7 @@ if (!app.requestSingleInstanceLock()) {
   app.quit()
 } else {
   app.whenReady().then(() => {
-    electronApp.setAppUserModelId('app.dayfit.desktop')
+    electronApp.setAppUserModelId(APP_ID)
     app.dock?.hide()
     app.on('browser-window-created', (_, window) => optimizer.watchWindowShortcuts(window))
 
