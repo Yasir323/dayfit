@@ -142,4 +142,27 @@ describe('QuickAdd', () => {
     expect(addItems).not.toHaveBeenCalled()
     expect(box).toHaveValue('Thing')
   })
+
+  it('re-dates an untouched draft when the day changes', async () => {
+    const onAdded = vi.fn()
+    const { rerender } = render(
+      <QuickAdd settings={DEFAULT_SETTINGS} today={TODAY} onAdded={onAdded} />
+    )
+    rerender(<QuickAdd settings={DEFAULT_SETTINGS} today="2026-10-24" onAdded={onAdded} />)
+    await userEvent.type(screen.getByRole('textbox', { name: 'Quick add' }), 'Write report')
+    await userEvent.keyboard('{Enter}')
+    expect(addItems.mock.calls[0][0][0]).toMatchObject({ date: '2026-10-24' })
+  })
+
+  it('keeps a hand-set date when the day changes', async () => {
+    const onAdded = vi.fn()
+    const { rerender } = render(
+      <QuickAdd settings={DEFAULT_SETTINGS} today={TODAY} onAdded={onAdded} />
+    )
+    await userEvent.selectOptions(screen.getByLabelText('Day'), 'date')
+    rerender(<QuickAdd settings={DEFAULT_SETTINGS} today="2026-10-24" onAdded={onAdded} />)
+    await userEvent.type(screen.getByRole('textbox', { name: 'Quick add' }), 'Write report')
+    await userEvent.keyboard('{Enter}')
+    expect(addItems.mock.calls[0][0][0]).toMatchObject({ date: '2026-10-25' })
+  })
 })

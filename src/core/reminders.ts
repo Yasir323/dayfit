@@ -54,7 +54,10 @@ export function dueReminders(input: {
     const lead = settings.meetingAlert.leadMin
     for (const b of blocks) {
       if (b.kind !== 'fixed') continue
-      const title = items.find((i) => i.id === b.itemId)?.title ?? 'Meeting'
+      const item = items.find((i) => i.id === b.itemId)
+      // A meeting marked done or deleted needs no alert.
+      if (item?.status === 'done' || item?.status === 'dropped') continue
+      const title = item?.title ?? 'Meeting'
       const soonKey = `meeting-soon:${b.itemId}:${b.start}`
       const nowKey = `meeting-now:${b.itemId}:${b.start}`
       if (now >= b.start - lead && now < b.start && !state.fired.includes(soonKey)) {

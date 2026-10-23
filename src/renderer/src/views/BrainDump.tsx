@@ -51,7 +51,9 @@ export function BrainDump({ settings, today, onPlanned }: Props): React.JSX.Elem
   const rows = useMemo(
     () =>
       splitDumpLines(text).map((line) => {
-        const item = edits[line] ?? toNewItem(parseLine(line, today), today, settings)
+        const parsed = toNewItem(parseLine(line, today), today, settings)
+        // A line made only of tokens keeps its raw text as the title (as in QuickAdd).
+        const item = edits[line] ?? { ...parsed, title: parsed.title || line }
         return { line, item, error: validateFields(item) }
       }),
     [text, edits, today, settings]

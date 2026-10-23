@@ -58,6 +58,13 @@ export function QuickAdd({ settings, today, onAdded }: Props): React.JSX.Element
   }
   const line = useMemo(() => parseLine(text, today), [text, today])
 
+  // Past midnight the draft still says yesterday: move it to the new day unless hand-set.
+  const [seenToday, setSeenToday] = useState(today)
+  if (seenToday !== today) {
+    setSeenToday(today)
+    if (draft.date === seenToday) setDraft({ ...draft, date: today })
+  }
+
   useEffect(() => input.current?.focus(), [])
 
   const onText = (next: string): void => {

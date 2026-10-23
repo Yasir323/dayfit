@@ -45,6 +45,16 @@ function setup(): { onPlanned: ReturnType<typeof vi.fn>; box: HTMLTextAreaElemen
 }
 
 describe('BrainDump', () => {
+  it('a line made only of tokens keeps the raw line as its title', async () => {
+    render(<BrainDump settings={DEFAULT_SETTINGS} today={TODAY} onPlanned={vi.fn()} />)
+    fireEvent.change(screen.getByRole('textbox', { name: 'Brain dump' }), {
+      target: { value: '30m #admin' }
+    })
+    expect(within(screen.getByRole('list')).getByText('30m #admin')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Plan my day' }))
+    expect(addItems.mock.calls[0][0][0]).toMatchObject({ title: '30m #admin', label: 'admin' })
+  })
+
   it('previews each line with a footer total', () => {
     setup()
     expect(screen.getAllByRole('listitem')).toHaveLength(5)
