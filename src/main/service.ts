@@ -81,9 +81,10 @@ const sameBlock = (a: Block, b: Block): boolean =>
 /** Owns the app state and every mutation; glues the pure core modules to the JSON store. */
 export class DayfitService {
   private state: AppState
-  /** Decision answers kept for the current day only (not persisted): everything except
-   *  tomorrow/drop on non-repeating items, which are applied to the item instead. */
-  /** Today's review answers; kept in the state file so they survive a restart. */
+  /**
+   * Today's review answers, kept in the state file so they survive a restart: everything except
+   * tomorrow/drop on non-repeating items, which are applied to the item instead.
+   */
   private get answers(): DecisionAnswer[] {
     return this.state.answers
   }
@@ -252,15 +253,14 @@ export class DayfitService {
   snoozeBreak(parts?: BreakPart[]): ViewState {
     this.begin()
     const s = this.state
-    this.clearAlerts((a) => a.kind === 'break')
+    const given = Array.isArray(parts) ? parts : []
+    // An older notification's snooze only clears break banners it covers.
+    this.clearAlerts(
+      (a) => a.kind === 'break' && (given.length === 0 || a.parts.every((p) => given.includes(p)))
+    )
     s.reminder = {
       ...s.reminder,
-      breaks: snoozeBreak(
-        s.reminder.breaks,
-        this.nowMin(),
-        s.settings.breaks.snoozeMin,
-        Array.isArray(parts) ? parts : []
-      )
+      breaks: snoozeBreak(s.reminder.breaks, this.nowMin(), s.settings.breaks.snoozeMin, given)
     }
     this.save()
     return this.buildView()
@@ -413,7 +413,9 @@ export class DayfitService {
     // While busy, nudge notifications wait (uncounted) for the first non-busy tick;
     // the item still shows as overdue in the app.
     const due = dueNudges(blocks, items, now, s.nudges)
-    const busy = isHeld(blocks, items, now, s.manualBusy, s.settings.bufferMin)
+    // Nudges wait only inside a running DND / high-priority block (no gap rule): the moment
+    // between two focus tasks is exactly when "time's up" is useful.
+    const busy = isHeld(blocks, items, now, s.manualBusy, 0)
     const overdueBefore = s.overdue.length
     for (const id of due) if (!s.overdue.includes(id)) s.overdue.push(id)
     const nudges = busy ? [] : due

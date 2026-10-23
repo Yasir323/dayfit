@@ -242,6 +242,8 @@ describe('snooze', () => {
   it('snoozes the given parts instead of the last fired break', () => {
     const s: BreakState = { ...EMPTY_BREAK_STATE, lastFired: ['eye', 'water'] }
     expect(snoozeBreak(s, 600, 10, ['eye']).pending).toEqual(['eye'])
+    // an older notification's snooze leaves the newer break answerable
+    expect(snoozeBreak(s, 600, 10, ['eye']).lastFired).toEqual(['eye', 'water'])
     expect(snoozeBreak(s, 600, 10, []).pending).toEqual(['eye', 'water'])
   })
 

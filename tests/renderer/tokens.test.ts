@@ -47,6 +47,13 @@ describe('design tokens', () => {
     expect(ratio(token(dark, 'on-accent'), token(dark, 'accent'))).toBeGreaterThanOrEqual(4.5)
   })
 
+  it('switch knobs use their own token, light in both themes', () => {
+    const settings = fs.readFileSync(path.join(ROOT, 'views/Settings.css'), 'utf8')
+    expect(settings).not.toContain('var(--on-accent)')
+    const css = fs.readFileSync(path.join(ROOT, 'theme.css'), 'utf8')
+    expect(css).toContain('--knob: #ffffff')
+  })
+
   it('banners cap their height and scroll, and the toast never blocks clicks', () => {
     const css = fs.readFileSync(path.join(ROOT, 'App.css'), 'utf8')
     const rule = (sel: string): string => css.slice(css.indexOf(`${sel} {`)).split('}')[0]

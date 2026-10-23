@@ -518,16 +518,39 @@ describe('DayfitService in-app alerts', () => {
 })
 
 describe('DayfitService polish', () => {
-  it('nudges wait while a DND or high-priority task runs', () => {
+  it("a task's own nudge fires in the gap before the next DND task", () => {
     svc.addItems([
-      newItem({ title: 'A', priority: 'high' }),
+      newItem({ title: 'A', dnd: true }),
       newItem({ title: 'B', durationMin: 60, dnd: true })
     ])
+    clock.set(26, 9, 31)
+    expect(svc.tick(0).nudges).toEqual(['id1'])
+  })
+
+  it('a repeat nudge waits while a DND task runs, then fires', () => {
+    svc.addItems([newItem({ title: 'A' }), newItem({ title: 'B', durationMin: 60, dnd: true })])
     const b = svc.view().plan.blocks.find((x) => x.itemId === 'id2')!
     clock.set(26, 9, 31)
+    expect(svc.tick(0).nudges).toEqual(['id1'])
+    clock.set(26, 9, 47)
     expect(svc.tick(0).nudges).toEqual([])
     clock.set(26, Math.floor((b.end + 1) / 60), (b.end + 1) % 60)
     expect(svc.tick(0).nudges).toContain('id1')
+  })
+
+  it('snoozing an older notification keeps the newer break', () => {
+    svc.updateSettings({ water: { ...svc.view().settings.water, intervalMin: 1 } })
+    svc.markPunched('in')
+    svc.tick(0)
+    let alertParts: string[] = []
+    for (let m = 1; m <= 20 && alertParts.length === 0; m++) {
+      clock.set(26, 9, m)
+      svc.tick(0)
+      alertParts = svc.view().alerts.flatMap((a) => a.parts)
+    }
+    expect(alertParts).toContain('water')
+    const v = svc.snoozeBreak(['eye'])
+    expect(v.alerts.flatMap((a) => a.parts)).toContain('water')
   })
 
   it('+15 min stops before a planned lunch', () => {

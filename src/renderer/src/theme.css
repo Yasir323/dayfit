@@ -15,6 +15,7 @@
   --accent: #c9431c;
   --accent-soft: color-mix(in srgb, var(--accent) 12%, transparent);
   --on-accent: #ffffff;
+  --knob: #ffffff;
   --danger: #d1453b;
   --danger-soft: color-mix(in srgb, var(--danger) 10%, transparent);
   --warn: #eb8909;

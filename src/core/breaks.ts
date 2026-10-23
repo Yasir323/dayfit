@@ -159,6 +159,7 @@ export function snoozeBreak(
     ...state,
     pending: ordered([...state.pending, ...again]),
     snoozeUntil: now + clampSnooze(snoozeMin),
-    lastFired: []
+    // Snoozing an older notification leaves the newer break answerable.
+    lastFired: parts.length > 0 ? state.lastFired : []
   }
 }

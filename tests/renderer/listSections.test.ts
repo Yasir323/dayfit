@@ -132,7 +132,9 @@ describe('buildSections', () => {
     expect(s.rows.map((r) => r.item.id)).toEqual(['a'])
     expect(s.rows[0].detail).toBe('Mon 26 Oct')
     const d = item('d', 'D', { date: '2026-10-27', deadline: { date: '2026-10-26', time: null } })
-    expect(section(makeView({ upcoming: [d] }), 'later')!.rows[0].detail).toBe('Tue 27 Oct · due Mon')
+    expect(section(makeView({ upcoming: [d] }), 'later')!.rows[0].detail).toBe(
+      'Tue 27 Oct · due Mon'
+    )
   })
 
   it('empty sections are hidden', () => {
