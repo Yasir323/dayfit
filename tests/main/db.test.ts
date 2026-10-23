@@ -62,3 +62,12 @@ describe('migrateJson', () => {
     expect(db.readState()).toEqual({ version: 1, items: ['new'] })
   })
 })
+
+describe('replaceDays', () => {
+  it('swaps the whole history', () => {
+    const db = openDb(file)
+    db.putDay('2026-10-01', { n: 1 })
+    db.replaceDays([{ date: '2026-10-22', summary: { n: 2 } }])
+    expect(db.days('2000-01-01', '2999-12-31')).toEqual([{ date: '2026-10-22', summary: { n: 2 } }])
+  })
+})

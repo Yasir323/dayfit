@@ -130,6 +130,84 @@ function Toggle({
 
 const DURATION_TYPES: ItemType[] = ['task', 'call', 'deep', 'household', 'fixed']
 
+/** Export and import of everything, through the main process's file dialogs. */
+function Backup({ onView }: { onView?: (v: ViewState) => void }): React.JSX.Element {
+  const [confirming, setConfirming] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [note, setNote] = useState<{ ok: boolean; text: string } | null>(null)
+  const run = async (
+    action: () => Promise<{ ok: true; text: string } | { ok: false; error: string | null }>
+  ): Promise<void> => {
+    setBusy(true)
+    setNote(null)
+    try {
+      const r = await action()
+      if (r.ok) setNote({ ok: true, text: r.text })
+      else if (r.error) setNote({ ok: false, text: r.error })
+    } catch {
+      setNote({ ok: false, text: 'Something went wrong' })
+    } finally {
+      setBusy(false)
+    }
+  }
+  const exportData = (): Promise<void> =>
+    run(async () => {
+      const r = await api.exportData()
+      return r.ok ? { ok: true, text: `Saved to ${r.file}` } : r
+    })
+  const importData = (): Promise<void> =>
+    run(async () => {
+      setConfirming(false)
+      const r = await api.importData()
+      if (!r.ok) return r
+      onView?.(r.view)
+      return { ok: true, text: 'Data imported' }
+    })
+
+  return (
+    <fieldset>
+      <legend>Backup</legend>
+      <div className="group-card">
+        <div className="backup-actions">
+          <button type="button" className="btn" disabled={busy} onClick={() => void exportData()}>
+            Export data…
+          </button>
+          {confirming ? (
+            <span className="confirm">
+              <span>Replace all data?</span>
+              <button type="button" onClick={() => void importData()}>
+                Yes, replace
+              </button>
+              <button type="button" onClick={() => setConfirming(false)}>
+                No
+              </button>
+            </span>
+          ) : (
+            <button
+              type="button"
+              className="btn"
+              disabled={busy}
+              onClick={() => setConfirming(true)}
+            >
+              Import data…
+            </button>
+          )}
+        </div>
+        {note &&
+          (note.ok ? (
+            <p className="muted backup-note" role="status">
+              {note.text}
+            </p>
+          ) : (
+            <p className="field-error" role="alert">
+              {note.text}
+            </p>
+          ))}
+      </div>
+    </fieldset>
+  )
+}
+
 export function Settings({ view, onView }: Props): React.JSX.Element {
   const s = view.settings
   const [saveError, setSaveError] = useState<string | null>(null)
@@ -355,6 +433,8 @@ export function Settings({ view, onView }: Props): React.JSX.Element {
           />
         </div>
       </fieldset>
+
+      <Backup onView={onView} />
     </section>
   )
 }

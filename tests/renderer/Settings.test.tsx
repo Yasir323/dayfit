@@ -9,6 +9,8 @@ const api = vi.hoisted(() => ({
   view: vi.fn(),
   updateSettings: vi.fn(),
   addItems: vi.fn(),
+  exportData: vi.fn(),
+  importData: vi.fn(),
   onState: vi.fn(),
   onFocus: vi.fn()
 }))
@@ -293,5 +295,54 @@ describe('FirstRun', () => {
     fireEvent.change(screen.getByLabelText('End'), { target: { value: '08:00' } })
     expect(screen.getByRole('alert')).toHaveTextContent('End must be after start')
     expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled()
+  })
+})
+
+describe('Settings backup', () => {
+  it('Export data calls IPC and says where it saved', async () => {
+    api.exportData.mockResolvedValue({ ok: true, file: '/tmp/dayfit-backup.json' })
+    render(<Settings view={view()} />)
+    const backup = screen.getByRole('group', { name: 'Backup' })
+    await userEvent.click(within(backup).getByRole('button', { name: 'Export data…' }))
+    expect(api.exportData).toHaveBeenCalled()
+    expect(await within(backup).findByRole('status')).toHaveTextContent(
+      'Saved to /tmp/dayfit-backup.json'
+    )
+  })
+
+  it('Import data asks first, then calls IPC', async () => {
+    api.importData.mockResolvedValue({ ok: true, view: view() })
+    const onView = vi.fn()
+    render(<Settings view={view()} onView={onView} />)
+    const backup = screen.getByRole('group', { name: 'Backup' })
+    await userEvent.click(within(backup).getByRole('button', { name: 'Import data…' }))
+    expect(within(backup).getByText('Replace all data?')).toBeInTheDocument()
+    expect(api.importData).not.toHaveBeenCalled()
+    await userEvent.click(within(backup).getByRole('button', { name: 'No' }))
+    expect(api.importData).not.toHaveBeenCalled()
+    await userEvent.click(within(backup).getByRole('button', { name: 'Import data…' }))
+    await userEvent.click(within(backup).getByRole('button', { name: 'Yes, replace' }))
+    expect(api.importData).toHaveBeenCalled()
+    await vi.waitFor(() => expect(onView).toHaveBeenCalled())
+    expect(within(backup).getByRole('status')).toHaveTextContent('Data imported')
+  })
+
+  it('a rejected file shows why', async () => {
+    api.importData.mockResolvedValue({ ok: false, error: 'Not a Dayfit backup' })
+    render(<Settings view={view()} />)
+    const backup = screen.getByRole('group', { name: 'Backup' })
+    await userEvent.click(within(backup).getByRole('button', { name: 'Import data…' }))
+    await userEvent.click(within(backup).getByRole('button', { name: 'Yes, replace' }))
+    expect(await within(backup).findByRole('alert')).toHaveTextContent('Not a Dayfit backup')
+  })
+
+  it('a cancelled dialog says nothing', async () => {
+    api.exportData.mockResolvedValue({ ok: false, error: null })
+    render(<Settings view={view()} />)
+    const backup = screen.getByRole('group', { name: 'Backup' })
+    await userEvent.click(within(backup).getByRole('button', { name: 'Export data…' }))
+    await vi.waitFor(() => expect(api.exportData).toHaveBeenCalled())
+    expect(within(backup).queryByRole('status')).toBeNull()
+    expect(within(backup).queryByRole('alert')).toBeNull()
   })
 })

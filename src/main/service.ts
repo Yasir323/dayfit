@@ -29,6 +29,7 @@ import {
   type NewItem,
   type Settings
 } from '../core/types'
+import { toBackup, type Backup } from './backup'
 import { openDb, type Db } from './db'
 import { loadState, saveState, type AppState, type DayPlan, type StateSource } from './store'
 
@@ -304,6 +305,25 @@ export class DayfitService {
       this.save()
     }
     return this.buildView()
+  }
+
+  /** Everything kept: the state and every saved day. */
+  exportData(): Backup {
+    this.begin()
+    return toBackup(
+      structuredClone(this.state),
+      this.db.days('0000-01-01', '9999-12-31'),
+      this.at.toISOString()
+    )
+  }
+
+  /** Replaces all data with a parsed backup, then plans today from it. */
+  importData(backup: Backup): ViewState {
+    this.db.replaceDays(backup.days)
+    this.state = structuredClone(backup.state)
+    this.lastTickAt = null
+    this.begin()
+    return this.replanAndSave()
   }
 
   /** The last 7 days' saved summaries, oldest first; null for a day with none. */

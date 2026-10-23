@@ -36,6 +36,8 @@ const dayfit = {
   updateSettings: call('updateSettings'),
   previewTomorrow: () => ipcRenderer.invoke('dayfit:previewTomorrow'),
   week: () => ipcRenderer.invoke('dayfit:week'),
+  exportData: () => ipcRenderer.invoke('dayfit:exportData'),
+  importData: () => ipcRenderer.invoke('dayfit:importData'),
   hide: () => ipcRenderer.send('dayfit:hide'),
   openPortal: () => ipcRenderer.send('dayfit:openPortal'),
   onState: subscribe('dayfit:state'),

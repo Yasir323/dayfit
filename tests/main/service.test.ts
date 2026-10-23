@@ -886,3 +886,29 @@ describe('DayfitService week', () => {
     expect(w.filter((d) => d.summary !== null)).toHaveLength(1)
   })
 })
+
+describe('DayfitService backup', () => {
+  it('export carries the state and every saved day', () => {
+    svc.addItems([newItem({ title: 'Keep me' })])
+    svc.checkOut([])
+    const b = svc.exportData()
+    expect(b.app).toBe('dayfit')
+    expect(b.state.items.map((i) => i.title)).toEqual(['Keep me'])
+    expect(b.days.map((d) => d.date)).toEqual([D])
+  })
+
+  it('import replaces the state and days, then replans', () => {
+    svc.addItems([newItem({ title: 'Old' })])
+    svc.checkOut([])
+    const other = new DayfitService(path.join(dir, 'other.db'), clock, () => 'n1')
+    other.addItems([newItem({ title: 'New' })])
+    const b = other.exportData()
+    b.days = [{ date: '2026-10-01', summary: { date: '2026-10-01' } }]
+    const v = svc.importData(b)
+    expect(v.items.map((i) => i.title)).toEqual(['New'])
+    expect(v.plan.blocks.some((x) => x.itemId === 'n1')).toBe(true)
+    expect(v.checkedOut).toBe(false)
+    expect(loadState(file).items.map((i) => i.title)).toEqual(['New'])
+    expect(svc.week().every((d) => d.summary === null)).toBe(true)
+  })
+})

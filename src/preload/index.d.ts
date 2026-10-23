@@ -1,3 +1,4 @@
+import type { ExportResult, ImportResult } from '../main/ipc'
 import type { DayfitService, ViewState } from '../main/service'
 
 type Async<K extends keyof DayfitService> = (
@@ -29,6 +30,8 @@ export interface DayfitApi {
   /** Hides the popover (Esc). */
   previewTomorrow(): Promise<ReturnType<DayfitService['previewTomorrow']>>
   week(): Promise<ReturnType<DayfitService['week']>>
+  exportData(): Promise<ExportResult>
+  importData(): Promise<ImportResult>
   hide(): void
   openPortal(): void
   onState(cb: (v: ViewState) => void): () => void

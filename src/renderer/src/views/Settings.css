@@ -131,3 +131,16 @@
   justify-content: flex-end;
   margin-top: var(--s4);
 }
+
+.backup-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s2);
+  padding: var(--s2) 0;
+}
+.backup-note {
+  margin: 0 0 var(--s2);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}

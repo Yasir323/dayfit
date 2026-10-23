@@ -10,6 +10,8 @@ export interface Db {
   writeState(state: unknown): void
   putDay(date: DateStr, summary: unknown): void
   days(fromDate: DateStr, toDate: DateStr): { date: DateStr; summary: unknown }[]
+  /** Replaces the whole history in one transaction (backup import). */
+  replaceDays(days: { date: DateStr; summary: unknown }[]): void
   close(): void
 }
 
@@ -71,6 +73,17 @@ export function openDb(file: string): Db {
         date: r.date,
         summary: JSON.parse(r.summary) as unknown
       }))
+    },
+    replaceDays(rows) {
+      db.exec('BEGIN')
+      try {
+        db.exec('DELETE FROM days')
+        for (const r of rows) put.run(r.date, JSON.stringify(r.summary))
+        db.exec('COMMIT')
+      } catch (e) {
+        db.exec('ROLLBACK')
+        throw e
+      }
     },
     close() {
       db.close()
