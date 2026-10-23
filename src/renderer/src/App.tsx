@@ -84,7 +84,9 @@ export function App(): React.JSX.Element {
       {!(review && firstRunDone) && banners.length > 0 && <div className="banners">{banners}</div>}
 
       <main className="tab-body">
-        {tab === 'today' && <TodayTab view={view} onView={setView} />}
+        {tab === 'today' && (
+          <TodayTab view={view} onView={setView} onAddTask={() => setTab('add')} />
+        )}
         {tab === 'add' && (
           <QuickAdd
             settings={view.settings}

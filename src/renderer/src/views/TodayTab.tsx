@@ -4,6 +4,7 @@ import type { ViewState } from '../api'
 import { dayHeader } from '../lib/dates'
 import { Icon } from '../ui/Icon'
 import { Segmented } from '../ui/Segmented'
+import { ListView } from './ListView'
 import { TimelineView } from './TimelineView'
 
 export type TodayViewKind = 'list' | 'calendar' | 'timeline'
@@ -40,9 +41,10 @@ function writeView(v: TodayViewKind): void {
 interface Props {
   view: ViewState
   onView: (v: ViewState) => void
+  onAddTask?: () => void
 }
 
-export function TodayTab({ view, onView }: Props): React.JSX.Element {
+export function TodayTab({ view, onView, onAddTask = () => {} }: Props): React.JSX.Element {
   const [kind, setKind] = useState<TodayViewKind>(readView)
   const [failure, setFailure] = useState<string | null>(null)
 
@@ -95,7 +97,7 @@ export function TodayTab({ view, onView }: Props): React.JSX.Element {
       )}
 
       <div className="today-body">
-        {kind === 'list' && <p className="placeholder muted">List view</p>}
+        {kind === 'list' && <ListView view={view} onView={onView} onAddTask={onAddTask} />}
         {kind === 'calendar' && <p className="placeholder muted">Calendar view</p>}
         {kind === 'timeline' && <TimelineView view={view} onView={onView} />}
       </div>

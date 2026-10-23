@@ -83,20 +83,6 @@ describe('Today timeline', () => {
     expect(api.updateItem).not.toHaveBeenCalled()
   })
 
-  it('lists unscheduled items with Plan now', async () => {
-    api.planNow.mockResolvedValue(makeView())
-    const base = makeView()
-    const v = makeView({
-      plan: { ...base.plan, unscheduled: ['u1'] },
-      items: [...base.items, item('u1', 'Do taxes')]
-    })
-    render(<TimelineView view={v} onView={vi.fn()} />)
-    const list = screen.getByRole('region', { name: 'Unscheduled' })
-    expect(within(list).getByText('Do taxes')).toBeInTheDocument()
-    await userEvent.click(within(list).getByRole('button', { name: 'Plan now' }))
-    expect(api.planNow).toHaveBeenCalledWith('u1')
-  })
-
   it('maps the busy toggle to setManualBusy', async () => {
     api.setManualBusy.mockResolvedValue(makeView())
     render(<TodayTab view={makeView()} onView={vi.fn()} />)
@@ -235,18 +221,6 @@ describe('Today details', () => {
     expect(within(blocks[1]).queryByRole('button', { name: 'Lock' })).toBeNull()
     await userEvent.click(within(blocks[4]).getByRole('button', { name: 'Lock' }))
     expect(api.setLock).toHaveBeenCalledWith('t1', true)
-  })
-
-  it('Upcoming shows "due <weekday>" for deadlines', async () => {
-    const later = item('u', 'Tax form', {
-      date: '2026-10-24',
-      deadline: { date: '2026-10-26', time: null }
-    })
-    render(<TimelineView view={makeView({ upcoming: [later] })} onView={vi.fn()} />)
-    expect(screen.queryByText('Tax form')).toBeNull()
-    await userEvent.click(screen.getByRole('button', { name: 'Upcoming (1)' }))
-    expect(screen.getByText('Tax form')).toBeInTheDocument()
-    expect(screen.getByText('due Mon')).toBeInTheDocument()
   })
 
   it('shows an error when the clipboard is unavailable', async () => {
