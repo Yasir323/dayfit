@@ -1,9 +1,19 @@
 import { describe, it, expect } from 'vitest'
-import { dueReminders, isBusy, EMPTY_REMINDER_STATE, type ReminderState } from '../../src/core/reminders'
+import {
+  dueReminders,
+  isBusy,
+  EMPTY_REMINDER_STATE,
+  type ReminderState
+} from '../../src/core/reminders'
 import { DEFAULT_SETTINGS } from '../../src/core/types'
 import type { Block, BlockKind, Item, Settings } from '../../src/core/types'
 
-const block = (kind: BlockKind, start: number, end: number, itemId: string | null = 'i1'): Block => ({
+const block = (
+  kind: BlockKind,
+  start: number,
+  end: number,
+  itemId: string | null = 'i1'
+): Block => ({
   itemId,
   kind,
   start,
@@ -76,7 +86,11 @@ describe('meeting alerts', () => {
   it('meeting-now fires even with manual busy, once', () => {
     const a = run(600, { blocks, manualBusy: true, state: quiet(600) })
     expect(a.events).toHaveLength(1)
-    expect(a.events[0]).toMatchObject({ kind: 'meeting-now', title: 'Standup is starting', silent: false })
+    expect(a.events[0]).toMatchObject({
+      kind: 'meeting-now',
+      title: 'Standup is starting',
+      silent: false
+    })
     expect(kinds(run(601, { blocks, manualBusy: true, state: a.state }))).toEqual([])
   })
   it('falls back to "Meeting" and does not mutate input state', () => {
@@ -92,7 +106,10 @@ describe('eye rest', () => {
     let state = EMPTY_REMINDER_STATE
     let count = 0
     for (let m = 1; m <= 20; m++) {
-      const r = run(600 + m, { elapsedMin: 1, state: { ...state, lastWaterAt: 600 + m, lastStretchAt: 600 + m } })
+      const r = run(600 + m, {
+        elapsedMin: 1,
+        state: { ...state, lastWaterAt: 600 + m, lastStretchAt: 600 + m }
+      })
       count += r.events.filter((e) => e.kind === 'eye').length
       state = r.state
     }
@@ -177,6 +194,13 @@ describe('walk', () => {
     expect(a.events).toHaveLength(1)
     expect(a.events[0]).toMatchObject({ kind: 'walk', itemId: null, title: 'Time for a walk' })
     expect(a.state.fired).toContain('walk:660')
-    expect(kinds(run(661, { blocks, state: { ...a.state, ...{ lastWaterAt: 661, lastStretchAt: 661, lastEyeAt: 661 } } }))).toEqual([])
+    expect(
+      kinds(
+        run(661, {
+          blocks,
+          state: { ...a.state, ...{ lastWaterAt: 661, lastStretchAt: 661, lastEyeAt: 661 } }
+        })
+      )
+    ).toEqual([])
   })
 })

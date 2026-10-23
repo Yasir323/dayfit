@@ -13,8 +13,20 @@ export interface ParsedLine {
 }
 
 const WEEKDAYS: Record<string, number> = {
-  sun: 0, sunday: 0, mon: 1, monday: 1, tue: 2, tuesday: 2, wed: 3, wednesday: 3,
-  thu: 4, thursday: 4, fri: 5, friday: 5, sat: 6, saturday: 6
+  sun: 0,
+  sunday: 0,
+  mon: 1,
+  monday: 1,
+  tue: 2,
+  tuesday: 2,
+  wed: 3,
+  wednesday: 3,
+  thu: 4,
+  thursday: 4,
+  fri: 5,
+  friday: 5,
+  sat: 6,
+  saturday: 6
 }
 const TYPES: Record<string, ItemType> = { '~call': 'call', '~deep': 'deep', '~home': 'household' }
 const PRIORITIES: Record<string, Priority> = { '!high': 'high', '!med': 'med', '!low': 'low' }

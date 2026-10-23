@@ -36,7 +36,16 @@ describe('store', () => {
     expect(b.settings).toEqual(DEFAULT_SETTINGS)
     expect(b.reminder.fired).toEqual([])
     expect(DEFAULT_SETTINGS.water.targetMl).toBe(2000)
-    expect(b).toMatchObject({ items: [], plans: {}, waterMl: {}, nudges: {}, overdue: [], manualBusy: null, lastDate: null, version: 1 })
+    expect(b).toMatchObject({
+      items: [],
+      plans: {},
+      waterMl: {},
+      nudges: {},
+      overdue: [],
+      manualBusy: null,
+      lastDate: null,
+      version: 1
+    })
   })
 
   it('corrupt store is backed up and replaced with defaults', () => {
@@ -55,7 +64,10 @@ describe('store', () => {
   })
 
   it('merges partial settings deeply over defaults and fills missing fields', () => {
-    fs.writeFileSync(file, JSON.stringify({ version: 1, settings: { hotkey: 'X', water: { targetMl: 3000 } } }))
+    fs.writeFileSync(
+      file,
+      JSON.stringify({ version: 1, settings: { hotkey: 'X', water: { targetMl: 3000 } } })
+    )
     const s = loadState(file)
     expect(s.settings.hotkey).toBe('X')
     expect(s.settings.water).toEqual({ enabled: true, targetMl: 3000, glassMl: 250 })

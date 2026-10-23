@@ -4,10 +4,7 @@ export type ItemType = 'task' | 'call' | 'deep' | 'fixed' | 'household'
 export type Priority = 'high' | 'med' | 'low'
 export type Half = 'am' | 'pm' | null
 export type Repeat =
-  | { kind: 'none' }
-  | { kind: 'daily' }
-  | { kind: 'weekdays' }
-  | { kind: 'weekly'; days: number[] } // 0 = Sunday
+  { kind: 'none' } | { kind: 'daily' } | { kind: 'weekdays' } | { kind: 'weekly'; days: number[] } // 0 = Sunday
 export interface Deadline {
   date: DateStr
   time: Minutes | null

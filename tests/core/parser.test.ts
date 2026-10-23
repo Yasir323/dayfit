@@ -16,7 +16,14 @@ describe('parseLine', () => {
       date: '2026-10-23',
       type: 'call'
     })
-    expect(p.tokens.map((t) => t.kind)).toEqual(['duration', 'label', 'priority', 'half', 'day', 'type'])
+    expect(p.tokens.map((t) => t.kind)).toEqual([
+      'duration',
+      'label',
+      'priority',
+      'half',
+      'day',
+      'type'
+    ])
   })
   test('token spans index into the original text', () => {
     const text = 'Call John 15m #work at 3pm'
@@ -24,7 +31,10 @@ describe('parseLine', () => {
     expect(p.tokens.map((t) => text.slice(t.start, t.end))).toEqual(['15m', '#work', 'at 3pm'])
   })
   test('at makes fixed; household stays household', () => {
-    expect(parseLine('Standup at 9:30 15m', D).fields).toMatchObject({ fixedStart: 570, type: 'fixed' })
+    expect(parseLine('Standup at 9:30 15m', D).fields).toMatchObject({
+      fixedStart: 570,
+      type: 'fixed'
+    })
     expect(parseLine('School pickup ~home at 3pm', D).fields).toMatchObject({
       fixedStart: 900,
       type: 'household'
@@ -36,7 +46,10 @@ describe('parseLine', () => {
       date: '2026-10-23',
       time: null
     })
-    expect(parseLine('Report by tomorrow', D).fields.deadline).toEqual({ date: '2026-10-24', time: null })
+    expect(parseLine('Report by tomorrow', D).fields.deadline).toEqual({
+      date: '2026-10-24',
+      time: null
+    })
   })
   test('weekday day tokens resolve on/after today', () => {
     expect(parseLine('x fri', D).fields.date).toBe(D)
@@ -54,11 +67,19 @@ describe('parseLine', () => {
   })
   test('last duplicate wins', () => expect(parseLine('x 15m 30m', D).fields.durationMin).toBe(30))
   test('case-insensitive', () => {
-    expect(parseLine('x !HIGH @PM TODAY', D).fields).toMatchObject({ priority: 'high', half: 'pm', date: D })
+    expect(parseLine('x !HIGH @PM TODAY', D).fields).toMatchObject({
+      priority: 'high',
+      half: 'pm',
+      date: D
+    })
   })
   test('object prototype keys are not tokens', () => {
     const p = parseLine('Fix constructor bug __proto__ toString by constructor', D)
-    expect(p).toEqual({ title: 'Fix constructor bug __proto__ toString by constructor', fields: {}, tokens: [] })
+    expect(p).toEqual({
+      title: 'Fix constructor bug __proto__ toString by constructor',
+      fields: {},
+      tokens: []
+    })
   })
   test('title only', () =>
     expect(parseLine('Write docs', D)).toEqual({ title: 'Write docs', fields: {}, tokens: [] }))

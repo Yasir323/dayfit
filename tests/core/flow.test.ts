@@ -4,13 +4,35 @@ import { diffMoves, frozenBlocks } from '../../src/core/replan'
 import { applyNudgeAnswer, dueNudges } from '../../src/core/nudge'
 import { DEFAULT_SETTINGS as S, type Block, type Item } from '../../src/core/types'
 
-const blk = (itemId: string | null, start: number, end: number, kind: Block['kind'] = 'task'): Block => ({
-  itemId, kind, start, end, chunk: null, reason: ''
+const blk = (
+  itemId: string | null,
+  start: number,
+  end: number,
+  kind: Block['kind'] = 'task'
+): Block => ({
+  itemId,
+  kind,
+  start,
+  end,
+  chunk: null,
+  reason: ''
 })
 const item = (id: string, status: Item['status'] = 'open'): Item => ({
-  id, title: id, type: 'task', durationMin: 30, label: null, priority: 'med', half: null,
-  date: '2026-10-23', fixedStart: null, deadline: null, repeat: { kind: 'none' }, status,
-  lockedStart: null, suggestedSlots: [], createdAt: 0
+  id,
+  title: id,
+  type: 'task',
+  durationMin: 30,
+  label: null,
+  priority: 'med',
+  half: null,
+  date: '2026-10-23',
+  fixedStart: null,
+  deadline: null,
+  repeat: { kind: 'none' },
+  status,
+  lockedStart: null,
+  suggestedSlots: [],
+  createdAt: 0
 })
 
 describe('suggestCallSlots', () => {

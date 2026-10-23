@@ -48,7 +48,8 @@ const isPlainObject = (v: unknown): v is Record<string, unknown> =>
 function deepMerge<T>(base: T, over: unknown): T {
   if (!isPlainObject(base) || !isPlainObject(over)) return (over === undefined ? base : over) as T
   const out: Record<string, unknown> = { ...base }
-  for (const [k, v] of Object.entries(over)) out[k] = k in base ? deepMerge((base as Record<string, unknown>)[k], v) : v
+  for (const [k, v] of Object.entries(over))
+    out[k] = k in base ? deepMerge((base as Record<string, unknown>)[k], v) : v
   return out as T
 }
 
