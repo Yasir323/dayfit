@@ -375,3 +375,55 @@ describe('planDay part 1', () => {
     expect(planDay(x)).toEqual(planDay(structuredClone(x)))
   })
 })
+
+describe('locks never overlap fixed or frozen blocks', () => {
+  const overlapping = (a: Block, b: Block): boolean => a.start < b.end && b.start < a.end
+
+  test('a locked deep block overlapping a later-added fixed item is re-placed', () => {
+    const d = deep(120, { lockedStart: 540 })
+    const f = fixed(645, 30)
+    const r = planDay(input([d, f], { settings: noWalks }))
+    const fb = r.blocks.find((b) => b.itemId === f.id) as Block
+    const db = deepBlocks(r.blocks)
+    expect(db.length).toBeGreaterThan(0)
+    expect(db.reduce((s, b) => s + b.end - b.start, 0)).toBe(120)
+    expect(db.some((b) => overlapping(b, fb))).toBe(false)
+    expect(db.some((b) => b.reason === 'Locked')).toBe(false)
+  })
+
+  test('a locked task overlapping a fixed item is planned as unlocked', () => {
+    const t = item({ lockedStart: 540 })
+    const f = fixed(550, 30)
+    const r = planDay(input([t, f], { settings: noWalks }))
+    const tb = r.blocks.find((b) => b.itemId === t.id) as Block
+    const fb = r.blocks.find((b) => b.itemId === f.id) as Block
+    expect(overlapping(tb, fb)).toBe(false)
+    expect(tb.reason).not.toBe('Locked')
+  })
+
+  test('a locked block overlapping a frozen block is planned as unlocked', () => {
+    const other = item()
+    const t = item({ lockedStart: 560 })
+    const frozen: Block = {
+      itemId: other.id,
+      kind: 'task',
+      start: 540,
+      end: 580,
+      chunk: null,
+      reason: 'x'
+    }
+    const r = planDay(input([other, t], { now: 570, frozen: [frozen], settings: noWalks }))
+    const tb = r.blocks.find((b) => b.itemId === t.id) as Block
+    expect(overlapping(tb, frozen)).toBe(false)
+  })
+
+  test('a clear lock is kept', () => {
+    const t = item({ lockedStart: 700 })
+    const r = planDay(input([t, fixed(540, 30)], { settings: noWalks }))
+    expect(r.blocks.find((b) => b.itemId === t.id)).toMatchObject({
+      start: 700,
+      end: 730,
+      reason: 'Locked'
+    })
+  })
+})

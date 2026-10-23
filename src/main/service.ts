@@ -172,10 +172,14 @@ export class DayfitService {
     this.begin()
     const item = this.find(id)
     if (!item) return this.buildView()
-    const first = this.todayPlan()
-      .blocks.filter((b) => b.itemId === id && b.kind !== 'walk')
-      .sort((a, b) => a.start - b.start)[0]
-    item.lockedStart = locked ? (first?.start ?? null) : null
+    if (locked) {
+      // Only a single, unchunked block can be locked: a lock stores one start for the whole item.
+      const own = this.todayPlan().blocks.filter((b) => b.itemId === id && b.kind !== 'walk')
+      if (own.length !== 1 || own[0].chunk !== null) return this.buildView()
+      item.lockedStart = own[0].start
+    } else {
+      item.lockedStart = null
+    }
     this.save()
     return this.buildView()
   }

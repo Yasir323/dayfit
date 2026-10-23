@@ -267,4 +267,28 @@ describe('DayfitService', () => {
     expect(svc.logWater().waterMl).toBe(500)
     expect(loadState(file).waterMl[D]).toBe(500)
   })
+
+  it('locking a split deep item is a no-op', () => {
+    clock.set(26, 8, 0)
+    svc.addItems([
+      newItem({ type: 'fixed', fixedStart: 605, durationMin: 35 }),
+      newItem({ type: 'fixed', fixedStart: 745, durationMin: 335 }),
+      newItem({ type: 'deep', durationMin: 120 })
+    ])
+    const before = svc.view().plan.blocks.filter((b) => b.itemId === 'id3')
+    expect(before.length).toBe(2)
+    const v = svc.setLock('id3', true)
+    expect(v.items.find((i) => i.id === 'id3')?.lockedStart).toBeNull()
+    expect(loadState(file).items.find((i) => i.id === 'id3')?.lockedStart).toBeNull()
+  })
+
+  it('a locked task is re-placed, not overlapped, when a fixed item lands on it', () => {
+    clock.set(26, 8, 0)
+    svc.addItems([newItem()])
+    expect(svc.setLock('id1', true).items[0].lockedStart).toBe(540)
+    const v = svc.addItems([newItem({ type: 'fixed', fixedStart: 550 })])
+    const t = blockOf(v, 'id1')!
+    const f = blockOf(v, 'id2')!
+    expect(t.start < f.end && f.start < t.end).toBe(false)
+  })
 })

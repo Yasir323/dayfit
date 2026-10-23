@@ -88,11 +88,16 @@ export function Today({ view, onView }: Props): React.JSX.Element {
   // Row actions go on an item's first block only (deep chunks share one item).
   const firstBlock = new Set<Block>()
   const seen = new Set<string>()
-  for (const b of blocks)
-    if (b.itemId !== null && !seen.has(b.itemId)) {
+  // Items split into chunks (or partly done) cannot be locked: a lock holds one block.
+  const chunked = new Set<string>()
+  for (const b of blocks) {
+    if (b.itemId === null) continue
+    if (seen.has(b.itemId) || b.chunk !== null) chunked.add(b.itemId)
+    if (!seen.has(b.itemId)) {
       seen.add(b.itemId)
       firstBlock.add(b)
     }
+  }
 
   const actions = (item: Item): React.JSX.Element => {
     const locked = item.lockedStart !== null
@@ -108,7 +113,7 @@ export function Today({ view, onView }: Props): React.JSX.Element {
             ✓
           </button>
         )}
-        {item.fixedStart === null && (
+        {item.fixedStart === null && (locked || !chunked.has(item.id)) && (
           <button
             type="button"
             aria-label={locked ? 'Unlock' : 'Lock'}

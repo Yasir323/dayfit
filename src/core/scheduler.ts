@@ -90,15 +90,44 @@ function initialBlocks(input: PlanInput, skip: Set<string>): Block[] {
   return blocks
 }
 
+/** Item ids answered tomorrow / unscheduled / drop. */
+function skippedIds(input: PlanInput): Set<string> {
+  const notPlaced = new Set(
+    input.answers.filter((a) => NOT_PLACED.includes(a.choice)).map((a) => a.itemId)
+  )
+  return new Set(input.items.filter((i) => notPlaced.has(i.id)).map((i) => i.id))
+}
+
+const overlaps = (a: Interval, b: Interval): boolean => a.start < b.end && b.start < a.end
+
+/**
+ * Step 0: a lock that would overlap a fixed or frozen block is ignored for this plan, so the
+ * item is placed as if unlocked (the stored lock is untouched).
+ */
+function releaseBlockedLocks(input: PlanInput): Item[] {
+  const skip = skippedIds(input)
+  const frozenIds = new Set(input.frozen.map((b) => b.itemId))
+  const hard: Interval[] = [
+    ...input.frozen,
+    ...input.items
+      .filter((i) => isFixed(i) && !skip.has(i.id) && !frozenIds.has(i.id))
+      .map((i) => ({
+        start: i.fixedStart as Minutes,
+        end: (i.fixedStart as Minutes) + i.durationMin
+      }))
+  ]
+  return input.items.map((i) => {
+    if (i.lockedStart === null || isFixed(i) || frozenIds.has(i.id)) return i
+    const own = { start: i.lockedStart, end: i.lockedStart + i.durationMin }
+    return hard.some((h) => overlaps(own, h)) ? { ...i, lockedStart: null } : i
+  })
+}
+
 // Step 2: window and free time.
 function startPlan(input: PlanInput): Plan {
   const { settings: s } = input
   const answers = new Map(input.answers.map((a) => [a.itemId, a.choice]))
-  const notPlaced = (i: Item): boolean => {
-    const c = answers.get(i.id)
-    return c !== undefined && NOT_PLACED.includes(c)
-  }
-  const skip = new Set(input.items.filter(notPlaced).map((i) => i.id))
+  const skip = skippedIds(input)
   const window = { start: Math.max(s.workStart, input.now), end: s.workEnd }
   const plan: Plan = {
     blocks: [],
@@ -436,7 +465,8 @@ function blockOrder(items: Item[]): (a: Block, b: Block) => number {
     (id(a) < id(b) ? -1 : id(a) > id(b) ? 1 : 0)
 }
 
-export function planDay(input: PlanInput): PlanResult {
+export function planDay(raw: PlanInput): PlanResult {
+  const input = { ...raw, items: releaseBlockedLocks(raw) }
   const plan = startPlan(input)
   placeDeepWork(plan, input.items, input.frozen)
   placeWalks(plan, input.settings)

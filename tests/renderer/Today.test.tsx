@@ -253,13 +253,19 @@ describe('Today details', () => {
     expect(api.logWater).toHaveBeenCalledTimes(1)
   })
 
-  it('lock toggles via setLock; fixed items have no lock', async () => {
+  it('lock toggles via setLock; fixed and chunked items have no lock', async () => {
     api.setLock.mockResolvedValue(makeView())
-    render(<Today view={makeView()} onView={vi.fn()} />)
+    const base = makeView()
+    const v = makeView({
+      plan: { ...base.plan, blocks: [...base.plan.blocks, block('t1', 'task', 720, 750)] },
+      items: [...base.items, item('t1', 'Write report')]
+    })
+    render(<Today view={v} onView={vi.fn()} />)
     const blocks = within(screen.getByRole('list', { name: 'Timeline' })).getAllByRole('listitem')
     expect(within(blocks[0]).queryByRole('button', { name: 'Lock' })).toBeNull()
-    await userEvent.click(within(blocks[1]).getByRole('button', { name: 'Lock' }))
-    expect(api.setLock).toHaveBeenCalledWith('deep', true)
+    expect(within(blocks[1]).queryByRole('button', { name: 'Lock' })).toBeNull()
+    await userEvent.click(within(blocks[4]).getByRole('button', { name: 'Lock' }))
+    expect(api.setLock).toHaveBeenCalledWith('t1', true)
   })
 
   it('Upcoming shows "due <weekday>" for deadlines', async () => {
