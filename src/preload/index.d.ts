@@ -19,6 +19,8 @@ export interface DayfitApi {
   logWater: Async<'logWater'>
   setManualBusy: Async<'setManualBusy'>
   updateSettings: Async<'updateSettings'>
+  /** Hides the popover (Esc). */
+  hide(): void
   onState(cb: (v: ViewState) => void): () => void
   onFocus(cb: (target: FocusTarget) => void): () => void
 }

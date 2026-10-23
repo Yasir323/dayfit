@@ -2,8 +2,10 @@ import { app, globalShortcut, powerMonitor } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { APP_ID } from './appId'
+import { guarded } from './guard'
+import { createHotkeyBinder } from './hotkey'
 import { registerIpc } from './ipc'
-import { showNotification } from './notify'
+import { planUpdatedNotice, showNotification } from './notify'
 import { DayfitService, type ViewState } from './service'
 import { createPopover } from './tray'
 
@@ -23,37 +25,43 @@ if (!app.requestSingleInstanceLock()) {
     const popover = createPopover()
     app.on('second-instance', () => popover.show())
 
-    let hotkey: string | null = null
+    const bindHotkey = createHotkeyBinder(globalShortcut, () => popover.focus('quick-add'))
     let launchAtLogin: boolean | null = null
-    /** Pushes the view to the renderer and applies settings-driven side effects. */
-    const publish = (view: ViewState): void => {
-      popover.send('dayfit:state', view)
-      const s = view.settings
-      if (s.hotkey !== hotkey) {
-        if (hotkey) globalShortcut.unregister(hotkey)
-        hotkey = s.hotkey
-        try {
-          globalShortcut.register(hotkey, () => popover.focus('quick-add'))
-        } catch {
-          // invalid accelerator string: leave the hotkey unbound
-        }
-      }
+    /**
+     * Applies settings-driven side effects, then pushes the view (with the hotkey status) to the
+     * renderer and returns it. Never throws because of the hotkey.
+     */
+    const publish = (raw: ViewState): ViewState => {
+      const s = raw.settings
+      const hotkeyOk = bindHotkey(s.hotkey)
+      service.setHotkeyOk(hotkeyOk)
+      const view = { ...raw, hotkeyOk }
       if (s.launchAtLogin !== launchAtLogin) {
         launchAtLogin = s.launchAtLogin
         app.setLoginItemSettings({ openAtLogin: launchAtLogin })
       }
+      popover.send('dayfit:state', view)
+      return view
     }
 
-    registerIpc(service, publish)
+    registerIpc(service, publish, { hide: () => popover.hide() })
     publish(service.view())
 
-    const tick = (): void => {
+    const handlers = {
+      onDrank: guarded('water action', () => {
+        publish(service.logWater())
+      }),
+      onNudge: guarded('nudge action', (id: string, a: 'done' | 'extend' | 'move') => {
+        const view = publish(service.answerNudge(id, a))
+        // The popover is hidden, so say what moved.
+        const notice = planUpdatedNotice(view)
+        if (notice) showNotification(notice, process.platform, handlers)
+      }),
+      onOpen: (nudge: boolean) => (nudge ? popover.focus('nudge') : popover.show())
+    }
+
+    const tick = guarded('tick', (): void => {
       const { events, nudges, view } = service.tick(powerMonitor.getSystemIdleTime())
-      const handlers = {
-        onDrank: () => publish(service.logWater()),
-        onNudge: (id: string, a: 'done' | 'extend' | 'move') => publish(service.answerNudge(id, a)),
-        onOpen: (nudge: boolean) => (nudge ? popover.focus('nudge') : popover.show())
-      }
       for (const event of events)
         showNotification({ type: 'event', event }, process.platform, handlers)
       for (const id of nudges) {
@@ -66,7 +74,7 @@ if (!app.requestSingleInstanceLock()) {
           )
       }
       publish(view)
-    }
+    })
     setInterval(tick, TICK_MS)
     powerMonitor.on('resume', tick)
     powerMonitor.on('unlock-screen', tick)

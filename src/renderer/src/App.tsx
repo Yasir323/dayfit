@@ -1,7 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import type { Move } from '../../core/replan'
-import { formatClock } from '../../core/time'
-import type { Item } from '../../core/types'
+import { movesText } from '../../core/movesText'
 import { api } from './api'
 import type { ViewState } from './api'
 import { BrainDump } from './views/BrainDump'
@@ -22,18 +20,6 @@ const TABS: [Tab, string][] = [
   ['settings', 'Settings']
 ]
 const TOAST_MS = 6000
-
-/** "Moved: Review PR 11:25 → 12:35, …" — newly placed items (from null) are not moves. */
-function movesText(moves: Move[], items: Item[]): string | null {
-  const parts = moves
-    .filter((m) => m.from !== null)
-    .map((m) => {
-      const title = items.find((i) => i.id === m.itemId)?.title ?? 'Item'
-      const to = m.to === null ? 'unplanned' : formatClock(m.to)
-      return `${title} ${formatClock(m.from as number)} → ${to}`
-    })
-  return parts.length > 0 ? `Moved: ${parts.join(', ')}` : null
-}
 
 export function App(): React.JSX.Element {
   const [view, setView] = useState<ViewState | null>(null)
@@ -65,6 +51,15 @@ export function App(): React.JSX.Element {
       seenMoves === null ? null : movesText(view.plan.moves, [...view.items, ...view.upcoming])
     if (text) setToast({ text })
   }
+
+  // Esc closes the popover (it is frameless, so there is no close button).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape' && !e.isComposing) api.hide()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
 
   useEffect(() => {
     if (!toast) return

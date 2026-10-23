@@ -393,6 +393,16 @@ describe('App flows', () => {
     expect(await screen.findByRole('list', { name: 'Timeline' })).toBeInTheDocument()
   })
 
+  it('Esc hides the popover', async () => {
+    api.view.mockResolvedValue(makeView())
+    render(<App />)
+    await screen.findByRole('list', { name: 'Timeline' })
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(api.hide).toHaveBeenCalledTimes(1)
+    fireEvent.keyDown(window, { key: 'a' })
+    expect(api.hide).toHaveBeenCalledTimes(1)
+  })
+
   it("onFocus('nudge') opens Today and focuses the banner", async () => {
     api.view.mockResolvedValue(makeView({ nudges: ['deep'] }))
     render(<App />)

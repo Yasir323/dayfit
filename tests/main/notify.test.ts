@@ -6,7 +6,8 @@ vi.mock('electron', () => ({
   }
 }))
 
-import { buildNotificationOptions } from '../../src/main/notify'
+import { buildNotificationOptions, planUpdatedNotice } from '../../src/main/notify'
+import type { ViewState } from '../../src/main/service'
 import type { ReminderEvent } from '../../src/core/reminders'
 
 const water: ReminderEvent = {
@@ -46,5 +47,30 @@ describe('buildNotificationOptions', () => {
     expect(o.title.endsWith("— time's up")).toBe(true)
     expect(o.body).toBe('Done, need 15 more min, or move it?')
     expect(o.actions?.map((a) => a.text)).toEqual(['Done', '+15 min', 'Move it'])
+  })
+})
+
+describe('planUpdatedNotice', () => {
+  const view = (moves: { itemId: string; from: number | null; to: number | null }[]): ViewState =>
+    ({
+      plan: { blocks: [], decisions: [], unscheduled: [], moves },
+      items: [{ id: 'a', title: 'Write report' }],
+      upcoming: []
+    }) as unknown as ViewState
+
+  it('is a "Plan updated" notice listing the moves', () => {
+    const n = planUpdatedNotice(view([{ itemId: 'a', from: 600, to: 660 }]))
+    expect(n).toEqual({
+      type: 'info',
+      title: 'Plan updated',
+      body: 'Moved: Write report 10:00 → 11:00'
+    })
+    const o = buildNotificationOptions(n!, 'darwin')
+    expect(o).toMatchObject({ title: 'Plan updated', body: 'Moved: Write report 10:00 → 11:00' })
+    expect(o.actions).toBeUndefined()
+  })
+
+  it('is null when nothing moved', () => {
+    expect(planUpdatedNotice(view([{ itemId: 'a', from: null, to: 660 }]))).toBeNull()
   })
 })

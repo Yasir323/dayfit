@@ -19,14 +19,26 @@ export const IPC_METHODS = [
 
 export type IpcMethod = (typeof IPC_METHODS)[number]
 
-/** Registers the handlers; `onState` runs after every call with the fresh view (push + side effects). */
-export function registerIpc(service: DayfitService, onState: (v: ViewState) => void): void {
+/** Window actions the renderer may ask for, outside the service. */
+export interface ShellActions {
+  /** `dayfit:hide` (Esc in the popover). */
+  hide(): void
+}
+
+/**
+ * Registers the handlers; `onState` runs after every call with the fresh view (push + side
+ * effects) and returns the view handed back to the caller.
+ */
+export function registerIpc(
+  service: DayfitService,
+  onState: (v: ViewState) => ViewState,
+  shell: ShellActions
+): void {
   for (const method of IPC_METHODS) {
     ipcMain.handle(`dayfit:${method}`, (_e, ...args: unknown[]) => {
       const fn = service[method] as (...a: unknown[]) => ViewState
-      const view = fn.apply(service, args)
-      onState(view)
-      return view
+      return onState(fn.apply(service, args))
     })
   }
+  ipcMain.on('dayfit:hide', () => shell.hide())
 }

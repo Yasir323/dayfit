@@ -3,6 +3,7 @@ import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
 import trayTemplate from '../../resources/trayTemplate.png?asset'
 import trayIco from '../../resources/tray.ico?asset'
+import { createBlurGuard } from './blurGuard'
 import type { ViewState } from './service'
 
 export type FocusTarget = 'quick-add' | 'nudge' | 'review'
@@ -12,6 +13,7 @@ const HEIGHT = 580
 
 export interface Popover {
   show(): void
+  hide(): void
   toggle(): void
   send(channel: 'dayfit:state', view: ViewState): void
   focus(target: FocusTarget): void
@@ -43,7 +45,11 @@ export function createPopover(): Popover {
   // The popover never opens windows or leaves the app.
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
   win.webContents.on('will-navigate', (e) => e.preventDefault())
-  win.on('blur', () => win.hide())
+  const guard = createBlurGuard()
+  win.on('blur', () => {
+    win.hide()
+    guard.blurHidden()
+  })
 
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
     win.loadURL(process.env['ELECTRON_RENDERER_URL'])
@@ -68,7 +74,11 @@ export function createPopover(): Popover {
     win.show()
     win.focus()
   }
-  const toggle = (): void => (win.isVisible() ? win.hide() : show())
+  // A tray click on the open popover blurs (hides) it first; don't let the click reopen it.
+  const toggle = (): void => {
+    if (win.isVisible()) win.hide()
+    else if (guard.mayShow()) show()
+  }
   tray.on('click', toggle)
 
   const whenLoaded = (fn: () => void): void => {
@@ -78,6 +88,7 @@ export function createPopover(): Popover {
 
   return {
     show,
+    hide: () => win.hide(),
     toggle,
     send: (channel, view) => whenLoaded(() => win.webContents.send(channel, view)),
     focus: (target) => {

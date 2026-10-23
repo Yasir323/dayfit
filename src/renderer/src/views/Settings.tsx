@@ -267,6 +267,11 @@ export function Settings({ view, onView }: Props): React.JSX.Element {
           }
           onValid={(v) => send({ hotkey: v })}
         />
+        {!view.hotkeyOk && (
+          <p className="field-error" role="alert">
+            Shortcut unavailable — pick another
+          </p>
+        )}
         <Toggle
           label="Launch at login"
           checked={s.launchAtLogin}

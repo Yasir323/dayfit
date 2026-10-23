@@ -27,6 +27,7 @@ const dayfit = {
   logWater: call('logWater'),
   setManualBusy: call('setManualBusy'),
   updateSettings: call('updateSettings'),
+  hide: () => ipcRenderer.send('dayfit:hide'),
   onState: subscribe('dayfit:state'),
   onFocus: subscribe('dayfit:focus')
 } as DayfitApi

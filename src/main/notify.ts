@@ -1,9 +1,19 @@
 import { Notification, type NotificationConstructorOptions } from 'electron'
+import { movesText } from '../core/movesText'
 import type { ReminderEvent } from '../core/reminders'
 import type { NudgeAnswer } from '../core/nudge'
+import type { ViewState } from './service'
 
 export type NotifyInput =
-  { type: 'event'; event: ReminderEvent } | { type: 'nudge'; itemId: string; title: string }
+  | { type: 'event'; event: ReminderEvent }
+  | { type: 'nudge'; itemId: string; title: string }
+  | { type: 'info'; title: string; body: string }
+
+/** After a nudge answered from a notification (popover hidden): the moves it caused, if any. */
+export function planUpdatedNotice(view: ViewState): NotifyInput | null {
+  const body = movesText(view.plan.moves, [...view.items, ...view.upcoming])
+  return body === null ? null : { type: 'info', title: 'Plan updated', body }
+}
 
 export interface NotifyHandlers {
   /** Water "Drank" button. */
@@ -35,6 +45,7 @@ export function buildNotificationOptions(
         : {})
     }
   }
+  if (input.type === 'info') return { title: input.title, body: input.body, silent: true }
   const { event } = input
   return {
     title: event.title,
@@ -61,7 +72,7 @@ export function showNotification(
     if (input.type === 'nudge') {
       const a = NUDGE_ACTIONS[index]
       if (a) handlers.onNudge(input.itemId, a.answer)
-    } else if (input.event.kind === 'water' && index === 0) {
+    } else if (input.type === 'event' && input.event.kind === 'water' && index === 0) {
       handlers.onDrank()
     }
   })

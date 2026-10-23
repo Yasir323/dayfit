@@ -45,6 +45,13 @@ beforeEach(() => {
 afterEach(cleanup)
 
 describe('Settings', () => {
+  it('says when the shortcut could not be registered', () => {
+    const { rerender } = render(<Settings view={view()} />)
+    expect(screen.queryByText('Shortcut unavailable — pick another')).toBeNull()
+    rerender(<Settings view={{ ...view(), hotkeyOk: false }} />)
+    expect(screen.getByText('Shortcut unavailable — pick another')).toBeInTheDocument()
+  })
+
   it('rejects an end before the start without sending', () => {
     render(<Settings view={view()} />)
     fireEvent.change(screen.getByLabelText('End'), { target: { value: '08:00' } })
