@@ -1,5 +1,13 @@
 import { useState } from 'react'
-import type { Decision, DecisionAnswer, DecisionChoice, Item } from '../../../core/types'
+import { lunchPickError } from '../../../core/scheduler'
+import { formatClock, parseClock } from '../../../core/time'
+import type {
+  Decision,
+  DecisionAnswer,
+  DecisionChoice,
+  Item,
+  LunchAnswer
+} from '../../../core/types'
 import { api } from '../api'
 import type { ViewState } from '../api'
 
@@ -7,7 +15,11 @@ interface Props {
   decisions: Decision[]
   items: Item[]
   onDone: (v: ViewState) => void
+  /** Needed for the lunch-clash row (plan, settings, now). */
+  view?: ViewState
 }
+
+type LunchPick = 'shorten' | 'move' | 'pick' | 'skip'
 
 const LABELS: Record<DecisionChoice, string> = {
   'use-other-half': 'Use other half',
@@ -18,11 +30,34 @@ const LABELS: Record<DecisionChoice, string> = {
 const HALF_CHOICES: DecisionChoice[] = ['use-other-half', 'tomorrow', 'unscheduled', 'drop']
 const NO_FIT_CHOICES: DecisionChoice[] = ['tomorrow', 'unscheduled', 'drop']
 
-export function Review({ decisions, items, onDone }: Props): React.JSX.Element {
+export function Review({ decisions, items, onDone, view }: Props): React.JSX.Element {
   const [choices, setChoices] = useState<Record<string, DecisionChoice>>({})
   const [saving, setSaving] = useState(false)
   const [failure, setFailure] = useState<string | null>(null)
-  const complete = decisions.every((d) => choices[d.itemId] !== undefined)
+  const clash = view?.plan.lunchClash ?? null
+  const lunchMin = view?.settings.endOfDay.lunchMin ?? 0
+  const [lunchPick, setLunchPick] = useState<LunchPick | null>(null)
+  const [pickText, setPickText] = useState('')
+  const picked = pickText === '' ? null : parseClock(pickText)
+  const pickError =
+    lunchPick !== 'pick' || !view
+      ? null
+      : picked === null
+        ? pickText === ''
+          ? null
+          : 'Enter a time'
+        : lunchPickError(picked, lunchMin, view.plan.blocks, view.items, view.settings, view.now)
+  const lunchAnswer = ((): LunchAnswer | null | undefined => {
+    if (!clash) return undefined
+    if (lunchPick === 'skip') return { kind: 'skip' }
+    if (lunchPick === 'shorten' && clash.shorten) return { kind: 'at', ...clash.shorten }
+    if (lunchPick === 'move' && clash.move !== null)
+      return { kind: 'at', start: clash.move, len: lunchMin }
+    if (lunchPick === 'pick' && picked !== null && pickError === null)
+      return { kind: 'at', start: picked, len: lunchMin }
+    return null
+  })()
+  const complete = decisions.every((d) => choices[d.itemId] !== undefined) && lunchAnswer !== null
 
   const apply = async (): Promise<void> => {
     if (!complete || saving) return
@@ -33,7 +68,11 @@ export function Review({ decisions, items, onDone }: Props): React.JSX.Element {
         itemId: d.itemId,
         choice: choices[d.itemId]
       }))
-      onDone(await api.answerDecisions(answers))
+      onDone(
+        await (lunchAnswer
+          ? api.answerDecisions(answers, lunchAnswer)
+          : api.answerDecisions(answers))
+      )
     } catch (e) {
       setFailure(e instanceof Error ? e.message : 'Could not apply answers')
     } finally {
@@ -72,6 +111,51 @@ export function Review({ decisions, items, onDone }: Props): React.JSX.Element {
           </div>
         )
       })}
+      {clash && (
+        <div role="group" aria-label="Lunch" className="review-row">
+          <p className="review-title">Lunch</p>
+          <p className="review-why">
+            {clash.reason === 'passed'
+              ? 'Lunch time has passed'
+              : `Lunch ${formatClock(clash.usual)} clashes with ${clash.clashWith ?? 'Busy'}`}
+          </p>
+          <div className="choice-seg">
+            {(
+              [
+                clash.shorten && ['shorten', `Shorten to ${clash.shorten.len} min`],
+                clash.move !== null && ['move', `Move to ${formatClock(clash.move)}`],
+                ['pick', 'Pick a time'],
+                ['skip', 'Skip today']
+              ].filter(Boolean) as [LunchPick, string][]
+            ).map(([c, label]) => (
+              <label key={c} className={lunchPick === c ? 'is-on' : undefined}>
+                <input
+                  type="radio"
+                  name="decision-lunch"
+                  checked={lunchPick === c}
+                  onChange={() => setLunchPick(c)}
+                />
+                {label}
+              </label>
+            ))}
+          </div>
+          {lunchPick === 'pick' && (
+            <div className="lunch-pick">
+              <input
+                type="time"
+                aria-label="Lunch start"
+                value={pickText}
+                onChange={(e) => setPickText(e.target.value)}
+              />
+              {pickError && (
+                <p className="error" role="alert">
+                  {pickError}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
       {failure && (
         <p className="error" role="alert">
           {failure}

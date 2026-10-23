@@ -699,3 +699,9 @@ body {
   flex: none;
   white-space: nowrap;
 }
+.lunch-pick {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  margin-top: var(--s2);
+}

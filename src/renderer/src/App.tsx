@@ -72,7 +72,7 @@ export function App(): React.JSX.Element {
 
   const titleOf = (id: string): string => view.items.find((i) => i.id === id)?.title ?? 'Item'
   const firstRunDone = view.settings.firstRunDone
-  const review = view.plan.decisions.length > 0
+  const review = view.plan.decisions.length > 0 || (view.plan.lunchClash ?? null) !== null
   const portalUrl = view.settings.endOfDay.portalUrl
   const banners = [
     ...(['in', 'out'] as const)
@@ -153,10 +153,11 @@ export function App(): React.JSX.Element {
         <div className="overlay" role="dialog" aria-modal="true" aria-label="Review your plan">
           {banners}
           <Review
-            key={JSON.stringify(view.plan.decisions)}
+            key={JSON.stringify([view.plan.decisions, view.plan.lunchClash ?? null])}
             decisions={view.plan.decisions}
             items={[...view.items, ...view.upcoming]}
             onDone={setView}
+            view={view}
           />
         </div>
       )}
