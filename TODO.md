@@ -21,13 +21,15 @@ Everything below "Full backlog" is unprioritised beyond the v1 / later split.
 - [x] Check-in/check-out attendance reminders with optional HRMS portal link
 - [x] Lunch block in the plan, end-of-day check-out screen, one overtime nudge
 - [x] Lunch clash: shorten, move, pick a time or skip today
-- [ ] Snooze/Drank from the popover on Windows (notifications have no buttons there)
+- [x] Snooze/Drank from the popover on Windows (notifications have no buttons there)
+- [x] In-app reminder fallback: menu-bar label + popover banners
 - [x] Busy mode: mutes Dayfit's own notifications during deep work and fixed items
 - [x] Local-only storage, no account, no cloud
 - [ ] Open source release (MIT license in place; needs README, screenshots, signed builds)
 
 ## Known issues and polish (from reviews)
 
+- [ ] Sign dev builds (Apple Development cert) so macOS shows notifications
 - [ ] Visual check of the redesign and break notifications in the running app (`npm run dev`)
 - [ ] Empty state missing when only Tomorrow/Later have items
 - [ ] Footer not sticky
@@ -46,6 +48,16 @@ Everything below "Full backlog" is unprioritised beyond the v1 / later split.
 - [ ] `!dnd` token highlight has no tinted background
 - [ ] Nudges use the old busy rule; breaks use DND/high priority — reconcile
 - [ ] A break can fire in the buffer between two different DND items
+- [ ] Nudge "+15 min" can push a future lunch block
+- [ ] "Unscheduled" answers (review and check-out) are lost on restart
+- [ ] "Tomorrow" at check-out keeps today's suggested call slots
+- [ ] macOS: "Punched" sits under Options when a portal link is set (only first action shows)
+- [ ] Punch-out and overtime can fire on the same tick
+- [ ] Lunch moves aren't announced in the "plan updated" toast
+- [ ] Answering a lunch clash can surface a second Review straight after Apply
+- [ ] Lunch clash says "clashes with Busy" when lunch only overflows working hours
+- [ ] Review selection resets if the lunch clash changes while it is open
+- [ ] Lunch pick validated against a possibly stale `now` in the renderer
 
 ## Next up
 - [ ] Drag and drop on the timeline: drag tasks and lunch to a new time (drop = lock there); fixed items stay put
