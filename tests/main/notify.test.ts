@@ -6,35 +6,49 @@ vi.mock('electron', () => ({
   }
 }))
 
-import { buildNotificationOptions, planUpdatedNotice } from '../../src/main/notify'
+import {
+  buildNotificationOptions,
+  planUpdatedNotice,
+  type NotifyInput
+} from '../../src/main/notify'
 import type { ViewState } from '../../src/main/service'
 import type { ReminderEvent } from '../../src/core/reminders'
 
-const water: ReminderEvent = {
-  kind: 'water',
+const brk: ReminderEvent = {
+  kind: 'break',
   itemId: null,
-  title: 'Water',
-  body: 'Drink a glass',
-  silent: false
+  title: 'Break time',
+  body: 'Look 20 ft away · Drink water (0 / 2000 ml)',
+  silent: false,
+  parts: ['eye', 'water']
 }
+const ev = (event: ReminderEvent): NotifyInput => ({ type: 'event', event, snoozeMin: 10 })
 
 describe('buildNotificationOptions', () => {
-  it('adds a Drank action for water on darwin', () => {
-    const o = buildNotificationOptions({ type: 'event', event: water }, 'darwin')
-    expect(o.actions).toEqual([{ type: 'button', text: 'Drank' }])
+  it('break on darwin has Snooze then Drank', () => {
+    const o = buildNotificationOptions(ev(brk), 'darwin')
+    expect(o.actions).toEqual([
+      { type: 'button', text: 'Snooze 10 min' },
+      { type: 'button', text: 'Drank' }
+    ])
   })
 
-  it('has no actions on win32', () => {
-    expect(
-      buildNotificationOptions({ type: 'event', event: water }, 'win32').actions
-    ).toBeUndefined()
+  it('no Drank without water', () => {
+    const o = buildNotificationOptions(ev({ ...brk, parts: ['eye'] }), 'darwin')
+    expect(o.actions).toEqual([{ type: 'button', text: 'Snooze 10 min' }])
+  })
+
+  it('no actions on win32', () => {
+    expect(buildNotificationOptions(ev(brk), 'win32').actions).toBeUndefined()
+  })
+
+  it('meeting events have no actions', () => {
+    const meeting = { ...brk, kind: 'meeting-soon' as const, parts: [] }
+    expect(buildNotificationOptions(ev(meeting), 'darwin').actions).toBeUndefined()
   })
 
   it('passes silent through', () => {
-    const o = buildNotificationOptions(
-      { type: 'event', event: { ...water, silent: true } },
-      'darwin'
-    )
+    const o = buildNotificationOptions(ev({ ...brk, silent: true }), 'darwin')
     expect(o.silent).toBe(true)
   })
 

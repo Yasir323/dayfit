@@ -3,6 +3,7 @@ import {
   dueReminders,
   isBusy,
   EMPTY_REMINDER_STATE,
+  type ReminderEvent,
   type ReminderState
 } from '../../src/core/reminders'
 import { DEFAULT_SETTINGS } from '../../src/core/types'
@@ -50,13 +51,8 @@ const run = (
   })
 
 const kinds = (r: ReturnType<typeof run>): string[] => r.events.map((e) => e.kind)
-// start water/stretch timers at `now` so only the rule under test can fire
-const quiet = (now: number): ReminderState => ({
-  ...EMPTY_REMINDER_STATE,
-  lastWaterAt: now,
-  lastStretchAt: now,
-  lastEyeAt: now
-})
+// a fresh state; with elapsedMin 0 no break can fall due
+const quiet = (): ReminderState => structuredClone(EMPTY_REMINDER_STATE)
 
 describe('isBusy', () => {
   it('is true inside fixed/deep blocks, manual overrides', () => {
@@ -71,7 +67,7 @@ describe('isBusy', () => {
 describe('meeting alerts', () => {
   const blocks = [block('fixed', 600, 630)]
   it('meeting-soon fires exactly once across ticks', () => {
-    const a = run(595, { blocks, state: quiet(595) })
+    const a = run(595, { blocks, state: quiet() })
     expect(a.events).toHaveLength(1)
     expect(a.events[0]).toMatchObject({
       kind: 'meeting-soon',
@@ -84,7 +80,7 @@ describe('meeting alerts', () => {
     expect(kinds(b)).toEqual([])
   })
   it('meeting-now fires even with manual busy, once', () => {
-    const a = run(600, { blocks, manualBusy: true, state: quiet(600) })
+    const a = run(600, { blocks, manualBusy: true, state: quiet() })
     expect(a.events).toHaveLength(1)
     expect(a.events[0]).toMatchObject({
       kind: 'meeting-now',
@@ -94,81 +90,39 @@ describe('meeting alerts', () => {
     expect(kinds(run(601, { blocks, manualBusy: true, state: a.state }))).toEqual([])
   })
   it('falls back to "Meeting" and does not mutate input state', () => {
-    const state = quiet(595)
+    const state = quiet()
     const r = run(595, { blocks: [block('fixed', 600, 630, 'zz')], state })
     expect(r.events[0].title).toBe('Meeting in 5 min')
     expect(state.fired).toEqual([])
   })
 })
 
-describe('eye rest', () => {
-  it('20 one-minute ticks give one eye event', () => {
-    let state = EMPTY_REMINDER_STATE
-    let count = 0
-    for (let m = 1; m <= 20; m++) {
-      const r = run(600 + m, {
-        elapsedMin: 1,
-        state: { ...state, lastWaterAt: 600 + m, lastStretchAt: 600 + m }
-      })
-      count += r.events.filter((e) => e.kind === 'eye').length
+describe('breaks via dueReminders', () => {
+  it('emits one break event with parts', () => {
+    let state = quiet()
+    const events: ReminderEvent[] = []
+    for (let now = 540; now < 560; now++) {
+      const r = run(now, { elapsedMin: 1, state })
+      events.push(...r.events)
       state = r.state
     }
-    expect(count).toBe(1)
-    expect(state.activeMin).toBe(0)
-    expect(state.lastEyeAt).toBe(620)
+    expect(events).toHaveLength(1)
+    expect(events[0]).toMatchObject({ kind: 'break', parts: ['eye'], silent: false, itemId: null })
   })
-  it('emits the exact body text', () => {
-    const r = run(620, { elapsedMin: 20, state: quiet(620) })
-    expect(r.events[0]).toMatchObject({
-      kind: 'eye',
-      title: 'Rest your eyes',
-      body: 'Look at something 20 feet away for 20 seconds.'
-    })
-  })
-  it('long idle resets the count so no event at minute 20', () => {
-    let state = EMPTY_REMINDER_STATE
-    let count = 0
-    for (let m = 1; m <= 20; m++) {
-      const r = run(600 + m, {
-        elapsedMin: 1,
-        idleSec: m === 10 ? 400 : 0,
-        state: { ...state, lastWaterAt: 600 + m, lastStretchAt: 600 + m }
-      })
-      count += r.events.filter((e) => e.kind === 'eye').length
-      state = r.state
-    }
-    expect(count).toBe(0)
-  })
-})
 
-describe('water', () => {
-  it('emits at 10:10 with 0 ml', () => {
-    const r = run(610, { state: { ...EMPTY_REMINDER_STATE, lastStretchAt: 610, lastEyeAt: 610 } })
-    expect(kinds(r)).toEqual(['water'])
-    expect(r.events[0].body).toContain('0 / 2000 ml')
-    expect(r.state.lastWaterAt).toBe(610)
-  })
-  it('no event with 500 ml', () => {
-    const r = run(610, {
-      waterMlToday: 500,
-      state: { ...EMPTY_REMINDER_STATE, lastStretchAt: 610, lastEyeAt: 610 }
+  it('meeting alerts still ignore holds', () => {
+    const dnd = { ...item('d', 'Focus'), dnd: true, status: 'open' } as Item
+    const r = dueReminders({
+      now: 595,
+      elapsedMin: 0,
+      idleSec: 0,
+      blocks: [block('task', 540, 700, 'd'), block('fixed', 600, 630)],
+      items: [dnd, item('i1', 'Standup')],
+      settings: DEFAULT_SETTINGS,
+      waterMlToday: 0,
+      manualBusy: null,
+      state: quiet()
     })
-    expect(kinds(r)).toEqual([])
-  })
-  it('does not run outside working hours', () => {
-    const r = run(480, { state: { ...EMPTY_REMINDER_STATE, lastStretchAt: 480 } })
-    expect(kinds(r)).toEqual([])
-  })
-})
-
-describe('stretch', () => {
-  const blocks = [block('deep', 540, 630)]
-  it('waits during deep block, fires first tick after', () => {
-    const state: ReminderState = { ...EMPTY_REMINDER_STATE, lastWaterAt: 600, lastEyeAt: 600 }
-    const during = run(600, { blocks, state })
-    expect(kinds(during)).not.toContain('stretch')
-    const after = run(631, { blocks, state: { ...during.state, lastWaterAt: 631, lastEyeAt: 631 } })
-    expect(kinds(after)).toEqual(['stretch'])
-    expect(after.state.lastStretchAt).toBe(631)
+    expect(r.events.map((e) => [e.kind, e.parts])).toEqual([['meeting-soon', []]])
   })
 })

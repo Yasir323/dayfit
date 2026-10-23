@@ -53,6 +53,9 @@ if (!app.requestSingleInstanceLock()) {
       onDrank: guarded('water action', () => {
         publish(service.logWater())
       }),
+      onSnooze: guarded('snooze action', () => {
+        publish(service.snoozeBreak())
+      }),
       onNudge: guarded('nudge action', (id: string, a: 'done' | 'extend' | 'move') => {
         const view = publish(service.answerNudge(id, a))
         // The popover is hidden, so say what moved.
@@ -65,7 +68,11 @@ if (!app.requestSingleInstanceLock()) {
     const tick = guarded('tick', (): void => {
       const { events, nudges, view } = service.tick(powerMonitor.getSystemIdleTime())
       for (const event of events)
-        showNotification({ type: 'event', event }, process.platform, handlers)
+        showNotification(
+          { type: 'event', event, snoozeMin: view.settings.breaks.snoozeMin },
+          process.platform,
+          handlers
+        )
       for (const id of nudges) {
         const item = view.items.find((i) => i.id === id)
         if (item)

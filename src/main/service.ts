@@ -4,6 +4,7 @@ import { applyNudgeAnswer, dueNudges, type NudgeAnswer } from '../core/nudge'
 import { itemsForDate, rolloverItems } from '../core/recurrence'
 import { dueReminders, EMPTY_REMINDER_STATE, isBusy, type ReminderEvent } from '../core/reminders'
 import { diffMoves, frozenBlocks } from '../core/replan'
+import { snoozeBreak } from '../core/breaks'
 import { planDay } from '../core/scheduler'
 import { addDays, minutesOf, toDateStr, weekday } from '../core/time'
 import {
@@ -206,6 +207,18 @@ export class DayfitService {
       item.lockedStart = own[0].start
     } else {
       item.lockedStart = null
+    }
+    this.save()
+    return this.buildView()
+  }
+
+  /** Notification Snooze: the last break comes back after `breaks.snoozeMin` minutes. */
+  snoozeBreak(): ViewState {
+    this.begin()
+    const s = this.state
+    s.reminder = {
+      ...s.reminder,
+      breaks: snoozeBreak(s.reminder.breaks, this.nowMin(), s.settings.breaks.snoozeMin)
     }
     this.save()
     return this.buildView()

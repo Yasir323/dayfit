@@ -6,6 +6,7 @@ import type { Move } from '../core/replan'
 import type { NudgeState } from '../core/nudge'
 import type { ReminderState } from '../core/reminders'
 import { EMPTY_REMINDER_STATE } from '../core/reminders'
+import { EMPTY_BREAK_STATE } from '../core/breaks'
 
 export interface DayPlan {
   blocks: Block[]
@@ -74,6 +75,17 @@ export function loadState(file: string): AppState {
   const defaults = defaultState()
   const state = { ...defaults, ...parsed } as AppState
   state.settings = deepMerge(defaults.settings, parsed.settings)
+  // deepMerge keeps unknown keys; drop settings that no longer exist.
+  delete (state.settings as Partial<Settings> & { busy?: unknown }).busy
+  // Reminder state from before combined breaks has no `breaks`: keep meeting keys, reset the rest.
+  const r = parsed.reminder
+  state.reminder =
+    isPlainObject(r) && isPlainObject(r.breaks)
+      ? deepMerge(defaults.reminder, r)
+      : {
+          fired: isPlainObject(r) && Array.isArray(r.fired) ? r.fired : [],
+          breaks: clone(EMPTY_BREAK_STATE)
+        }
   // Walks are reminders now; plans saved before that may still hold walk blocks.
   for (const d of Object.keys(state.plans)) {
     const plan = state.plans[d]

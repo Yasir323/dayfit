@@ -1,27 +1,23 @@
+import { EMPTY_BREAK_STATE, stepBreaks, type BreakPart, type BreakState } from './breaks'
 import type { Block, Item, Minutes, Settings } from './types'
 
-export type ReminderKind = 'meeting-soon' | 'meeting-now' | 'water' | 'eye' | 'stretch' | 'walk'
+export type ReminderKind = 'meeting-soon' | 'meeting-now' | 'break'
 export interface ReminderEvent {
   kind: ReminderKind
   itemId: string | null
   title: string
   body: string
   silent: boolean
+  parts: BreakPart[] // [] for meetings
 }
 export interface ReminderState {
-  activeMin: number
-  lastEyeAt: Minutes | null
-  lastStretchAt: Minutes | null
-  lastWaterAt: Minutes | null
-  fired: string[] // 'meeting-soon:<id>:<start>', 'meeting-now:<id>:<start>', 'walk:<start>'
+  fired: string[] // 'meeting-soon:<id>:<start>', 'meeting-now:<id>:<start>'
+  breaks: BreakState
 }
 
 export const EMPTY_REMINDER_STATE: ReminderState = {
-  activeMin: 0,
-  lastEyeAt: null,
-  lastStretchAt: null,
-  lastWaterAt: null,
-  fired: []
+  fired: [],
+  breaks: EMPTY_BREAK_STATE
 }
 
 const inside = (b: Block, now: Minutes): boolean => now >= b.start && now < b.end
@@ -42,12 +38,9 @@ export function dueReminders(input: {
   manualBusy: boolean | null
   state: ReminderState
 }): { events: ReminderEvent[]; state: ReminderState } {
-  const { now, elapsedMin, idleSec, blocks, items, settings, waterMlToday, manualBusy } = input
+  const { now, blocks, items, settings } = input
   const state: ReminderState = { ...input.state, fired: [...input.state.fired] }
   const events: ReminderEvent[] = []
-  const busy = isBusy(blocks, now, manualBusy)
-  const working = now >= settings.workStart && now < settings.workEnd
-  const gentle = false
 
   // Meeting alerts: ignore busy mode.
   if (settings.meetingAlert.enabled) {
@@ -67,7 +60,8 @@ export function dueReminders(input: {
           itemId: b.itemId,
           title: `${title} in ${lead} min`,
           body: 'Heads up, wrap up what you are doing.',
-          silent: false
+          silent: false,
+          parts: []
         })
       }
       if (inside(b, now) && !state.fired.includes(nowKey)) {
@@ -77,61 +71,25 @@ export function dueReminders(input: {
           itemId: b.itemId,
           title: `${title} is starting`,
           body: 'Time to join.',
-          silent: false
+          silent: false,
+          parts: []
         })
       }
     }
   }
 
-  // Eye rest: active-time counter, reset by idleness.
-  if (settings.eye.enabled && working) {
-    if (idleSec >= settings.eye.idleResetMin * 60) state.activeMin = 0
-    else state.activeMin += elapsedMin
-    if (state.activeMin >= settings.eye.intervalMin && (!busy || gentle)) {
-      state.activeMin = 0
-      state.lastEyeAt = now
-      events.push({
-        kind: 'eye',
-        itemId: null,
-        title: 'Rest your eyes',
-        body: 'Look at something 20 feet away for 20 seconds.',
-        silent: busy
-      })
-    }
-  }
-
-  // Water: spread glasses evenly over working hours.
-  if (settings.water.enabled && working && (!busy || gentle)) {
-    const { targetMl, glassMl } = settings.water
-    const glasses = Math.ceil(targetMl / glassMl)
-    const interval = (settings.workEnd - settings.workStart) / glasses
-    const dueGlasses = Math.floor((now - settings.workStart) / interval)
-    const sinceLast = state.lastWaterAt === null ? Infinity : now - state.lastWaterAt
-    if (waterMlToday < dueGlasses * glassMl && sinceLast >= interval) {
-      state.lastWaterAt = now
-      events.push({
-        kind: 'water',
-        itemId: null,
-        title: 'Water break',
-        body: `${waterMlToday} / ${targetMl} ml so far today.`,
-        silent: busy
-      })
-    }
-  }
-
-  // Stretch: waits out busy periods.
-  if (settings.stretch.enabled && working && !busy) {
-    if (now - (state.lastStretchAt ?? settings.workStart) >= settings.stretch.intervalMin) {
-      state.lastStretchAt = now
-      events.push({
-        kind: 'stretch',
-        itemId: null,
-        title: 'Stretch break',
-        body: 'Stand up and loosen your shoulders and back.',
-        silent: false
-      })
-    }
-  }
+  // Breaks: eye, water, stretch and walk combine into one held, snoozable notification.
+  const r = stepBreaks({ ...input, state: input.state.breaks })
+  state.breaks = r.state
+  if (r.fire)
+    events.push({
+      kind: 'break',
+      itemId: null,
+      title: r.fire.title,
+      body: r.fire.body,
+      silent: false,
+      parts: r.fire.parts
+    })
 
   return { events, state }
 }

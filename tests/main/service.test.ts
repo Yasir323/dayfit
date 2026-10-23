@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { Block, NewItem } from '../../src/core/types'
 import { DayfitService, type Clock, type ViewState } from '../../src/main/service'
 import { loadState } from '../../src/main/store'
+import { EMPTY_BREAK_STATE } from '../../src/core/breaks'
 
 const D = '2026-10-26' // Monday
 const D1 = '2026-10-27'
@@ -229,12 +230,40 @@ describe('DayfitService', () => {
     expect(s.overdue).toEqual([])
   })
 
+  it('snoozeBreak re-queues the last break', () => {
+    svc.tick(0)
+    let fired: string[] = []
+    for (let m = 1; m <= 20 && fired.length === 0; m++) {
+      clock.set(26, 9, m)
+      fired = svc.tick(0).events.map((e) => e.kind)
+    }
+    expect(fired).toEqual(['break'])
+    svc.snoozeBreak()
+    clock.set(26, 9, 25)
+    expect(svc.tick(0).events).toEqual([])
+    clock.set(26, 9, 30)
+    expect(svc.tick(0).events.map((e) => [e.kind, e.parts])).toEqual([['break', ['eye']]])
+  })
+
+  it('day rollover clears pending and snooze', () => {
+    svc.tick(0)
+    for (let m = 1; m <= 20; m++) {
+      clock.set(26, 9, m)
+      svc.tick(0)
+    }
+    svc.snoozeBreak()
+    expect(loadState(file).reminder.breaks.snoozeUntil).not.toBeNull()
+    clock.set(27, 8, 0)
+    svc.view()
+    expect(loadState(file).reminder.breaks).toEqual(EMPTY_BREAK_STATE)
+  })
+
   it('caps the minutes counted between ticks at 5', () => {
     svc.tick(0)
-    expect(loadState(file).reminder.activeMin).toBe(0)
+    expect(loadState(file).reminder.breaks.eyeActiveMin).toBe(0)
     clock.set(26, 9, 30)
     svc.tick(0)
-    expect(loadState(file).reminder.activeMin).toBe(5)
+    expect(loadState(file).reminder.breaks.eyeActiveMin).toBe(5)
   })
 
   it('the first plan of the day reports no moves', () => {

@@ -4,6 +4,7 @@ import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { DEFAULT_SETTINGS } from '../../src/core/types'
 import { defaultState, loadState, saveState } from '../../src/main/store'
+import { EMPTY_BREAK_STATE } from '../../src/core/breaks'
 
 let dir: string
 let file: string
@@ -47,6 +48,28 @@ describe('store', () => {
     const plan = { blocks: [task, walk], decisions: [], unscheduled: [], moves: [] }
     fs.writeFileSync(file, JSON.stringify({ ...s, plans: { '2026-10-23': plan } }))
     expect(loadState(file).plans['2026-10-23'].blocks).toEqual([task])
+  })
+
+  it('resets a v1-shaped reminder state on load', () => {
+    const old = {
+      activeMin: 7,
+      lastEyeAt: 500,
+      lastStretchAt: null,
+      lastWaterAt: null,
+      fired: ['x']
+    }
+    fs.writeFileSync(file, JSON.stringify({ ...defaultState(), reminder: old }))
+    expect(loadState(file).reminder).toEqual({ fired: ['x'], breaks: EMPTY_BREAK_STATE })
+  })
+
+  it('ignores the removed busy setting', () => {
+    const s = defaultState()
+    const settings = { ...s.settings, busy: { allowGentle: true }, water: { targetMl: 3000 } }
+    fs.writeFileSync(file, JSON.stringify({ ...s, settings }))
+    const loaded = loadState(file).settings
+    expect('busy' in loaded).toBe(false)
+    expect(loaded.breaks.snoozeMin).toBe(10)
+    expect(loaded.water.intervalMin).toBe(60)
   })
 
   it('returns defaults for a missing file', () => {

@@ -5,7 +5,7 @@ import type { NudgeAnswer } from '../core/nudge'
 import type { ViewState } from './service'
 
 export type NotifyInput =
-  | { type: 'event'; event: ReminderEvent }
+  | { type: 'event'; event: ReminderEvent; snoozeMin: number }
   | { type: 'nudge'; itemId: string; title: string }
   | { type: 'info'; title: string; body: string }
 
@@ -16,8 +16,10 @@ export function planUpdatedNotice(view: ViewState): NotifyInput | null {
 }
 
 export interface NotifyHandlers {
-  /** Water "Drank" button. */
+  /** Break "Drank" button. */
   onDrank(): void
+  /** Break "Snooze" button. */
+  onSnooze(): void
   /** Nudge action button. */
   onNudge(itemId: string, answer: NudgeAnswer): void
   /** Plain click (and the only interaction on Windows). `nudge` is true for nudge notifications. */
@@ -28,6 +30,12 @@ const NUDGE_ACTIONS: { text: string; answer: NudgeAnswer }[] = [
   { text: 'Done', answer: 'done' },
   { text: '+15 min', answer: 'extend' },
   { text: 'Move it', answer: 'move' }
+]
+
+/** Snooze first (index 0), then Drank (index 1) when water is part of the break. */
+const breakActions = (event: ReminderEvent, snoozeMin: number): string[] => [
+  `Snooze ${snoozeMin} min`,
+  ...(event.parts.includes('water') ? ['Drank'] : [])
 ]
 
 export function buildNotificationOptions(
@@ -51,8 +59,13 @@ export function buildNotificationOptions(
     title: event.title,
     body: event.body,
     silent: event.silent,
-    ...(mac && event.kind === 'water'
-      ? { actions: [{ type: 'button' as const, text: 'Drank' }] }
+    ...(mac && event.kind === 'break'
+      ? {
+          actions: breakActions(event, input.snoozeMin).map((text) => ({
+            type: 'button' as const,
+            text
+          }))
+        }
       : {})
   }
 }
@@ -72,8 +85,9 @@ export function showNotification(
     if (input.type === 'nudge') {
       const a = NUDGE_ACTIONS[index]
       if (a) handlers.onNudge(input.itemId, a.answer)
-    } else if (input.type === 'event' && input.event.kind === 'water' && index === 0) {
-      handlers.onDrank()
+    } else if (input.type === 'event' && input.event.kind === 'break') {
+      if (index === 0) handlers.onSnooze()
+      else if (index === 1) handlers.onDrank()
     }
   })
   live.add(n)
