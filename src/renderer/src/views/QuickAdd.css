@@ -9,9 +9,9 @@
 }
 .syntax-box {
   position: relative;
-  border: 1px solid #c9ccd1;
+  border: 1px solid var(--border-strong);
   border-radius: 8px;
-  background: #fff;
+  background: var(--surface);
 }
 .syntax-mirror,
 .syntax-input {
@@ -33,49 +33,49 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
-  color: #1d1d1f;
+  color: var(--text);
 }
 .syntax-input {
   position: relative;
   background: transparent;
   color: transparent;
-  caret-color: #1d1d1f;
+  caret-color: var(--text);
   outline: none;
 }
 .syntax-input::placeholder {
-  color: #9a9ca3;
+  color: var(--muted);
 }
 .syntax-box:focus-within {
-  border-color: #3b82f6;
+  border-color: var(--accent);
 }
 .tok {
   border-radius: 3px;
 }
 .tok-duration {
-  color: #2563eb;
-  background: #dbeafe;
+  color: var(--tok-duration);
+  background: color-mix(in srgb, var(--tok-duration) 14%, transparent);
 }
 .tok-label {
-  color: #15803d;
-  background: #dcfce7;
+  color: var(--tok-label);
+  background: color-mix(in srgb, var(--tok-label) 14%, transparent);
 }
 .tok-priority {
-  color: #dc2626;
-  background: #fee2e2;
+  color: var(--tok-priority);
+  background: color-mix(in srgb, var(--tok-priority) 14%, transparent);
 }
 .tok-half,
 .tok-day {
-  color: #7c3aed;
-  background: #ede9fe;
+  color: var(--tok-day);
+  background: color-mix(in srgb, var(--tok-day) 14%, transparent);
 }
 .tok-at,
 .tok-by {
-  color: #c2410c;
-  background: #ffedd5;
+  color: var(--tok-time);
+  background: color-mix(in srgb, var(--tok-time) 14%, transparent);
 }
 .tok-type {
-  color: #4b5563;
-  background: #e5e7eb;
+  color: var(--tok-type);
+  background: color-mix(in srgb, var(--tok-type) 14%, transparent);
 }
 .fields {
   display: grid;
@@ -87,7 +87,7 @@
   flex-direction: column;
   gap: 3px;
   font-size: 11px;
-  color: #6b7280;
+  color: var(--muted);
 }
 .fields select,
 .fields input {
@@ -108,28 +108,28 @@
 .days button {
   flex: 1;
   padding: 4px 0;
-  border: 1px solid #c9ccd1;
+  border: 1px solid var(--border-strong);
   border-radius: 6px;
-  background: #fff;
+  background: var(--surface);
 }
 .days button[aria-pressed='true'] {
-  background: #3b82f6;
-  border-color: #3b82f6;
-  color: #fff;
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
 }
 .error {
   margin: 0;
-  color: #dc2626;
+  color: var(--danger);
   font-size: 12px;
 }
 .add {
   padding: 8px;
   border: 0;
   border-radius: 8px;
-  background: #3b82f6;
-  color: #fff;
+  background: var(--accent);
+  color: var(--on-accent);
   font-size: 14px;
 }
 .add:disabled {
-  background: #c9ccd1;
+  background: var(--border-strong);
 }

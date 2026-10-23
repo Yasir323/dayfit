@@ -4,7 +4,7 @@
 .settings fieldset {
   margin: 0 0 12px;
   padding: 8px 10px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border);
   border-radius: 8px;
 }
 .settings legend {
@@ -24,11 +24,11 @@
   min-width: 0;
 }
 .settings .field input[aria-invalid='true'] {
-  border-color: #dc2626;
+  border-color: var(--danger);
 }
 .field-error {
   grid-column: 1 / -1;
-  color: #dc2626;
+  color: var(--danger);
   font-size: 12px;
 }
 .settings .toggle {
@@ -44,7 +44,7 @@
 }
 .firstrun .steps {
   margin: 0 0 12px;
-  color: #6b7280;
+  color: var(--muted);
   font-size: 12px;
 }
 .firstrun .field {
