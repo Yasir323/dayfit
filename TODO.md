@@ -20,6 +20,7 @@ Everything below "Full backlog" is unprioritised beyond the v1 / later split.
 - [x] Combined break notification (eye/water/stretch/walk) with snooze and per-task DND
 - [x] Check-in/check-out attendance reminders with optional HRMS portal link
 - [x] Lunch block in the plan, end-of-day check-out screen, one overtime nudge
+- [x] Lunch clash: shorten, move, pick a time or skip today
 - [ ] Snooze/Drank from the popover on Windows (notifications have no buttons there)
 - [x] Busy mode: mutes Dayfit's own notifications during deep work and fixed items
 - [x] Local-only storage, no account, no cloud
@@ -45,6 +46,9 @@ Everything below "Full backlog" is unprioritised beyond the v1 / later split.
 - [ ] `!dnd` token highlight has no tinted background
 - [ ] Nudges use the old busy rule; breaks use DND/high priority — reconcile
 - [ ] A break can fire in the buffer between two different DND items
+
+## Next up
+- [ ] Drag and drop on the timeline: drag tasks and lunch to a new time (drop = lock there); fixed items stay put
 
 ## Later versions
 
