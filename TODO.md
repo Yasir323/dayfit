@@ -54,18 +54,45 @@ Everything below "Full backlog" is unprioritised beyond the v1 / later split.
 - [x] macOS: "Punched" sits under Options when a portal link is set (only first action shows)
 - [x] Punch-out and overtime can fire on the same tick
 - [x] Lunch moves aren't announced in the "plan updated" toast
-- [ ] Answering a lunch clash can surface a second Review straight after Apply
+- [x] Answering a lunch clash can surface a second Review straight after Apply
 - [x] Lunch clash says "clashes with Busy" when lunch only overflows working hours
-- [ ] Review selection resets if the lunch clash changes while it is open
-- [ ] Lunch pick validated against a possibly stale `now` in the renderer
-- [ ] Banners behind check-out / first-run overlays are keyboard-reachable
-- [ ] Banner "Check out" silently does nothing during a review (no feedback)
+- [x] Review selection resets if the lunch clash changes while it is open
+- [x] Lunch pick validated against a possibly stale `now` in the renderer
+- [x] Banners behind check-out / first-run overlays are keyboard-reachable
+- [x] Banner "Check out" silently does nothing during a review (no feedback)
 - [x] Alert banner "Check out" dismisses even if a pending review blocks the check-out screen
 - [x] `markSeen` exposed over IPC but unused by the renderer
 - [x] No test for popover show → markSeen wiring (first-run order depends on line order in index.ts)
 
+## Pick next — finish the app end to end (tick what to build)
+Calendar sync, Slack/Teams, AI and mood detection stay in "Later versions".
+
+### Planning and tasks
+- [x] Drag and drop on the timeline (drop = lock there; fixed items stay put)
+- [x] Edit an existing item in place (title, duration, time, labels) from List/Timeline
+- [x] Repeating tasks and chores (daily/weekly), not only fixed items
+- [x] Evening preview: see and adjust tomorrow's plan before checking out
+- [x] Meeting buffers: auto gap after back-to-back fixed items + "prep in 5 min" note
+
+### Focus and wellbeing
+- [x] Focus timer (25/50 min) on any task: DND on, breaks held, short break after
+- [x] Coffee and energy: caffeine cap + cut-off hour, afternoon-slump coffee/walk suggestion
+- [x] Daily summary at check-out: focus time, breaks taken, water vs target, done/moved
+- [x] Weekly trend view (last 7 days of the daily summary)
+
+### App quality
+- [ ] Keyboard navigation in the popover (tabs, list rows, actions)
+- [x] Backup: export/import data as JSON from Settings
+- [x] Leftover minors (5 items under "Known issues and polish")
+- [ ] Visual check in the running app (`npm run dev`)
+
+### Release (end)
+- [ ] App icon and packaging for Mac + Windows
+- [ ] Sign dev and release builds (Apple Development / Developer ID)
+- [ ] Open-source release: README, screenshots, contributing guide, CI
+
 ## Next up
-- [ ] Drag and drop on the timeline: drag tasks and lunch to a new time (drop = lock there); fixed items stay put
+- [x] Drag and drop on the timeline: drag tasks and lunch to a new time (drop = lock there); fixed items stay put
 
 ## Later versions
 
@@ -104,7 +131,7 @@ Everything below "Full backlog" is unprioritised beyond the v1 / later split.
 - [ ] Blink-rate detection for dry eyes
 - [ ] Posture warning
 - [ ] Screen-distance warning
-- [ ] Caffeine tracker: daily cap + cutoff hour; after cutoff suggest walk/water instead of coffee
+- [x] Caffeine tracker: daily cap + cutoff hour; after cutoff suggest walk/water instead of coffee
 - [ ] Meal / skipped-lunch reminder
 - [ ] Snack reminder
 - [ ] Medication reminder
@@ -116,7 +143,7 @@ Everything below "Full backlog" is unprioritised beyond the v1 / later split.
 
 - [ ] Auto busy mode during calendar meetings, screen share, or fullscreen apps
 - [x] Smart break timing: never mid-meeting, moved into gaps
-- [ ] Back-to-back meeting detection; auto-add buffer time
+- [x] Back-to-back meeting detection; auto-add buffer time
 - [ ] Meeting prep pop-up 5 min before: agenda, join link, attendees
 - [ ] Auto-book focus blocks into empty calendar slots
 - [ ] Pomodoro timer tied to break cycle
@@ -154,7 +181,7 @@ Everything below "Full backlog" is unprioritised beyond the v1 / later split.
 
 - [ ] Auto busy mode during meetings
 - [x] Smart break timing (never mid-meeting)
-- [ ] Back-to-back meeting buffers
+- [x] Back-to-back meeting buffers
 - [x] Walk reminder
 - [x] Stretching reminder
 - [ ] Meal / skipped-lunch reminder
