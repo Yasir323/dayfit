@@ -286,6 +286,21 @@ describe('DayfitService', () => {
     expect(svc.tick(0).events.map((e) => e.kind)).toContain('attendance-out')
   })
 
+  it('an item unscheduled at check-out loses its time and is never nudged', () => {
+    svc.markPunched('in')
+    svc.addItems([newItem({ title: 'A' })]) // planned 09:00–09:30
+    clock.set(26, 9, 10)
+    const v = svc.checkOut([{ itemId: 'id1', choice: 'unscheduled' }])
+    expect(v.plan.blocks.some((b) => b.itemId === 'id1')).toBe(false)
+    expect(v.plan.unscheduled).toContain('id1')
+    clock.set(26, 9, 31)
+    expect(svc.tick(0).nudges).toEqual([])
+    clock.set(26, 9, 50)
+    const t = svc.tick(0)
+    expect(t.nudges).toEqual([])
+    expect(t.view.nudges).toEqual([])
+  })
+
   it('checkOut skips items that are no longer open', () => {
     svc.addItems([newItem()])
     svc.updateItem('id1', { status: 'done' })

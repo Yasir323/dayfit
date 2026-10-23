@@ -248,6 +248,7 @@ export class DayfitService {
   checkOut(choices: { itemId: string; choice: 'tomorrow' | 'unscheduled' | 'drop' }[]): ViewState {
     this.begin()
     const tomorrow = addDays(this.today(), 1)
+    const unscheduled = new Set<string>()
     for (const { itemId, choice } of choices) {
       const item = this.find(itemId)
       // Items finished or removed since the screen opened are left alone.
@@ -256,10 +257,19 @@ export class DayfitService {
         item.date = tomorrow
         item.lockedStart = null
       } else if (choice === 'drop') item.status = 'dropped'
-      else this.answers = [...this.answers.filter((a) => a.itemId !== itemId), { itemId, choice }]
+      else {
+        this.answers = [...this.answers.filter((a) => a.itemId !== itemId), { itemId, choice }]
+        // "No time" means no block, no overdue flag and no more time's-up nudges today.
+        unscheduled.add(itemId)
+        const s = this.state
+        s.overdue = s.overdue.filter((id) => id !== itemId)
+        s.nudges[itemId] = { count: NUDGES_EXHAUSTED, lastAt: this.nowMin() }
+      }
     }
     this.state.endOfDay = startCheckout(this.state.endOfDay)
-    return this.replanAndSave()
+    return this.replanAndSave((frozen) =>
+      frozen.filter((b) => b.itemId === null || !unscheduled.has(b.itemId))
+    )
   }
 
   logWater(): ViewState {
