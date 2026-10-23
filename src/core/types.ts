@@ -47,6 +47,8 @@ export interface DecisionAnswer {
 }
 /** Today's answer to a lunch clash: skip, or lunch at an exact time and length. */
 export type LunchAnswer = { kind: 'skip' } | { kind: 'at'; start: Minutes; len: number }
+/** What Review sends: shorten / move are resolved against the current plan when answered. */
+export type LunchChoice = LunchAnswer | { kind: 'shorten' } | { kind: 'move' }
 /** Lunch can't sit at its usual time; the user picks shorten / move / a time / skip. */
 export interface LunchClash {
   reason: 'clash' | 'passed'

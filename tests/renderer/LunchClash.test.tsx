@@ -82,7 +82,7 @@ describe('lunch clash row', () => {
     expect(apply).toBeDisabled()
     await userEvent.click(screen.getByRole('radio', { name: 'Move to 14:25' }))
     await userEvent.click(apply)
-    expect(api.answerDecisions).toHaveBeenCalledWith([], { kind: 'at', start: 865, len: 45 })
+    expect(api.answerDecisions).toHaveBeenCalledWith([], { kind: 'move' })
   })
 
   it('skip sends a skip answer', async () => {

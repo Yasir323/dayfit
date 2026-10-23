@@ -371,6 +371,11 @@ describe('planDay: lunch', () => {
     expect(r.lunchClash).toBeNull()
   })
 
+  test('passed with no room left (e.g. after hours) asks nothing', () => {
+    expect(plan([], { now: 1100 }).lunchClash).toBeNull()
+    expect(plan([call(900, 180)], { now: 900 }).lunchClash).toBeNull()
+  })
+
   test('lunchMin below 30 never offers shorten', () => {
     const settings = { ...S, endOfDay: { ...S.endOfDay, lunchMin: 25 } }
     expect(plan([call(800, 60)], { settings }).lunchClash?.shorten).toBeNull()

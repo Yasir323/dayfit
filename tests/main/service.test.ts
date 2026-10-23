@@ -484,6 +484,39 @@ describe('DayfitService lunch clash', () => {
     expect(v.plan.lunchClash?.reason).toBe('clash')
   })
 
+  it('a move answer is resolved against the current time, not a stale view', () => {
+    // first plan at 15:00 → "passed", move 900; the user answers at 15:05
+    clock.set(26, 15, 0)
+    expect(svc.replan().plan.lunchClash).toMatchObject({ reason: 'passed', move: 900 })
+    clock.set(26, 15, 5)
+    const v = svc.answerDecisions([], { kind: 'move' })
+    expect(lunchStarts(v)).toEqual([905])
+    expect(v.plan.lunchClash).toBeNull()
+  })
+
+  it('a shorten answer that is no longer offered is refused', () => {
+    clock.set(26, 13, 5)
+    expect(() => svc.answerDecisions([], { kind: 'shorten' })).toThrow(
+      'That option is no longer available'
+    )
+  })
+
+  it('no lunch question after working hours', () => {
+    clock.set(26, 18, 30)
+    expect(svc.replan().plan.lunchClash).toBeNull()
+  })
+
+  it("changing the lunch time or length in Settings clears today's answer", () => {
+    svc.answerDecisions([], { kind: 'at', start: 865, len: 45 })
+    svc.updateSettings({ lunch: 720 })
+    expect(loadState(file).lunchAnswer).toBeNull()
+    expect(lunchStarts(svc.view())).toEqual([720])
+    svc.answerDecisions([], { kind: 'skip' })
+    const s = svc.view().settings
+    svc.updateSettings({ endOfDay: { ...s.endOfDay, lunchMin: 30 } })
+    expect(loadState(file).lunchAnswer).toBeNull()
+  })
+
   it('answer survives a restart and clears at rollover', () => {
     svc.answerDecisions([], { kind: 'at', start: 865, len: 45 })
     const again = new DayfitService(file, clock)

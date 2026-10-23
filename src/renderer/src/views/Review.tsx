@@ -6,7 +6,7 @@ import type {
   DecisionAnswer,
   DecisionChoice,
   Item,
-  LunchAnswer
+  LunchChoice
 } from '../../../core/types'
 import { api } from '../api'
 import type { ViewState } from '../api'
@@ -47,12 +47,11 @@ export function Review({ decisions, items, onDone, view }: Props): React.JSX.Ele
           ? null
           : 'Enter a time'
         : lunchPickError(picked, lunchMin, view.plan.blocks, view.items, view.settings, view.now)
-  const lunchAnswer = ((): LunchAnswer | null | undefined => {
+  const lunchAnswer = ((): LunchChoice | null | undefined => {
     if (!clash) return undefined
     if (lunchPick === 'skip') return { kind: 'skip' }
-    if (lunchPick === 'shorten' && clash.shorten) return { kind: 'at', ...clash.shorten }
-    if (lunchPick === 'move' && clash.move !== null)
-      return { kind: 'at', start: clash.move, len: lunchMin }
+    if (lunchPick === 'shorten' && clash.shorten) return { kind: 'shorten' }
+    if (lunchPick === 'move' && clash.move !== null) return { kind: 'move' }
     if (lunchPick === 'pick' && picked !== null && pickError === null)
       return { kind: 'at', start: picked, len: lunchMin }
     return null

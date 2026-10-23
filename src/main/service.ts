@@ -22,6 +22,7 @@ import {
   type DecisionAnswer,
   type Item,
   type LunchAnswer,
+  type LunchChoice,
   type Minutes,
   type NewItem,
   type Settings
@@ -137,9 +138,10 @@ export class DayfitService {
     return this.replanAndSave()
   }
 
-  answerDecisions(answers: DecisionAnswer[], lunch?: LunchAnswer): ViewState {
+  answerDecisions(answers: DecisionAnswer[], choice?: LunchChoice): ViewState {
     this.begin()
     const today = this.today()
+    const lunch = choice && this.resolveLunch(choice)
     if (lunch) {
       if (lunch.kind === 'at') {
         const error = lunchPickError(
@@ -309,6 +311,13 @@ export class DayfitService {
 
   updateSettings(p: Partial<Settings>): ViewState {
     this.begin()
+    const old = this.state.settings
+    // A new lunch time or length overrides today's clash answer.
+    if (
+      (p.lunch !== undefined && p.lunch !== old.lunch) ||
+      (p.endOfDay !== undefined && p.endOfDay.lunchMin !== old.endOfDay.lunchMin)
+    )
+      this.state.lunchAnswer = null
     this.state.settings = { ...this.state.settings, ...p }
     return this.replanAndSave()
   }
@@ -470,6 +479,22 @@ export class DayfitService {
     s.plans[today] = { ...next, moves: hadPlan ? diffMoves(prev, next.blocks) : [] }
     this.save()
     return this.buildView()
+  }
+
+  /**
+   * Shorten / move are offers computed at the last replan; re-plan now (without a saved answer)
+   * and take the current offer, so a stale view never books a time that has already passed.
+   */
+  private resolveLunch(choice: LunchChoice): LunchAnswer {
+    if (choice.kind === 'skip' || choice.kind === 'at') return choice
+    this.state.lunchAnswer = null
+    this.replanAndSave()
+    const clash = this.todayPlan().lunchClash ?? null
+    const len = this.state.settings.endOfDay.lunchMin
+    if (choice.kind === 'shorten' && clash?.shorten) return { kind: 'at', ...clash.shorten }
+    if (choice.kind === 'move' && clash && clash.move !== null)
+      return { kind: 'at', start: clash.move, len }
+    throw new Error('That option is no longer available')
   }
 
   /** Keeps earlier suggestions that are still ahead and free, then fills up to CALL_SLOTS. */

@@ -473,17 +473,15 @@ function placeLunch(plan: Plan, input: PlanInput): { clash: LunchClash | null; r
   }
   const usual = s.lunch
   const len = s.endOfDay.lunchMin
-  if (usual < plan.window.start)
+  if (usual < plan.window.start) {
+    // Passed with no room left today (e.g. after hours): nothing to ask.
+    const move = nextSlot(plan.free, plan.window.start, len)
+    if (move === null) return { clash: null, rejected }
     return {
-      clash: {
-        reason: 'passed',
-        usual,
-        clashWith: null,
-        shorten: null,
-        move: nextSlot(plan.free, plan.window.start, len)
-      },
+      clash: { reason: 'passed', usual, clashWith: null, shorten: null, move },
       rejected
     }
+  }
   if (fitsFree(plan.free, usual, len)) {
     put(usual, len)
     return { clash: null, rejected }
