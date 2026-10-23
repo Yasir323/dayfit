@@ -40,6 +40,7 @@ const view = (over: Partial<ViewState['settings']> = {}): ViewState =>
     alerts: [],
     trayLabel: null,
     focus: null,
+    daySummary: null,
     coffee: 0
   }) as ViewState
 

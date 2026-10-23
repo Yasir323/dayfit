@@ -14,6 +14,7 @@ import {
   EMPTY_END_OF_DAY_STATE,
   type AttendanceKind
 } from '../core/endOfDay'
+import { EMPTY_DAY_STATS, summarizeDay, type DayStats, type DaySummary } from '../core/summary'
 import { lunchPickError, planDay, slotError } from '../core/scheduler'
 import { addDays, minutesOf, toDateStr, weekOf } from '../core/time'
 import {
@@ -58,6 +59,8 @@ export interface ViewState {
   alerts: Alert[]
   /** Short label for the menu bar, or null once seen. */
   trayLabel: string | null
+  /** Today's summary once checked out, else null. */
+  daySummary: DaySummary | null
   /** The running focus session, if any. */
   focus: { itemId: string; title: string; endsAt: number; minutesLeft: number } | null
   /** False when the quick-add shortcut could not be registered (set by the shell). */
@@ -331,10 +334,13 @@ export class DayfitService {
     this.clearAlerts(
       (a) => a.kind === 'break' && (given.length === 0 || a.parts.every((p) => given.includes(p)))
     )
-    s.reminder = {
-      ...s.reminder,
-      breaks: snoozeBreak(s.reminder.breaks, this.nowMin(), s.settings.breaks.snoozeMin, given)
+    const breaks = snoozeBreak(s.reminder.breaks, this.nowMin(), s.settings.breaks.snoozeMin, given)
+    // A snoozed break wasn't taken; it counts again when it comes back.
+    if (breaks !== s.reminder.breaks) {
+      const stats = this.stats()
+      stats.breaksTaken = Math.max(0, stats.breaksTaken - 1)
     }
+    s.reminder = { ...s.reminder, breaks }
     this.save()
     return this.buildView()
   }
@@ -384,6 +390,7 @@ export class DayfitService {
       // Items finished or removed since the screen opened are left alone.
       if (!item || item.status !== 'open') continue
       if (choice === 'tomorrow') {
+        this.stats().moved++
         item.date = tomorrow
         item.lockedStart = null
         item.suggestedSlots = []
@@ -400,9 +407,11 @@ export class DayfitService {
     this.state.endOfDay = startCheckout(this.state.endOfDay)
     // Checked out: the wrap-up and past-hours banners are done with.
     this.clearAlerts((a) => a.kind === 'heads-up' || a.kind === 'overtime')
-    return this.replanAndSave((frozen) =>
+    const view = this.replanAndSave((frozen) =>
       frozen.filter((b) => b.itemId === null || !unscheduled.has(b.itemId))
     )
+    this.db.putDay(this.today(), this.summarize(this.today()))
+    return view
   }
 
   logCoffee(): ViewState {
@@ -462,7 +471,7 @@ export class DayfitService {
     const now = this.nowMin()
     const blocks = this.todayPlan().blocks
     const items = itemsForDate(s.items, today)
-    const before = JSON.stringify([s.reminder, s.endOfDay, s.alerts, s.unseen, s.focus])
+    const before = JSON.stringify([s.reminder, s.endOfDay, s.alerts, s.unseen, s.focus, s.stats])
 
     const r = dueReminders({
       now,
@@ -505,6 +514,7 @@ export class DayfitService {
 
     // A focus session past its end finishes once: busy goes back, and a short break is queued.
     if (s.focus && at >= s.focus.endsAt) {
+      this.stats().focusMin += s.focus.minutes
       s.manualBusy = s.focus.prevManualBusy
       s.focus = null
       const pending = new Set([...s.reminder.breaks.pending, 'eye', 'stretch'])
@@ -522,6 +532,9 @@ export class DayfitService {
       })
     }
 
+    const fired = events.filter((e) => e.kind === 'break').length
+    if (fired > 0) this.stats().breaksTaken += fired
+
     const rec = recordAlerts(s.alerts, s.unseen, events, nudges.length, now, s.settings)
     s.alerts = rec.alerts
     s.unseen = rec.unseen
@@ -529,7 +542,7 @@ export class DayfitService {
     if (
       nudges.length > 0 ||
       s.overdue.length !== overdueBefore ||
-      JSON.stringify([s.reminder, s.endOfDay, s.alerts, s.unseen, s.focus]) !== before
+      JSON.stringify([s.reminder, s.endOfDay, s.alerts, s.unseen, s.focus, s.stats]) !== before
     )
       this.save()
     return { events, nudges, view: this.buildView() }
@@ -580,6 +593,26 @@ export class DayfitService {
       .reduce<Block | undefined>((best, b) => (!best || b.end > best.end ? b : best), undefined)
   }
 
+  /** Today's summary counters, created on first use. */
+  private stats(): DayStats {
+    const today = this.today()
+    this.state.stats[today] ??= { ...EMPTY_DAY_STATS }
+    return this.state.stats[today]
+  }
+
+  private summarize(date: DateStr): DaySummary {
+    const s = this.state
+    return summarizeDay({
+      date,
+      items: s.items,
+      blocks: s.plans[date]?.blocks ?? [],
+      stats: s.stats[date] ?? EMPTY_DAY_STATS,
+      waterMl: s.waterMl[date] ?? 0,
+      waterTargetMl: s.settings.water.targetMl,
+      coffeeCups: s.coffee[date] ?? 0
+    })
+  }
+
   private save(): void {
     saveState(this.db, this.state)
   }
@@ -589,6 +622,10 @@ export class DayfitService {
     const today = this.today()
     if (this.state.lastDate === today) return
     const s = this.state
+    // A day that ended without "Done for today" still gets its summary, once.
+    const last = s.lastDate
+    if (last && this.db.days(last, last).length === 0) this.db.putDay(last, this.summarize(last))
+    s.stats = today in s.stats ? { [today]: s.stats[today] } : {}
     s.items = rolloverItems(s.items, today)
     s.reminder = structuredClone(EMPTY_REMINDER_STATE)
     s.endOfDay = structuredClone(EMPTY_END_OF_DAY_STATE)
@@ -736,6 +773,7 @@ export class DayfitService {
       attendance: attendanceDue(s.endOfDay, now, s.settings),
       checkedOut: s.endOfDay.checkedOut,
       alerts: s.alerts,
+      daySummary: s.endOfDay.checkedOut ? this.summarize(today) : null,
       trayLabel: s.unseen ?? (focus ? `Focus ${focus.minutesLeft}m` : null),
       focus,
       hotkeyOk: this.hotkeyOk

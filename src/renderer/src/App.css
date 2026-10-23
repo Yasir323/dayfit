@@ -360,6 +360,11 @@ body {
   margin: 4px 0 var(--s2);
   font-size: 12px;
 }
+.day-summary {
+  margin: var(--s2) 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
 .review-row {
   padding: 10px 0;
   border-top: 1px solid var(--hairline);

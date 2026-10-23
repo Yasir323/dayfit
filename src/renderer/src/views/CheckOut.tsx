@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { api } from '../api'
 import type { ViewState } from '../api'
+import { formatSummary } from '../../../core/summary'
 import { checkoutRows } from '../lib/checkout'
 
 type Choice = 'tomorrow' | 'unscheduled' | 'drop'
@@ -24,6 +25,8 @@ export function CheckOut({ view, onDone, onCancel, onPreview }: Props): React.JS
   const [choices, setChoices] = useState<Record<string, Choice>>({})
   const [saving, setSaving] = useState(false)
   const [failure, setFailure] = useState<string | null>(null)
+  /** The checked-out view, held while the day's summary is on screen. */
+  const [finished, setFinished] = useState<ViewState | null>(null)
   const choiceOf = (id: string): Choice => choices[id] ?? 'tomorrow'
 
   const apply = async (): Promise<void> => {
@@ -31,13 +34,28 @@ export function CheckOut({ view, onDone, onCancel, onPreview }: Props): React.JS
     setSaving(true)
     setFailure(null)
     try {
-      onDone(await api.checkOut(rows.map((i) => ({ itemId: i.id, choice: choiceOf(i.id) }))))
+      const v = await api.checkOut(rows.map((i) => ({ itemId: i.id, choice: choiceOf(i.id) })))
+      if (v.daySummary) setFinished(v)
+      else onDone(v)
     } catch (e) {
       setFailure(e instanceof Error ? e.message : 'Could not check out')
     } finally {
       setSaving(false)
     }
   }
+
+  if (finished?.daySummary)
+    return (
+      <div className="review card">
+        <h2>Your day</h2>
+        <p className="day-summary">{formatSummary(finished.daySummary)}</p>
+        <div className="review-actions">
+          <button type="button" className="btn-primary" onClick={() => onDone(finished)}>
+            Close
+          </button>
+        </div>
+      </div>
+    )
 
   return (
     <div className="review card">

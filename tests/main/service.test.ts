@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { Block, NewItem } from '../../src/core/types'
 import { DayfitService, type Clock, type ViewState } from '../../src/main/service'
 import { loadState } from '../../src/main/store'
+import { openDb } from '../../src/main/db'
 import { EMPTY_BREAK_STATE } from '../../src/core/breaks'
 import { EMPTY_END_OF_DAY_STATE } from '../../src/core/endOfDay'
 
@@ -779,5 +780,89 @@ describe('DayfitService view: tomorrow and week', () => {
     expect(v.week[0].date).toBe(D)
     expect(v.week[0].count).toBe(v.items.length)
     expect(v.week[1]).toEqual({ date: D1, count: 0 })
+  })
+})
+
+describe('DayfitService daily summary', () => {
+  const daysIn = (): { date: string; summary: unknown }[] => {
+    const db = openDb(file)
+    try {
+      return db.days('2026-01-01', '2026-12-31')
+    } finally {
+      db.close()
+    }
+  }
+  const fireBreak = (): void => {
+    svc.markPunched('in')
+    svc.tick(0)
+    for (let m = 1; m <= 20; m++) {
+      clock.set(26, 9, m)
+      if (svc.tick(0).events.some((e) => e.kind === 'break')) return
+    }
+    throw new Error('no break fired')
+  }
+
+  it('checkOut writes today and the view shows it', () => {
+    svc.addItems([newItem({ title: 'A' }), newItem({ title: 'B' }), newItem({ title: 'C' })])
+    svc.updateItem('id1', { status: 'done' })
+    svc.logWater()
+    svc.logCoffee()
+    const v = svc.checkOut([
+      { itemId: 'id2', choice: 'tomorrow' },
+      { itemId: 'id3', choice: 'drop' }
+    ])
+    const want = {
+      date: D,
+      done: 1,
+      moved: 1,
+      dropped: 1,
+      waterMl: 250,
+      waterTargetMl: 2000,
+      coffeeCups: 1
+    }
+    expect(v.daySummary).toMatchObject(want)
+    expect(daysIn()).toEqual([{ date: D, summary: expect.objectContaining(want) }])
+  })
+
+  it('no summary in the view before check-out', () => {
+    expect(svc.view().daySummary).toBeNull()
+  })
+
+  it('a fired break counts as taken; a snoozed one does not', () => {
+    fireBreak()
+    expect(svc.checkOut([]).daySummary?.breaksTaken).toBe(1)
+    svc.snoozeBreak()
+    expect(svc.view().daySummary?.breaksTaken).toBe(0)
+  })
+
+  it('a finished focus session adds its minutes', () => {
+    svc.addItems([newItem()])
+    svc.startFocus('id1', 25)
+    clock.set(26, 9, 26)
+    svc.tick(0)
+    expect(svc.checkOut([]).daySummary?.focusMin).toBe(25)
+  })
+
+  it('rollover writes the previous day when check-out was skipped, once', () => {
+    svc.addItems([newItem()])
+    svc.updateItem('id1', { status: 'done' })
+    clock.set(27, 9, 0)
+    svc.view()
+    expect(daysIn()).toEqual([{ date: D, summary: expect.objectContaining({ done: 1 }) }])
+    // A later rollover adds the next day and leaves this one as written.
+    clock.set(28, 9, 0)
+    svc.view()
+    const rows = daysIn()
+    expect(rows.map((d) => d.date)).toEqual([D, D1])
+    expect(rows[0].summary).toMatchObject({ done: 1 })
+  })
+
+  it('rollover keeps the check-out summary', () => {
+    svc.logWater()
+    svc.checkOut([])
+    svc.logWater() // after check-out: not in the saved summary
+    clock.set(27, 9, 0)
+    svc.view()
+    expect(daysIn()).toEqual([{ date: D, summary: expect.objectContaining({ waterMl: 250 }) }])
   })
 })

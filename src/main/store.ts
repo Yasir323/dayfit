@@ -15,6 +15,7 @@ import type { NudgeState } from '../core/nudge'
 import type { ReminderState } from '../core/reminders'
 import { EMPTY_REMINDER_STATE } from '../core/reminders'
 import type { Alert } from '../core/alerts'
+import type { DayStats } from '../core/summary'
 import { EMPTY_BREAK_STATE } from '../core/breaks'
 import { openDb, type Db } from './db'
 import { EMPTY_END_OF_DAY_STATE, type EndOfDayState } from '../core/endOfDay'
@@ -36,6 +37,8 @@ export interface AppState {
   plans: Record<DateStr, DayPlan>
   waterMl: Record<DateStr, number>
   coffee: Record<DateStr, number>
+  /** Per-day counters for the daily summary; only today's survives rollover. */
+  stats: Record<DateStr, DayStats>
   reminder: ReminderState
   endOfDay: EndOfDayState
   /** Today's lunch-clash answer; ignored once the date moves on. */
@@ -63,6 +66,7 @@ export const defaultState = (): AppState => ({
   plans: {},
   waterMl: {},
   coffee: {},
+  stats: {},
   reminder: clone(EMPTY_REMINDER_STATE),
   endOfDay: clone(EMPTY_END_OF_DAY_STATE),
   lunchAnswer: null,

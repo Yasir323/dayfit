@@ -95,6 +95,35 @@ describe('check-out', () => {
     expect(screen.queryByRole('dialog', { name: 'Wrap up today' })).toBeNull()
   })
 
+  it('Done for today shows the day summary before closing', async () => {
+    api.checkOut.mockResolvedValue(
+      withEod({
+        checkedOut: true,
+        daySummary: {
+          date: '2026-10-23',
+          focusMin: 130,
+          breaksTaken: 6,
+          waterMl: 1500,
+          waterTargetMl: 2000,
+          coffeeCups: 1,
+          done: 4,
+          moved: 0,
+          dropped: 0,
+          meetings: 2
+        }
+      })
+    )
+    await show(withEod({ now: 1030, items: tasks }))
+    await userEvent.click(screen.getByRole('button', { name: 'Check out' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Done for today' }))
+    const dialog = screen.getByRole('dialog', { name: 'Wrap up today' })
+    expect(
+      within(dialog).getByText('Focus 2h 10m · Water 1500 / 2000 ml · Breaks 6 · Done 4')
+    ).toBeInTheDocument()
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Close' }))
+    expect(screen.queryByRole('dialog', { name: 'Wrap up today' })).toBeNull()
+  })
+
   it('Not yet closes without changes', async () => {
     await show(withEod({ now: 1030, items: tasks }))
     await userEvent.click(screen.getByRole('button', { name: 'Check out' }))
