@@ -306,6 +306,18 @@ export class DayfitService {
     return this.buildView()
   }
 
+  /** The last 7 days' saved summaries, oldest first; null for a day with none. */
+  week(): { date: DateStr; summary: DaySummary | null }[] {
+    this.begin()
+    const today = this.today()
+    const from = addDays(today, -6)
+    const saved = new Map(this.db.days(from, today).map((d) => [d.date, d.summary as DaySummary]))
+    return Array.from({ length: 7 }, (_, n) => {
+      const date = addDays(from, n)
+      return { date, summary: saved.get(date) ?? null }
+    })
+  }
+
   /** Tomorrow's plan from the start of work, for the evening preview; nothing is saved. */
   previewTomorrow(): { date: DateStr; blocks: Block[]; items: Item[] } {
     this.begin()

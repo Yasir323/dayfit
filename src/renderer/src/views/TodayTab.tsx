@@ -5,18 +5,20 @@ import { dayHeader } from '../lib/dates'
 import { Icon } from '../ui/Icon'
 import { Segmented } from '../ui/Segmented'
 import { TomorrowView } from './TomorrowView'
+import { WeekView } from './WeekView'
 import { CHECKOUT_BUTTON_LEAD_MIN } from '../../../core/endOfDay'
 import { nextUp } from '../lib/agenda'
 import { CalendarView } from './CalendarView'
 import { ListView } from './ListView'
 import { TimelineView } from './TimelineView'
 
-export type TodayViewKind = 'list' | 'calendar' | 'timeline' | 'tomorrow'
+export type TodayViewKind = 'list' | 'calendar' | 'timeline' | 'week' | 'tomorrow'
 
 const VIEWS: [TodayViewKind, string][] = [
   ['list', 'List'],
   ['calendar', 'Calendar'],
-  ['timeline', 'Timeline']
+  ['timeline', 'Timeline'],
+  ['week', 'Week']
 ]
 const STORAGE_KEY = 'dayfit.todayView'
 const BUSY_MODES: [string, boolean | null][] = [
@@ -146,6 +148,7 @@ export function TodayTab({
           <CalendarView view={view} onShowList={() => choose('list')} onAddTask={onAddTask} />
         )}
         {shownKind === 'timeline' && <TimelineView view={view} onView={onView} />}
+        {shownKind === 'week' && <WeekView view={view} />}
         {shownKind === 'tomorrow' && <TomorrowView view={view} />}
       </div>
 

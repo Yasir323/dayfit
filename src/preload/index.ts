@@ -35,6 +35,7 @@ const dayfit = {
   setManualBusy: call('setManualBusy'),
   updateSettings: call('updateSettings'),
   previewTomorrow: () => ipcRenderer.invoke('dayfit:previewTomorrow'),
+  week: () => ipcRenderer.invoke('dayfit:week'),
   hide: () => ipcRenderer.send('dayfit:hide'),
   openPortal: () => ipcRenderer.send('dayfit:openPortal'),
   onState: subscribe('dayfit:state'),

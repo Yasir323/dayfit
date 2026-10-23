@@ -51,6 +51,7 @@ export function registerIpc(
   }
   // Read-only queries that return data, not a new view.
   ipcMain.handle('dayfit:previewTomorrow', () => service.previewTomorrow())
+  ipcMain.handle('dayfit:week', () => service.week())
   ipcMain.on('dayfit:hide', () => shell.hide())
   ipcMain.on('dayfit:openPortal', () => shell.openPortal())
 }

@@ -866,3 +866,23 @@ describe('DayfitService daily summary', () => {
     expect(daysIn()).toEqual([{ date: D, summary: expect.objectContaining({ waterMl: 250 }) }])
   })
 })
+
+describe('DayfitService week', () => {
+  it('returns the last 7 days oldest first, null where there is no summary', () => {
+    svc.checkOut([]) // 26th
+    clock.set(28, 9, 0)
+    svc.view() // the 27th never ran, so it has no summary
+    const w = svc.week()
+    expect(w.map((d) => d.date)).toEqual([
+      '2026-10-22',
+      '2026-10-23',
+      '2026-10-24',
+      '2026-10-25',
+      '2026-10-26',
+      '2026-10-27',
+      '2026-10-28'
+    ])
+    expect(w[4].summary).toMatchObject({ date: D })
+    expect(w.filter((d) => d.summary !== null)).toHaveLength(1)
+  })
+})

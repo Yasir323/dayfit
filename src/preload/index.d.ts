@@ -28,6 +28,7 @@ export interface DayfitApi {
   updateSettings: Async<'updateSettings'>
   /** Hides the popover (Esc). */
   previewTomorrow(): Promise<ReturnType<DayfitService['previewTomorrow']>>
+  week(): Promise<ReturnType<DayfitService['week']>>
   hide(): void
   openPortal(): void
   onState(cb: (v: ViewState) => void): () => void
