@@ -85,6 +85,22 @@ describe('parseLine', () => {
     expect(parseLine('Write docs', D)).toEqual({ title: 'Write docs', fields: {}, tokens: [] }))
 })
 
+describe('dnd', () => {
+  test('!dnd sets dnd and is a token', () => {
+    const p = parseLine('Write report 1h !high !dnd', D)
+    expect(p.title).toBe('Write report')
+    expect(p.fields.dnd).toBe(true)
+    expect(p.tokens.map((t) => t.kind)).toEqual(['duration', 'priority', 'dnd'])
+  })
+
+  test('toNewItem defaults dnd from type and fixed start', () => {
+    expect(toNewItem(parseLine('Plan ~deep', D), D, DEFAULT_SETTINGS).dnd).toBe(true)
+    expect(toNewItem(parseLine('Standup at 10:00', D), D, DEFAULT_SETTINGS).dnd).toBe(true)
+    expect(toNewItem(parseLine('Email Sam', D), D, DEFAULT_SETTINGS).dnd).toBe(false)
+    expect(toNewItem(parseLine('Email Sam !dnd', D), D, DEFAULT_SETTINGS).dnd).toBe(true)
+  })
+})
+
 describe('toNewItem', () => {
   test('defaults', () =>
     expect(toNewItem(parseLine('Deep thing ~deep', D), D, DEFAULT_SETTINGS)).toMatchObject({

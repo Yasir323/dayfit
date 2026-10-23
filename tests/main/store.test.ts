@@ -24,6 +24,22 @@ describe('store', () => {
     expect(fs.existsSync(file + '.tmp')).toBe(false)
   })
 
+  it('fills missing dnd on load from type and fixed start', () => {
+    const s = defaultState()
+    const base = { title: 't', durationMin: 30, label: null, priority: 'med', half: null }
+    const rest = { date: '2026-10-23', deadline: null, repeat: { kind: 'none' }, status: 'open' }
+    const more = { lockedStart: null, suggestedSlots: [], createdAt: 1 }
+    const raw = {
+      ...s,
+      items: [
+        { ...base, ...rest, ...more, id: 'a', type: 'deep', fixedStart: null },
+        { ...base, ...rest, ...more, id: 'b', type: 'task', fixedStart: null }
+      ]
+    }
+    fs.writeFileSync(file, JSON.stringify(raw))
+    expect(loadState(file).items.map((i) => i.dnd)).toEqual([true, false])
+  })
+
   it('returns defaults for a missing file', () => {
     expect(loadState(file)).toEqual(defaultState())
   })

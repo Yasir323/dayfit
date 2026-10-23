@@ -28,6 +28,7 @@ type Field =
   | 'Start time'
   | 'Deadline'
   | 'Repeat'
+  | 'DND'
 
 const TYPE_NAMES: Record<ItemType, string> = {
   task: 'Task',
@@ -149,7 +150,8 @@ export function ItemChips({ value, onChange, today, defaultDurations }: Props): 
       value.deadline?.time == null ? 'none' : `by ${formatClock(value.deadline.time)}`,
       true
     ],
-    ['Repeat', 'calendar', REPEAT_NAMES[value.repeat.kind], value.type === 'fixed']
+    ['Repeat', 'calendar', REPEAT_NAMES[value.repeat.kind], value.type === 'fixed'],
+    ['DND', 'lock', value.dnd ? 'on' : 'off', true]
   ]
 
   const picker = (field: Field): React.JSX.Element => {
@@ -318,6 +320,22 @@ export function ItemChips({ value, onChange, today, defaultDurations }: Props): 
               }}
             />
           </label>
+        )
+      case 'DND':
+        return (
+          <div className="field toggle-row">
+            <span>Do not disturb</span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={value.dnd}
+              aria-label="Do not disturb"
+              className="switch"
+              onClick={() => set({ dnd: !value.dnd })}
+            >
+              <span className="knob" />
+            </button>
+          </div>
         )
       case 'Repeat':
         return (

@@ -32,6 +32,7 @@ const item = (id: string, status: Item['status'] = 'open'): Item => ({
   status,
   lockedStart: null,
   suggestedSlots: [],
+  dnd: false,
   createdAt: 0
 })
 

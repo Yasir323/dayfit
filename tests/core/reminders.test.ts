@@ -35,7 +35,7 @@ const run = (
     manualBusy: boolean | null
     state: ReminderState
   }> = {}
-) =>
+): ReturnType<typeof dueReminders> =>
   dueReminders({
     now,
     elapsedMin: 0,

@@ -21,6 +21,7 @@ const mk = (o: Partial<Item> = {}): Item => ({
   status: 'open',
   lockedStart: null,
   suggestedSlots: [],
+  dnd: false,
   createdAt: 0,
   ...o
 })

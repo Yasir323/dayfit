@@ -48,6 +48,19 @@ describe('QuickAdd', () => {
     expect(chip('Type')).toHaveAccessibleName('Type: Call')
   })
 
+  it('DND chip follows type until changed by hand', async () => {
+    const { box } = setup()
+    await userEvent.type(box, 'Plan ~deep')
+    expect(chip('DND')).toHaveAccessibleName('DND: on')
+    await userEvent.clear(box)
+    await userEvent.type(box, 'Email')
+    expect(chip('DND')).toHaveAccessibleName('DND: off')
+    await userEvent.click(chip('DND'))
+    await userEvent.click(screen.getByRole('switch', { name: 'Do not disturb' }))
+    await userEvent.type(box, ' 15m')
+    expect(chip('DND')).toHaveAccessibleName('DND: on')
+  })
+
   it('keeps a hand-changed field when later text does not touch that token', async () => {
     const { box } = setup()
     await userEvent.type(box, 'Write report !high')

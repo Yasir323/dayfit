@@ -24,6 +24,7 @@ export interface Item {
   status: 'open' | 'done' | 'dropped'
   lockedStart: Minutes | null // user-locked planned block
   suggestedSlots: Minutes[] // calls awaiting a time
+  dnd: boolean // holds break reminders while this item runs
   createdAt: number
 }
 export type NewItem = Omit<Item, 'id' | 'status' | 'lockedStart' | 'suggestedSlots' | 'createdAt'>
@@ -84,3 +85,7 @@ export const DEFAULT_SETTINGS: Settings = {
 }
 
 export const isFixed = (i: Item): boolean => i.fixedStart !== null
+
+/** Deep work and anything with a fixed start (meetings, a fixed run) hold breaks by default. */
+export const defaultDnd = (type: ItemType, fixedStart: Minutes | null): boolean =>
+  type === 'deep' || fixedStart !== null

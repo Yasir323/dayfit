@@ -1,10 +1,11 @@
 import { addDays, nextWeekday, parseClock } from './time'
+import { defaultDnd } from './types'
 import type { DateStr, Half, ItemType, NewItem, Priority, Settings } from './types'
 
 export interface TokenSpan {
   start: number
   end: number
-  kind: 'duration' | 'label' | 'priority' | 'half' | 'day' | 'at' | 'by' | 'type'
+  kind: 'duration' | 'label' | 'priority' | 'half' | 'day' | 'at' | 'by' | 'type' | 'dnd'
 }
 export interface ParsedLine {
   title: string
@@ -72,6 +73,9 @@ export function parseLine(text: string, today: DateStr): ParsedLine {
     } else if (w.length > 1 && w[0] === '#') {
       fields.label = raw.slice(1)
       push('label')
+    } else if (w === '!dnd') {
+      fields.dnd = true
+      push('dnd')
     } else if (lookup(PRIORITIES, w) !== undefined) {
       fields.priority = PRIORITIES[w]
       push('priority')
@@ -136,6 +140,7 @@ export function toNewItem(p: ParsedLine, today: DateStr, s: Settings): NewItem {
     fixedStart: null,
     deadline: null,
     repeat: { kind: 'none' },
+    dnd: defaultDnd(type, p.fields.fixedStart ?? null),
     ...p.fields
   }
 }

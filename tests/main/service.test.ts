@@ -30,6 +30,7 @@ const newItem = (p: Partial<NewItem> = {}): NewItem => ({
   fixedStart: null,
   deadline: null,
   repeat: { kind: 'none' },
+  dnd: false,
   ...p
 })
 
@@ -356,7 +357,13 @@ describe('DayfitService', () => {
 describe('DayfitService view: tomorrow and week', () => {
   it('tomorrow includes repeating fixed items and dated tasks; upcoming excludes repeating', () => {
     const v = svc.addItems([
-      newItem({ title: 'Run', type: 'fixed', fixedStart: 1110, durationMin: 45, repeat: { kind: 'daily' } }),
+      newItem({
+        title: 'Run',
+        type: 'fixed',
+        fixedStart: 1110,
+        durationMin: 45,
+        repeat: { kind: 'daily' }
+      }),
       newItem({ title: 'Later task', date: D1 })
     ])
     expect(v.tomorrow.map((i) => i.title)).toEqual(['Run', 'Later task'])

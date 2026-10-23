@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { formatClock } from '../../../core/time'
+import { defaultDnd } from '../../../core/types'
 import type { NewItem, Settings } from '../../../core/types'
 import { api } from '../api'
 import type { ViewState } from '../api'
@@ -66,7 +67,8 @@ export function FirstRun({ settings, today, onDone }: Props): React.JSX.Element 
           date: today,
           fixedStart: rs.value,
           deadline: null,
-          repeat: { kind: 'daily' }
+          repeat: { kind: 'daily' },
+          dnd: defaultDnd('fixed', rs.value)
         }
         await api.addItems([item])
         added.current = true

@@ -17,6 +17,7 @@ const meeting = (status: Item['status']): Item => ({
   status,
   lockedStart: null,
   suggestedSlots: [],
+  dnd: false,
   createdAt: 1
 })
 const block: Block = {

@@ -18,6 +18,7 @@ export const item = (id: string, title: string, extra: Partial<Item> = {}): Item
   status: 'open',
   lockedStart: null,
   suggestedSlots: [],
+  dnd: false,
   createdAt: 1,
   ...extra
 })

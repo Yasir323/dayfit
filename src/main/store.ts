@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import type { Block, DateStr, Decision, Item, Settings } from '../core/types'
-import { DEFAULT_SETTINGS } from '../core/types'
+import { DEFAULT_SETTINGS, defaultDnd } from '../core/types'
 import type { Move } from '../core/replan'
 import type { NudgeState } from '../core/nudge'
 import type { ReminderState } from '../core/reminders'
@@ -74,6 +74,10 @@ export function loadState(file: string): AppState {
   const defaults = defaultState()
   const state = { ...defaults, ...parsed } as AppState
   state.settings = deepMerge(defaults.settings, parsed.settings)
+  // Items saved before per-item DND existed get the type-based default.
+  state.items = state.items.map((i) =>
+    typeof i.dnd === 'boolean' ? i : { ...i, dnd: defaultDnd(i.type, i.fixedStart) }
+  )
   return state
 }
 

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { parseLine, toNewItem } from '../../../core/parser'
 import type { TokenSpan } from '../../../core/parser'
+import { defaultDnd } from '../../../core/types'
 import type { DateStr, NewItem, Settings } from '../../../core/types'
 import { api } from '../api'
 import type { ViewState } from '../api'
@@ -23,7 +24,8 @@ const FIELD_KEYS = [
   'half',
   'date',
   'fixedStart',
-  'deadline'
+  'deadline',
+  'dnd'
 ] as const
 
 function highlight(text: string, tokens: TokenSpan[]): React.ReactNode[] {
@@ -87,6 +89,17 @@ export function QuickAdd({ settings, today, onAdded }: Props): React.JSX.Element
         d.durationMin === settings.defaultDurations[d.type]
       ) {
         patch.durationMin = settings.defaultDurations[patch.type]
+      }
+      // DND follows type and fixed start until the user sets it by hand.
+      if (
+        (patch.type !== undefined || patch.fixedStart !== undefined) &&
+        patch.dnd === undefined &&
+        d.dnd === defaultDnd(d.type, d.fixedStart)
+      ) {
+        patch.dnd = defaultDnd(
+          patch.type ?? d.type,
+          patch.fixedStart !== undefined ? patch.fixedStart : d.fixedStart
+        )
       }
       return { ...d, ...patch }
     })
