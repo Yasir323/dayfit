@@ -95,6 +95,8 @@ function makeView(over: Partial<ViewState> = {}): ViewState {
       item('deep', 'Payments refactor', { type: 'deep', durationMin: 120 })
     ],
     upcoming: [],
+    tomorrow: [],
+    week: [],
     awaitingCalls: [],
     nudges: [],
     busy: false,

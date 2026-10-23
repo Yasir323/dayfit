@@ -5,7 +5,7 @@ import { itemsForDate, rolloverItems } from '../core/recurrence'
 import { dueReminders, EMPTY_REMINDER_STATE, isBusy, type ReminderEvent } from '../core/reminders'
 import { diffMoves, frozenBlocks } from '../core/replan'
 import { planDay } from '../core/scheduler'
-import { addDays, minutesOf, toDateStr } from '../core/time'
+import { addDays, minutesOf, toDateStr, weekday } from '../core/time'
 import {
   isFixed,
   type Block,
@@ -29,6 +29,8 @@ export interface ViewState {
   plan: DayPlan
   items: Item[] // itemsForDate(today)
   upcoming: Item[] // open, date > today
+  tomorrow: Item[] // open, itemsForDate(tomorrow), repeating included
+  week: { date: DateStr; count: number }[] // Monday–Sunday of today's week
   awaitingCalls: Item[] // type call, not fixed, open, today
   nudges: string[]
   busy: boolean
@@ -42,6 +44,18 @@ const MAX_ELAPSED_MIN = 5
 const CALL_SLOTS = 3
 /** Matches nudge.ts MAX_NUDGES: a nudge state at this count is never repeated. */
 const NUDGES_EXHAUSTED = 2
+
+/** Monday–Sunday of the week containing `today`; mirrors weekOf in src/renderer/src/lib/dates.ts. */
+const weekDates = (today: DateStr): DateStr[] => {
+  const monday = addDays(today, -((weekday(today) + 6) % 7))
+  return Array.from({ length: 7 }, (_, i) => addDays(monday, i))
+}
+const byFixedThenCreated = (a: Item, b: Item): number =>
+  (a.fixedStart ?? Infinity) === (b.fixedStart ?? Infinity)
+    ? a.createdAt - b.createdAt
+    : (a.fixedStart ?? Infinity) < (b.fixedStart ?? Infinity)
+      ? -1
+      : 1
 
 const emptyPlan = (): DayPlan => ({ blocks: [], decisions: [], unscheduled: [], moves: [] })
 const byCreated = (a: Item, b: Item): number => a.createdAt - b.createdAt
@@ -411,6 +425,13 @@ export class DayfitService {
       upcoming: s.items
         .filter((i) => i.status === 'open' && i.date > today)
         .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : byCreated(a, b))),
+      tomorrow: itemsForDate(s.items, addDays(today, 1))
+        .filter((i) => i.status === 'open')
+        .sort(byFixedThenCreated),
+      week: weekDates(today).map((date) => ({
+        date,
+        count: itemsForDate(s.items, date).length
+      })),
       awaitingCalls: items.filter(isAwaitingCall).sort(byCreated),
       nudges: [...s.overdue],
       busy: isBusy(plan.blocks, now, s.manualBusy),

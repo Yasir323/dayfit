@@ -352,3 +352,21 @@ describe('DayfitService', () => {
     expect(svc.view().hotkeyOk).toBe(false)
   })
 })
+
+describe('DayfitService view: tomorrow and week', () => {
+  it('tomorrow includes repeating fixed items and dated tasks; upcoming excludes repeating', () => {
+    const v = svc.addItems([
+      newItem({ title: 'Run', type: 'fixed', fixedStart: 1110, durationMin: 45, repeat: { kind: 'daily' } }),
+      newItem({ title: 'Later task', date: D1 })
+    ])
+    expect(v.tomorrow.map((i) => i.title)).toEqual(['Run', 'Later task'])
+    expect(v.upcoming.map((i) => i.title)).toEqual(['Later task'])
+  })
+  it('week has 7 entries starting Monday with today counting today’s items', () => {
+    const v = svc.addItems([newItem({ title: 'A' }), newItem({ title: 'B' })])
+    expect(v.week).toHaveLength(7)
+    expect(v.week[0].date).toBe(D)
+    expect(v.week[0].count).toBe(v.items.length)
+    expect(v.week[1]).toEqual({ date: D1, count: 0 })
+  })
+})

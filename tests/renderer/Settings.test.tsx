@@ -27,6 +27,8 @@ const view = (over: Partial<ViewState['settings']> = {}): ViewState =>
     plan: { blocks: [], decisions: [], unscheduled: [], moves: [] },
     items: [],
     upcoming: [],
+    tomorrow: [],
+    week: [],
     awaitingCalls: [],
     nudges: [],
     busy: false,
