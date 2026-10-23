@@ -3,7 +3,8 @@ import type { ReminderEvent, ReminderKind } from './reminders'
 import type { Minutes, Settings } from './types'
 
 /** Reminders that get a banner in the popover; punch and time's-up have banners already. */
-export type AlertKind = 'break' | 'heads-up' | 'lunch' | 'overtime' | 'meeting-soon' | 'meeting-now'
+export type AlertKind =
+  'break' | 'heads-up' | 'lunch' | 'overtime' | 'meeting-soon' | 'meeting-now' | 'focus-done'
 export interface Alert {
   id: string
   kind: AlertKind
@@ -20,7 +21,8 @@ const BANNER_KINDS: ReminderKind[] = [
   'lunch',
   'overtime',
   'meeting-soon',
-  'meeting-now'
+  'meeting-now',
+  'focus-done'
 ]
 const NUDGE_LABEL = "Time's up"
 
@@ -47,6 +49,8 @@ export function labelForKind(kind: ReminderKind, s: Settings): string {
       return `Meeting ${s.meetingAlert.leadMin}m`
     case 'meeting-now':
       return 'Meeting now'
+    case 'focus-done':
+      return 'Focus done'
   }
 }
 

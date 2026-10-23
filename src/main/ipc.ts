@@ -15,6 +15,8 @@ export const IPC_METHODS = [
   'logWater',
   'markPunched',
   'snoozeBreak',
+  'startFocus',
+  'stopFocus',
   'dismissAlert',
   'checkOut',
   'setManualBusy',

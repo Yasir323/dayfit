@@ -17,6 +17,7 @@ interface Props {
 /** Done / Lock / Delete for one item. A repeating item's delete removes the series, so it asks. */
 export function ItemActions({ item, run, withDone, chunked }: Props): React.JSX.Element {
   const [confirming, setConfirming] = useState(false)
+  const [focusing, setFocusing] = useState(false)
   const edit = useContext(EditContext)
   const locked = item.lockedStart !== null
   const drop = (): void => {
@@ -37,8 +38,35 @@ export function ItemActions({ item, run, withDone, chunked }: Props): React.JSX.
       </span>
     )
 
+  if (focusing)
+    return (
+      <span className="confirm">
+        <span>Focus for</span>
+        {[25, 50].map((m) => (
+          <button
+            key={m}
+            type="button"
+            onClick={() => {
+              setFocusing(false)
+              void run(() => api.startFocus(item.id, m))
+            }}
+          >
+            {m} min
+          </button>
+        ))}
+        <button type="button" onClick={() => setFocusing(false)}>
+          Cancel
+        </button>
+      </span>
+    )
+
   return (
     <span className="item-actions">
+      {item.status === 'open' && item.fixedStart === null && (
+        <button type="button" aria-label="Focus" title="Focus" onClick={() => setFocusing(true)}>
+          <Icon name="clock" size={14} />
+        </button>
+      )}
       {withDone && item.fixedStart === null && item.status === 'open' && (
         <button
           type="button"

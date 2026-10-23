@@ -43,6 +43,8 @@ export interface AppState {
   alerts: Alert[]
   /** Today's review answers (unscheduled / use-other-half); cleared at rollover. */
   answers: DecisionAnswer[]
+  /** A running focus session (manual busy is on while it runs). */
+  focus: { itemId: string; endsAt: number; minutes: number; prevManualBusy: boolean | null } | null
   /** Label next to the menu-bar icon until the popover is opened. */
   unseen: string | null
   nudges: NudgeState
@@ -64,6 +66,7 @@ export const defaultState = (): AppState => ({
   lunchAnswer: null,
   alerts: [],
   answers: [],
+  focus: null,
   unseen: null,
   nudges: {},
   overdue: [],

@@ -718,3 +718,12 @@ body {
   box-shadow: var(--shadow-card);
   opacity: 0.9;
 }
+.focus-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s2);
+  padding: 6px var(--s4);
+  background: var(--accent-soft);
+  color: var(--text);
+}

@@ -38,7 +38,8 @@ const view = (over: Partial<ViewState['settings']> = {}): ViewState =>
     attendance: { in: false, out: false },
     checkedOut: false,
     alerts: [],
-    trayLabel: null
+    trayLabel: null,
+    focus: null
   }) as ViewState
 
 beforeEach(() => {

@@ -23,7 +23,8 @@ describe('labelFor', () => {
       ['heads-up', 'Wrap up'],
       ['overtime', 'Past hours'],
       ['meeting-soon', 'Meeting 5m'],
-      ['meeting-now', 'Meeting now']
+      ['meeting-now', 'Meeting now'],
+      ['focus-done', 'Focus done']
     ]
     for (const [k, label] of kinds) expect(labelFor(ev(k), S)).toBe(label)
     const lead10 = { ...S, meetingAlert: { ...S.meetingAlert, leadMin: 10 } }

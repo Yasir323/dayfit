@@ -519,6 +519,37 @@ describe('DayfitService in-app alerts', () => {
   })
 })
 
+describe('DayfitService focus timer', () => {
+  it('a session sets busy, ends once after its time, restores busy and queues a break', () => {
+    svc.addItems([newItem({ title: 'Write' })])
+    const v = svc.startFocus('id1', 25)
+    expect(v.focus).toMatchObject({ itemId: 'id1', title: 'Write', minutesLeft: 25 })
+    expect(v.manualBusy).toBe(true)
+    expect(v.trayLabel).toBe('Focus 25m')
+    clock.set(26, 9, 10)
+    expect(svc.tick(0).events.map((e) => e.kind)).not.toContain('focus-done')
+    clock.set(26, 9, 26)
+    const t = svc.tick(0)
+    expect(t.events.filter((e) => e.kind === 'focus-done')).toHaveLength(1)
+    expect(t.view.focus).toBeNull()
+    expect(t.view.manualBusy).toBeNull()
+    expect(loadState(file).reminder.breaks.pending).toEqual(['eye', 'stretch'])
+    clock.set(26, 9, 27)
+    expect(svc.tick(0).events.map((e) => e.kind)).not.toContain('focus-done')
+  })
+
+  it('a session survives a restart and stop restores busy', () => {
+    svc.addItems([newItem()])
+    svc.setManualBusy(false)
+    svc.startFocus('id1', 50)
+    const again = new DayfitService(file, clock)
+    expect(again.view().focus?.minutesLeft).toBe(50)
+    const v = again.stopFocus()
+    expect(v.focus).toBeNull()
+    expect(v.manualBusy).toBe(false)
+  })
+})
+
 describe('DayfitService evening preview', () => {
   it("previews tomorrow's plan without saving anything", () => {
     svc.addItems([

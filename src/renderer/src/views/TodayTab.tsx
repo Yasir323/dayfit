@@ -137,6 +137,14 @@ export function TodayTab({
         {shownKind === 'tomorrow' && <TomorrowView view={view} />}
       </div>
 
+      {view.focus && (
+        <div className="focus-bar" role="status">
+          <span>{`Focus · ${view.focus.title} · ${view.focus.minutesLeft} min left`}</span>
+          <button type="button" className="btn" onClick={() => void run(() => api.stopFocus())}>
+            Stop focus
+          </button>
+        </div>
+      )}
       <footer className="today-footer">
         <div className="busy-toggle" role="group" aria-label="Busy mode">
           {BUSY_MODES.map(([label, value]) => (

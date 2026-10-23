@@ -5,7 +5,7 @@ import { itemsForDate, rolloverItems } from '../core/recurrence'
 import { dueReminders, EMPTY_REMINDER_STATE, type ReminderEvent } from '../core/reminders'
 import { diffMoves, frozenBlocks } from '../core/replan'
 import { clearAlerts, recordAlerts, type Alert } from '../core/alerts'
-import { isHeld, snoozeBreak, type BreakPart } from '../core/breaks'
+import { isHeld, PART_ORDER, snoozeBreak, type BreakPart } from '../core/breaks'
 import {
   attendanceDue,
   markPunched,
@@ -57,6 +57,8 @@ export interface ViewState {
   alerts: Alert[]
   /** Short label for the menu bar, or null once seen. */
   trayLabel: string | null
+  /** The running focus session, if any. */
+  focus: { itemId: string; title: string; endsAt: number; minutesLeft: number } | null
   /** False when the quick-add shortcut could not be registered (set by the shell). */
   hotkeyOk: boolean
 }
@@ -269,6 +271,37 @@ export class DayfitService {
     return this.buildView()
   }
 
+  /** Starts a focus session on an item: busy mode holds breaks and nudges until it ends. */
+  startFocus(itemId: string, minutes: number): ViewState {
+    this.begin()
+    const s = this.state
+    const item = this.find(itemId)
+    const len = Math.min(180, Math.max(1, Math.round(Number(minutes) || 25)))
+    if (!item) return this.buildView()
+    const prev = s.focus ? s.focus.prevManualBusy : s.manualBusy
+    s.focus = {
+      itemId,
+      endsAt: this.at.getTime() + len * 60_000,
+      minutes: len,
+      prevManualBusy: prev
+    }
+    s.manualBusy = true
+    this.save()
+    return this.buildView()
+  }
+
+  /** Ends a focus session early; busy mode goes back to what it was. */
+  stopFocus(): ViewState {
+    this.begin()
+    const s = this.state
+    if (s.focus) {
+      s.manualBusy = s.focus.prevManualBusy
+      s.focus = null
+      this.save()
+    }
+    return this.buildView()
+  }
+
   /** Tomorrow's plan from the start of work, for the evening preview; nothing is saved. */
   previewTomorrow(): { date: DateStr; blocks: Block[]; items: Item[] } {
     this.begin()
@@ -420,7 +453,7 @@ export class DayfitService {
     const now = this.nowMin()
     const blocks = this.todayPlan().blocks
     const items = itemsForDate(s.items, today)
-    const before = JSON.stringify([s.reminder, s.endOfDay, s.alerts, s.unseen])
+    const before = JSON.stringify([s.reminder, s.endOfDay, s.alerts, s.unseen, s.focus])
 
     const r = dueReminders({
       now,
@@ -460,6 +493,25 @@ export class DayfitService {
     const nudges = busy ? [] : due
     for (const id of nudges) s.nudges[id] = { count: (s.nudges[id]?.count ?? 0) + 1, lastAt: now }
 
+    // A focus session past its end finishes once: busy goes back, and a short break is queued.
+    if (s.focus && at >= s.focus.endsAt) {
+      s.manualBusy = s.focus.prevManualBusy
+      s.focus = null
+      const pending = new Set([...s.reminder.breaks.pending, 'eye', 'stretch'])
+      s.reminder = {
+        ...s.reminder,
+        breaks: { ...s.reminder.breaks, pending: PART_ORDER.filter((p) => pending.has(p)) }
+      }
+      events.push({
+        kind: 'focus-done',
+        itemId: null,
+        title: 'Focus done',
+        body: 'Take 5 — stretch and rest your eyes.',
+        silent: false,
+        parts: []
+      })
+    }
+
     const rec = recordAlerts(s.alerts, s.unseen, events, nudges.length, now, s.settings)
     s.alerts = rec.alerts
     s.unseen = rec.unseen
@@ -467,7 +519,7 @@ export class DayfitService {
     if (
       nudges.length > 0 ||
       s.overdue.length !== overdueBefore ||
-      JSON.stringify([s.reminder, s.endOfDay, s.alerts, s.unseen]) !== before
+      JSON.stringify([s.reminder, s.endOfDay, s.alerts, s.unseen, s.focus]) !== before
     )
       this.save()
     return { events, nudges, view: this.buildView() }
@@ -622,6 +674,17 @@ export class DayfitService {
   }
 
   private buildView(): ViewState {
+    const focus = this.state.focus
+      ? {
+          itemId: this.state.focus.itemId,
+          title: this.find(this.state.focus.itemId)?.title ?? 'Focus',
+          endsAt: this.state.focus.endsAt,
+          minutesLeft: Math.max(
+            0,
+            Math.ceil((this.state.focus.endsAt - this.at.getTime()) / 60_000)
+          )
+        }
+      : null
     const s = this.state
     const today = this.today()
     const now = this.nowMin()
@@ -662,7 +725,8 @@ export class DayfitService {
       attendance: attendanceDue(s.endOfDay, now, s.settings),
       checkedOut: s.endOfDay.checkedOut,
       alerts: s.alerts,
-      trayLabel: s.unseen,
+      trayLabel: s.unseen ?? (focus ? `Focus ${focus.minutesLeft}m` : null),
+      focus,
       hotkeyOk: this.hotkeyOk
     })
   }
