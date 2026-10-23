@@ -18,6 +18,14 @@ describe('agendaRows', () => {
   })
 })
 
+describe('agendaRows: lunch', () => {
+  it('labels the lunch block', () => {
+    const base = makeView()
+    const v = makeView({ plan: { ...base.plan, blocks: [block(null, 'lunch', 780, 825)] } })
+    expect(agendaRows(v).map((r) => [r.kind, r.title])).toEqual([['lunch', 'Lunch']])
+  })
+})
+
 describe('nextUp', () => {
   it('names the next fixed item after now', () => {
     const base = makeView()

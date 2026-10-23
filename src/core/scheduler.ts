@@ -425,9 +425,39 @@ function blockOrder(items: Item[]): (a: Block, b: Block) => number {
     (id(a) < id(b) ? -1 : id(a) > id(b) ? 1 : 0)
 }
 
+// Step 2b: lunch, before flexible work. Nearest free start to the lunch time (ties: earlier).
+function placeLunch(plan: Plan, s: Settings): void {
+  if (s.lunch === null || plan.blocks.some((b) => b.kind === 'lunch')) return
+  const target = s.lunch
+  const len = s.endOfDay.lunchMin
+  let best: Minutes | null = null
+  for (const f of plan.free) {
+    if (f.end - f.start < len) continue
+    const start = Math.min(Math.max(target, f.start), f.end - len)
+    const d = Math.abs(start - target)
+    if (
+      best === null ||
+      d < Math.abs(best - target) ||
+      (d === Math.abs(best - target) && start < best)
+    )
+      best = start
+  }
+  // No room anywhere in working hours: no lunch today.
+  if (best === null) return
+  commit(plan, {
+    itemId: null,
+    kind: 'lunch',
+    start: best,
+    end: best + len,
+    chunk: null,
+    reason: 'Lunch'
+  })
+}
+
 export function planDay(raw: PlanInput): PlanResult {
   const input = { ...raw, items: releaseBlockedLocks(raw) }
   const plan = startPlan(input)
+  placeLunch(plan, input.settings)
   placeDeepWork(plan, input.items, input.frozen)
   placeTasks(plan, input)
   return {

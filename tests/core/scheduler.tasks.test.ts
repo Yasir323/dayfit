@@ -282,3 +282,44 @@ describe('planDay part 2: tasks', () => {
     expect(planDay(x)).toEqual(planDay(structuredClone(x)))
   })
 })
+
+describe('planDay: lunch', () => {
+  const S = { ...noWalks, lunch: 780 }
+  const lunchOf = (bs: Block[]): Block[] => bs.filter((b) => b.kind === 'lunch')
+  const lunch: Block = {
+    itemId: null,
+    kind: 'lunch',
+    start: 780,
+    end: 825,
+    chunk: null,
+    reason: 'Lunch'
+  }
+
+  test('lunch blocks time at the lunch setting', () => {
+    expect(lunchOf(planDay(input([], { settings: S })).blocks)).toEqual([lunch])
+    const t = task(30, { half: 'pm' })
+    const r = planDay(input([t], { settings: S }))
+    expect(overlaps(blockOf(r.blocks, t.id)!, 780, 825)).toBe(false)
+  })
+
+  test('lunch moves to the nearest free slot when a fixed item covers it', () => {
+    // 5m buffers: fixed 765–825 frees up to 760 (candidate 715, 65 away) and from 830 (50 away)
+    expect(lunchOf(planDay(input([fixed(765, 60)], { settings: S })).blocks)[0].start).toBe(830)
+    // fixed 780–810 frees up to 775 (candidate 730, 50 away) and from 815 (35 away)
+    expect(lunchOf(planDay(input([fixed(780, 30)], { settings: S })).blocks)[0].start).toBe(815)
+  })
+
+  test('no lunch without a lunch time', () => {
+    expect(lunchOf(planDay(input([], { settings: { ...S, lunch: null } })).blocks)).toEqual([])
+  })
+
+  test('lunch never before now; frozen lunch not duplicated', () => {
+    expect(lunchOf(planDay(input([], { settings: S, now: 800 })).blocks)[0].start).toBe(800)
+    const r = planDay(input([], { settings: S, now: 800, frozen: [lunch] }))
+    expect(lunchOf(r.blocks)).toEqual([lunch])
+  })
+
+  test('no room means no lunch', () => {
+    expect(lunchOf(planDay(input([fixed(540, 540)], { settings: S })).blocks)).toEqual([])
+  })
+})

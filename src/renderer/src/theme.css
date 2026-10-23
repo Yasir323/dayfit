@@ -29,6 +29,8 @@
   --k-task: var(--accent);
   --k-fixed-soft: color-mix(in srgb, var(--k-fixed) 12%, transparent);
   --k-deep-soft: color-mix(in srgb, var(--k-deep) 12%, transparent);
+  --k-lunch: #0f8a7e;
+  --k-lunch-soft: color-mix(in srgb, var(--k-lunch) 12%, transparent);
   --k-task-soft: color-mix(in srgb, var(--k-task) 12%, transparent);
 
   --tok-duration: #246fe0;
@@ -76,6 +78,7 @@
 
     --k-fixed: #9a9a9a;
     --k-deep: #9d6ee6;
+    --k-lunch: #3cbfb1;
 
     --tok-duration: #5a93ee;
     --tok-label: #3fae5c;

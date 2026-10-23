@@ -25,7 +25,7 @@ export function agendaRows(view: ViewState): AgendaRow[] {
       return {
         start: b.start,
         kind: b.kind,
-        title: item?.title ?? 'Busy',
+        title: b.kind === 'lunch' ? 'Lunch' : (item?.title ?? 'Busy'),
         detail: parts.join(' · ')
       }
     })

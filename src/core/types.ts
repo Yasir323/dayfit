@@ -28,7 +28,7 @@ export interface Item {
   createdAt: number
 }
 export type NewItem = Omit<Item, 'id' | 'status' | 'lockedStart' | 'suggestedSlots' | 'createdAt'>
-export type BlockKind = 'fixed' | 'deep' | 'task'
+export type BlockKind = 'fixed' | 'deep' | 'task' | 'lunch'
 export interface Block {
   itemId: string | null
   kind: BlockKind

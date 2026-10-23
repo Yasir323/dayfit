@@ -225,6 +225,10 @@ body {
   background: var(--k-fixed-soft);
   border-color: var(--k-fixed);
 }
+.block-lunch {
+  background: var(--k-lunch-soft);
+  border-color: var(--k-lunch);
+}
 .block-deep {
   background: var(--k-deep-soft);
   border-color: var(--k-deep);
@@ -660,6 +664,9 @@ body {
 }
 .kind-fixed {
   background: var(--k-fixed);
+}
+.kind-lunch {
+  background: var(--k-lunch);
 }
 .kind-deep {
   background: var(--k-deep);
