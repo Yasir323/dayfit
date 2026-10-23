@@ -4,7 +4,7 @@ import type { TokenSpan } from '../../../core/parser'
 import type { DateStr, NewItem, Settings } from '../../../core/types'
 import { api } from '../api'
 import type { ViewState } from '../api'
-import { ItemFields } from './ItemFields'
+import { ItemChips } from './ItemChips'
 import { validateFields } from './validateFields'
 import './QuickAdd.css'
 
@@ -95,16 +95,20 @@ export function QuickAdd({ settings, today, onAdded }: Props): React.JSX.Element
   const error = validateFields(draft)
   const canAdd = !saving && error === null && text.trim() !== ''
 
+  const reset = (): void => {
+    parsed.current = parseLine('', today)
+    setText('')
+    setFormKey((k) => k + 1)
+    setDraft(toNewItem(parsed.current, today, settings))
+  }
+
   const submit = async (openToday: boolean): Promise<void> => {
     if (!canAdd) return
     setSaving(true)
     setFailure(null)
     try {
       const v = await api.addItems([{ ...draft, title: line.title || text.trim() }])
-      parsed.current = parseLine('', today)
-      setText('')
-      setFormKey((k) => k + 1)
-      setDraft(toNewItem(parsed.current, today, settings))
+      reset()
       onAdded(v, openToday)
       input.current?.focus()
     } catch (e) {
@@ -122,49 +126,67 @@ export function QuickAdd({ settings, today, onAdded }: Props): React.JSX.Element
         void submit(false)
       }}
     >
-      <div className="syntax-box">
-        <div ref={mirror} className="syntax-mirror" aria-hidden="true">
-          {highlight(text, line.tokens)}
+      <div className="qa-card">
+        <div className="syntax-box">
+          <div ref={mirror} className="syntax-mirror" aria-hidden="true">
+            {highlight(text, line.tokens)}
+          </div>
+          <input
+            ref={input}
+            aria-label="Quick add"
+            className="syntax-input"
+            type="text"
+            value={text}
+            placeholder="Task name, e.g. Call John 15m ~call"
+            spellCheck={false}
+            autoComplete="off"
+            onChange={(e) => {
+              onText(e.target.value)
+              syncScroll()
+            }}
+            onScroll={syncScroll}
+            onKeyUp={syncScroll}
+            onSelect={syncScroll}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                if (!e.nativeEvent.isComposing) void submit(e.metaKey || e.ctrlKey)
+              }
+            }}
+          />
         </div>
-        <input
-          ref={input}
-          aria-label="Quick add"
-          className="syntax-input"
-          type="text"
-          value={text}
-          placeholder="Call John 15m ~call !high #work"
-          spellCheck={false}
-          autoComplete="off"
-          onChange={(e) => {
-            onText(e.target.value)
-            syncScroll()
-          }}
-          onScroll={syncScroll}
-          onKeyUp={syncScroll}
-          onSelect={syncScroll}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault()
-              if (!e.nativeEvent.isComposing) void submit(e.metaKey || e.ctrlKey)
-            }
-          }}
+        <ItemChips
+          key={formKey}
+          value={draft}
+          onChange={setDraft}
+          today={today}
+          defaultDurations={settings.defaultDurations}
         />
+        {failure && (
+          <p className="error" role="alert">
+            {failure}
+          </p>
+        )}
+        <div className="qa-actions">
+          <button
+            type="button"
+            className="btn"
+            onClick={() => {
+              reset()
+              input.current?.focus()
+            }}
+          >
+            Cancel
+          </button>
+          <button type="submit" className="btn-primary" disabled={!canAdd}>
+            Add task
+          </button>
+        </div>
       </div>
-      <ItemFields
-        key={formKey}
-        value={draft}
-        onChange={setDraft}
-        today={today}
-        defaultDurations={settings.defaultDurations}
-      />
-      {failure && (
-        <p className="error" role="alert">
-          {failure}
-        </p>
-      )}
-      <button type="submit" className="add" disabled={!canAdd}>
-        Add
-      </button>
+      <p className="qa-hint muted">
+        Type <code>15m</code> <code>#label</code> <code>!high</code> <code>@am</code>{' '}
+        <code>at 14:00</code> <code>~call</code> · ↵ add · ⌘↵ add &amp; open Today
+      </p>
     </form>
   )
 }

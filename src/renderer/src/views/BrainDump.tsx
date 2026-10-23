@@ -5,7 +5,7 @@ import type { DateStr, ItemType, NewItem, Settings } from '../../../core/types'
 import { formatClock } from '../../../core/time'
 import { api } from '../api'
 import type { ViewState } from '../api'
-import { ItemFields } from './ItemFields'
+import { ItemChips } from './ItemChips'
 import { validateFields } from './validateFields'
 
 interface Props {
@@ -112,7 +112,7 @@ export function BrainDump({ settings, today, onPlanned }: Props): React.JSX.Elem
               </p>
             )}
             {open === i && (
-              <ItemFields
+              <ItemChips
                 value={r.item}
                 onChange={(next) => setEdits((s) => ({ ...s, [r.line]: next }))}
                 today={today}

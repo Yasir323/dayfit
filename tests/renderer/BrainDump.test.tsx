@@ -28,6 +28,13 @@ const LINES = [
 const item = (id: string, title: string): unknown => ({ id, title })
 const planned = { today: TODAY, plan: { decisions: [] }, items: [], upcoming: [] }
 
+/** Opens a field's chip picker and returns its labelled control. */
+async function control(field: string): Promise<HTMLElement> {
+  if (!screen.queryByRole('dialog', { name: field }))
+    await userEvent.click(screen.getByRole('button', { name: new RegExp(`^${field}: `) }))
+  return within(screen.getByRole('dialog', { name: field })).getByLabelText(field)
+}
+
 beforeEach(() => {
   addItems.mockReset()
   answerDecisions.mockReset()
@@ -73,14 +80,14 @@ describe('BrainDump', () => {
   it('a row edit survives until that line text changes', async () => {
     const { box } = setup()
     await userEvent.click(screen.getByText('Call John'))
-    await userEvent.selectOptions(screen.getByLabelText('Priority'), 'high')
+    await userEvent.selectOptions(await control('Priority'), 'high')
     await userEvent.click(screen.getByRole('button', { name: 'Plan my day' }))
     expect(addItems.mock.calls[0][0][0]).toMatchObject({ title: 'Call John', priority: 'high' })
 
     addItems.mockClear()
     fireEvent.change(box, { target: { value: LINES } })
     await userEvent.click(screen.getByText('Call John'))
-    await userEvent.selectOptions(screen.getByLabelText('Priority'), 'high')
+    await userEvent.selectOptions(await control('Priority'), 'high')
     fireEvent.change(box, { target: { value: LINES.replace('Call John 15m', 'Call John 20m') } })
     await userEvent.click(screen.getByRole('button', { name: 'Plan my day' }))
     expect(addItems.mock.calls[0][0][0]).toMatchObject({ durationMin: 20, priority: 'med' })
@@ -92,7 +99,7 @@ describe('BrainDump', () => {
       target: { value: 'Standup' }
     })
     await userEvent.click(screen.getByRole('button', { name: /Standup/ }))
-    await userEvent.selectOptions(screen.getByLabelText('Type'), 'fixed')
+    await userEvent.selectOptions(await control('Type'), 'fixed')
     expect(screen.getByRole('button', { name: 'Plan my day' })).toBeDisabled()
     expect(screen.getAllByRole('alert')).toHaveLength(2)
   })

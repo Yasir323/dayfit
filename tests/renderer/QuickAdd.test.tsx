@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom/vitest'
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { DEFAULT_SETTINGS } from '../../src/core/types'
@@ -20,6 +20,20 @@ function setup(): { onAdded: ReturnType<typeof vi.fn>; box: HTMLInputElement } {
   return { onAdded, box: screen.getByRole('textbox', { name: 'Quick add' }) as HTMLInputElement }
 }
 
+/** The chip for a field, e.g. chip('Duration') → the "Duration: 15m" button. */
+const chip = (field: string): HTMLElement =>
+  screen.getByRole('button', { name: new RegExp(`^${field}: `) })
+
+/** Opens a field's chip picker (if not already open) and returns its labelled control. */
+async function control(field: string): Promise<HTMLElement> {
+  if (!screen.queryByRole('dialog', { name: field })) await userEvent.click(chip(field))
+  return within(screen.getByRole('dialog', { name: field })).getByLabelText(field)
+}
+
+async function pick(field: string, value: string): Promise<void> {
+  await userEvent.selectOptions(await control(field), value)
+}
+
 beforeEach(() => {
   addItems.mockReset()
   addItems.mockResolvedValue(view)
@@ -30,17 +44,17 @@ describe('QuickAdd', () => {
   it('fills duration and type from typed syntax', async () => {
     const { box } = setup()
     await userEvent.type(box, 'Call John 15m ~call')
-    expect(screen.getByLabelText('Duration')).toHaveValue('15')
-    expect(screen.getByLabelText('Type')).toHaveValue('call')
+    expect(chip('Duration')).toHaveAccessibleName('Duration: 15m')
+    expect(chip('Type')).toHaveAccessibleName('Type: Call')
   })
 
   it('keeps a hand-changed field when later text does not touch that token', async () => {
     const { box } = setup()
     await userEvent.type(box, 'Write report !high')
-    expect(screen.getByLabelText('Priority')).toHaveValue('high')
-    await userEvent.selectOptions(screen.getByLabelText('Priority'), 'low')
+    expect(chip('Priority')).toHaveAccessibleName('Priority: High')
+    await pick('Priority', 'low')
     await userEvent.type(box, ' more')
-    expect(screen.getByLabelText('Priority')).toHaveValue('low')
+    expect(chip('Priority')).toHaveAccessibleName('Priority: Low')
   })
 
   it('submits parsed item, clears and refocuses the input', async () => {
@@ -65,80 +79,81 @@ describe('QuickAdd', () => {
   it('disables Add for Fixed without a start time', async () => {
     const { box } = setup()
     await userEvent.type(box, 'Standup')
-    await userEvent.selectOptions(screen.getByLabelText('Type'), 'fixed')
+    await pick('Type', 'fixed')
     expect(screen.getByText('Set a start time')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Add' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Add task' })).toBeDisabled()
   })
 
   it('disables Add for weekly repeat with no days', async () => {
     const { box } = setup()
     await userEvent.type(box, 'Standup at 9:30')
-    await userEvent.selectOptions(screen.getByLabelText('Repeat'), 'weekly')
+    await pick('Repeat', 'weekly')
     expect(screen.getByText('Pick at least one day')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Add' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Add task' })).toBeDisabled()
     await userEvent.click(screen.getByRole('button', { name: 'Mon' }))
-    expect(screen.getByRole('button', { name: 'Add' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Add task' })).toBeEnabled()
   })
 
   it('rejects a non-integer custom duration', async () => {
     const { box } = setup()
     await userEvent.type(box, 'Thing')
-    await userEvent.selectOptions(screen.getByLabelText('Duration'), 'custom')
+    await pick('Duration', 'custom')
     const custom = screen.getByLabelText('Custom minutes')
     await userEvent.clear(custom)
     await userEvent.type(custom, '12.5')
-    expect(screen.getByRole('button', { name: 'Add' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Add task' })).toBeDisabled()
     await userEvent.clear(custom)
     await userEvent.type(custom, '25')
-    expect(screen.getByRole('button', { name: 'Add' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Add task' })).toBeEnabled()
   })
 
   it('keeps a hand-set type after an unrelated keystroke following "at 9:30"', async () => {
     const { box } = setup()
     await userEvent.type(box, 'Standup at 9:30')
-    expect(screen.getByLabelText('Type')).toHaveValue('fixed')
-    await userEvent.selectOptions(screen.getByLabelText('Type'), 'task')
+    expect(chip('Type')).toHaveAccessibleName('Type: Fixed')
+    await pick('Type', 'task')
     await userEvent.type(box, ' x')
-    expect(screen.getByLabelText('Type')).toHaveValue('task')
+    expect(chip('Type')).toHaveAccessibleName('Type: Task')
   })
 
   it('overwrites a hand-edited field once its token changes, and resets it when removed', async () => {
     const { box } = setup()
     await userEvent.type(box, 'Thing !high')
-    await userEvent.selectOptions(screen.getByLabelText('Priority'), 'low')
+    await pick('Priority', 'low')
     await userEvent.type(box, '{Backspace}{Backspace}{Backspace}{Backspace}{Backspace}!med')
-    expect(screen.getByLabelText('Priority')).toHaveValue('med')
-    await userEvent.selectOptions(screen.getByLabelText('Priority'), 'low')
+    expect(chip('Priority')).toHaveAccessibleName('Priority: Med')
+    await pick('Priority', 'low')
     await userEvent.clear(box)
     await userEvent.type(box, 'Thing')
-    expect(screen.getByLabelText('Priority')).toHaveValue('med')
+    expect(chip('Priority')).toHaveAccessibleName('Priority: Med')
   })
 
   it('resets custom duration and day modes after a successful add', async () => {
     const { box } = setup()
     await userEvent.type(box, 'Thing')
-    await userEvent.selectOptions(screen.getByLabelText('Duration'), 'custom')
-    await userEvent.selectOptions(screen.getByLabelText('Day'), 'date')
+    await pick('Duration', 'custom')
+    await pick('Day', 'date')
     await userEvent.click(box)
     await userEvent.keyboard('{Enter}')
     await vi.waitFor(() => expect(box).toHaveValue(''))
-    expect(screen.getByLabelText('Duration')).toHaveValue('30')
+    expect(chip('Duration')).toHaveAccessibleName('Duration: 30m')
+    expect(await control('Duration')).toHaveValue('30')
     expect(screen.queryByLabelText('Custom minutes')).toBeNull()
-    expect(screen.getByLabelText('Day')).toHaveValue('today')
+    expect(chip('Day')).toHaveAccessibleName('Day: Today')
   })
 
   it('shows Tomorrow when parsed syntax sets the day after Pick date was used', async () => {
     const { box } = setup()
     await userEvent.type(box, 'Thing')
-    await userEvent.selectOptions(screen.getByLabelText('Day'), 'date')
+    await pick('Day', 'date')
     await userEvent.type(box, ' tomorrow')
-    expect(screen.getByLabelText('Day')).toHaveValue('tomorrow')
+    expect(chip('Day')).toHaveAccessibleName('Day: Tomorrow')
   })
 
   it('Enter in the Label field does not add the item', async () => {
     const { box } = setup()
     await userEvent.type(box, 'Thing')
-    await userEvent.type(screen.getByLabelText('Label'), 'work{Enter}')
+    await userEvent.type(await control('Label'), 'work{Enter}')
     expect(addItems).not.toHaveBeenCalled()
     expect(box).toHaveValue('Thing')
   })
@@ -159,10 +174,54 @@ describe('QuickAdd', () => {
     const { rerender } = render(
       <QuickAdd settings={DEFAULT_SETTINGS} today={TODAY} onAdded={onAdded} />
     )
-    await userEvent.selectOptions(screen.getByLabelText('Day'), 'date')
+    await pick('Day', 'date')
     rerender(<QuickAdd settings={DEFAULT_SETTINGS} today="2026-10-24" onAdded={onAdded} />)
     await userEvent.type(screen.getByRole('textbox', { name: 'Quick add' }), 'Write report')
     await userEvent.keyboard('{Enter}')
     expect(addItems.mock.calls[0][0][0]).toMatchObject({ date: '2026-10-25' })
+  })
+
+  it('a chip opens its picker; choosing a value updates the chip and closes it', async () => {
+    const { box } = setup()
+    await userEvent.type(box, 'Thing')
+    await userEvent.click(chip('Duration'))
+    expect(screen.getByRole('dialog', { name: 'Duration' })).toBeInTheDocument()
+    await userEvent.selectOptions(await control('Duration'), '30')
+    expect(chip('Duration')).toHaveAccessibleName('Duration: 30m')
+    expect(screen.queryByRole('dialog', { name: 'Duration' })).toBeNull()
+  })
+
+  it('opening one picker closes another', async () => {
+    setup()
+    await userEvent.click(chip('Duration'))
+    await userEvent.click(chip('Day'))
+    expect(screen.queryByRole('dialog', { name: 'Duration' })).toBeNull()
+    expect(screen.getByRole('dialog', { name: 'Day' })).toBeInTheDocument()
+  })
+
+  it('Esc closes the open picker', async () => {
+    setup()
+    await userEvent.click(chip('Label'))
+    expect(screen.getByRole('dialog', { name: 'Label' })).toBeInTheDocument()
+    await userEvent.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog', { name: 'Label' })).toBeNull()
+  })
+
+  it('the start-time chip appears only for Fixed and Household', async () => {
+    const { box } = setup()
+    await userEvent.type(box, 'Thing')
+    expect(screen.queryByRole('button', { name: /^Start time: / })).toBeNull()
+    await pick('Type', 'fixed')
+    expect(chip('Start time')).toHaveAccessibleName('Start time: none')
+    expect(chip('Repeat')).toHaveAccessibleName('Repeat: none')
+  })
+
+  it('Cancel clears the draft', async () => {
+    const { box } = setup()
+    await userEvent.type(box, 'Thing !high')
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(box).toHaveValue('')
+    expect(chip('Priority')).toHaveAccessibleName('Priority: Med')
+    expect(addItems).not.toHaveBeenCalled()
   })
 })

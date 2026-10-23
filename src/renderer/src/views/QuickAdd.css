@@ -1,31 +1,36 @@
 .quick-add {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 12px;
-  font:
-    13px system-ui,
-    sans-serif;
+  gap: var(--s2);
+  padding: var(--s3);
+}
+.qa-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px var(--s3) var(--s3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+}
+.qa-card:focus-within {
+  border-color: var(--border-strong);
 }
 .syntax-box {
   position: relative;
-  border: 1px solid var(--border-strong);
-  border-radius: 8px;
-  background: var(--surface);
 }
 .syntax-mirror,
 .syntax-input {
   box-sizing: border-box;
   width: 100%;
   margin: 0;
-  padding: 10px 12px;
-  font:
-    15px ui-monospace,
-    Menlo,
-    Consolas,
-    monospace;
+  padding: 4px 0;
+  font-family: var(--font);
+  font-size: 14.5px;
   letter-spacing: 0;
   border: 0;
+  border-radius: 0;
   white-space: pre;
   overflow: hidden;
 }
@@ -42,11 +47,11 @@
   caret-color: var(--text);
   outline: none;
 }
-.syntax-input::placeholder {
-  color: var(--muted);
+.syntax-input:focus-visible {
+  outline: none;
 }
-.syntax-box:focus-within {
-  border-color: var(--accent);
+.syntax-input::placeholder {
+  color: var(--faint);
 }
 .tok {
   border-radius: 3px;
@@ -77,28 +82,53 @@
   color: var(--tok-type);
   background: color-mix(in srgb, var(--tok-type) 14%, transparent);
 }
-.fields {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
+.item-chips {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
 }
-.fields label {
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 11.5px;
+}
+.chip.is-empty {
+  color: var(--muted);
+}
+.chip:hover,
+.chip.is-open {
+  border-color: var(--border-strong);
+  background: var(--bg-2);
+}
+.chip .icon {
+  color: var(--muted);
+}
+.chip-picker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--bg-2);
+}
+.chip-picker label {
   display: flex;
   flex-direction: column;
   gap: 3px;
   font-size: 11px;
   color: var(--muted);
-}
-.fields select,
-.fields input {
-  font:
-    13px system-ui,
-    sans-serif;
-  padding: 5px 6px;
-}
-.fields .repeat,
-.fields .error {
-  grid-column: 1 / -1;
 }
 .days {
   display: flex;
@@ -122,14 +152,21 @@
   color: var(--danger);
   font-size: 12px;
 }
-.add {
-  padding: 8px;
-  border: 0;
-  border-radius: 8px;
-  background: var(--accent);
-  color: var(--on-accent);
-  font-size: 14px;
+.qa-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  padding-top: var(--s2);
+  border-top: 1px solid var(--hairline);
 }
-.add:disabled {
-  background: var(--border-strong);
+.qa-hint {
+  margin: 0 2px;
+  font-size: 11px;
+  line-height: 1.6;
+}
+.qa-hint code {
+  padding: 0 3px;
+  border-radius: 3px;
+  background: var(--hairline);
+  font-family: inherit;
 }
