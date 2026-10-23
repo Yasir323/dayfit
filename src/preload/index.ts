@@ -28,7 +28,6 @@ const dayfit = {
   markPunched: call('markPunched'),
   snoozeBreak: call('snoozeBreak'),
   dismissAlert: call('dismissAlert'),
-  markSeen: call('markSeen'),
   checkOut: call('checkOut'),
   setManualBusy: call('setManualBusy'),
   updateSettings: call('updateSettings'),

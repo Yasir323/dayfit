@@ -2,10 +2,10 @@ import { randomUUID } from 'node:crypto'
 import { suggestCallSlots } from '../core/callSlots'
 import { applyNudgeAnswer, dueNudges, type NudgeAnswer } from '../core/nudge'
 import { itemsForDate, rolloverItems } from '../core/recurrence'
-import { dueReminders, EMPTY_REMINDER_STATE, isBusy, type ReminderEvent } from '../core/reminders'
+import { dueReminders, EMPTY_REMINDER_STATE, type ReminderEvent } from '../core/reminders'
 import { diffMoves, frozenBlocks } from '../core/replan'
 import { clearAlerts, recordAlerts, type Alert } from '../core/alerts'
-import { snoozeBreak } from '../core/breaks'
+import { isHeld, snoozeBreak, type BreakPart } from '../core/breaks'
 import {
   attendanceDue,
   markPunched,
@@ -83,7 +83,13 @@ export class DayfitService {
   private state: AppState
   /** Decision answers kept for the current day only (not persisted): everything except
    *  tomorrow/drop on non-repeating items, which are applied to the item instead. */
-  private answers: DecisionAnswer[] = []
+  /** Today's review answers; kept in the state file so they survive a restart. */
+  private get answers(): DecisionAnswer[] {
+    return this.state.answers
+  }
+  private set answers(a: DecisionAnswer[]) {
+    this.state.answers = a
+  }
   private lastTickAt: number | null = null
   private hotkeyOk = true
   /** Clock snapshot taken once per public call, so date and minutes always agree. */
@@ -242,13 +248,19 @@ export class DayfitService {
   }
 
   /** Notification Snooze: the last break comes back after `breaks.snoozeMin` minutes. */
-  snoozeBreak(): ViewState {
+  /** `parts`: the snoozed notification's parts; the popover banner passes none (last break). */
+  snoozeBreak(parts?: BreakPart[]): ViewState {
     this.begin()
     const s = this.state
     this.clearAlerts((a) => a.kind === 'break')
     s.reminder = {
       ...s.reminder,
-      breaks: snoozeBreak(s.reminder.breaks, this.nowMin(), s.settings.breaks.snoozeMin)
+      breaks: snoozeBreak(
+        s.reminder.breaks,
+        this.nowMin(),
+        s.settings.breaks.snoozeMin,
+        Array.isArray(parts) ? parts : []
+      )
     }
     this.save()
     return this.buildView()
@@ -301,6 +313,7 @@ export class DayfitService {
       if (choice === 'tomorrow') {
         item.date = tomorrow
         item.lockedStart = null
+        item.suggestedSlots = []
       } else if (choice === 'drop') item.status = 'dropped'
       else {
         this.answers = [...this.answers.filter((a) => a.itemId !== itemId), { itemId, choice }]
@@ -400,7 +413,7 @@ export class DayfitService {
     // While busy, nudge notifications wait (uncounted) for the first non-busy tick;
     // the item still shows as overdue in the app.
     const due = dueNudges(blocks, items, now, s.nudges)
-    const busy = isBusy(blocks, now, s.manualBusy)
+    const busy = isHeld(blocks, items, now, s.manualBusy, s.settings.bufferMin)
     const overdueBefore = s.overdue.length
     for (const id of due) if (!s.overdue.includes(id)) s.overdue.push(id)
     const nudges = busy ? [] : due
@@ -446,6 +459,10 @@ export class DayfitService {
   private nextObstacle(block: Block, frozen: Block[]): Minutes {
     const starts = [
       ...frozen.map((b) => b.start),
+      // Lunch is planned ahead of tasks; an extension must not push it.
+      ...this.todayPlan()
+        .blocks.filter((b) => b.kind === 'lunch')
+        .map((b) => b.start),
       ...itemsForDate(this.state.items, this.today()).flatMap((i) =>
         i.id === block.itemId ? [] : (i.fixedStart ?? i.lockedStart ?? [])
       )
@@ -592,7 +609,13 @@ export class DayfitService {
       })),
       awaitingCalls: items.filter(isAwaitingCall).sort(byCreated),
       nudges: [...s.overdue],
-      busy: isBusy(plan.blocks, now, s.manualBusy),
+      busy: isHeld(
+        plan.blocks,
+        itemsForDate(s.items, today),
+        now,
+        s.manualBusy,
+        s.settings.bufferMin
+      ),
       manualBusy: s.manualBusy,
       waterMl: s.waterMl[today] ?? 0,
       attendance: attendanceDue(s.endOfDay, now, s.settings),

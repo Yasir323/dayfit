@@ -20,7 +20,6 @@ export interface DayfitApi {
   markPunched: Async<'markPunched'>
   snoozeBreak: Async<'snoozeBreak'>
   dismissAlert: Async<'dismissAlert'>
-  markSeen: Async<'markSeen'>
   checkOut: Async<'checkOut'>
   setManualBusy: Async<'setManualBusy'>
   updateSettings: Async<'updateSettings'>

@@ -105,6 +105,13 @@ describe('store', () => {
     expect(s.unseen).toBeNull()
   })
 
+  it('older state without answers loads with []', () => {
+    const older: Record<string, unknown> = { ...defaultState() }
+    delete older.answers
+    fs.writeFileSync(file, JSON.stringify(older))
+    expect(loadState(file).answers).toEqual([])
+  })
+
   it('returns defaults for a missing file', () => {
     expect(loadState(file)).toEqual(defaultState())
   })

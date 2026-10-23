@@ -1,7 +1,7 @@
 import { Notification, type NotificationConstructorOptions } from 'electron'
 import { movesText } from '../core/movesText'
 import type { ReminderEvent } from '../core/reminders'
-import { clampSnooze } from '../core/breaks'
+import { clampSnooze, type BreakPart } from '../core/breaks'
 import type { NudgeAnswer } from '../core/nudge'
 import type { ViewState } from './service'
 import { isPortalUrl } from '../core/portalUrl'
@@ -21,8 +21,8 @@ export function planUpdatedNotice(view: ViewState): NotifyInput | null {
 export interface NotifyHandlers {
   /** Break "Drank" button. */
   onDrank(): void
-  /** Break "Snooze" button. */
-  onSnooze(): void
+  /** Break "Snooze" button: snoozes this notification's parts. */
+  onSnooze(parts: BreakPart[]): void
   /** Nudge action button. */
   onNudge(itemId: string, answer: NudgeAnswer): void
   /** Attendance "Punched" button. */
@@ -41,8 +41,8 @@ const NUDGE_ACTIONS: { text: string; answer: NudgeAnswer }[] = [
 
 /** Snooze first (index 0), then Drank (index 1) when water is part of the break. */
 const breakActions = (event: ReminderEvent, snoozeMin: number): string[] => [
-  `Snooze ${clampSnooze(snoozeMin)} min`,
-  ...(event.parts.includes('water') ? ['Drank'] : [])
+  ...(event.parts.includes('water') ? ['Drank'] : []),
+  `Snooze ${clampSnooze(snoozeMin)} min`
 ]
 
 const attendanceKind = (event: ReminderEvent): AttendanceKind | null =>
@@ -53,7 +53,7 @@ function eventActions(input: Extract<NotifyInput, { type: 'event' }>): string[] 
   const { event } = input
   if (event.kind === 'break') return breakActions(event, input.snoozeMin)
   if (attendanceKind(event) !== null)
-    return [...(isPortalUrl(input.portalUrl) ? ['Open portal'] : []), 'Punched']
+    return ['Punched', ...(isPortalUrl(input.portalUrl) ? ['Open portal'] : [])]
   return []
 }
 
@@ -111,7 +111,7 @@ export function showNotification(
       const text = eventActions(input)[index]
       const kind = attendanceKind(input.event)
       if (text === 'Drank') handlers.onDrank()
-      else if (text?.startsWith('Snooze')) handlers.onSnooze()
+      else if (text?.startsWith('Snooze')) handlers.onSnooze(input.event.parts)
       else if (text === 'Open portal') handlers.onOpenPortal()
       else if (text === 'Punched' && kind !== null) handlers.onPunched(kind)
     }

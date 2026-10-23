@@ -206,14 +206,15 @@ describe('DayfitService', () => {
     expect(v.plan.decisions).toEqual([{ kind: 'no-fit', itemId: 'id1' }])
   })
 
-  it('an unscheduled answer lives in memory for the day only', () => {
+  it('an unscheduled answer lasts the day, across restarts, and clears at rollover', () => {
     svc.addItems([newItem({ durationMin: 600 })])
     let v = svc.answerDecisions([{ itemId: 'id1', choice: 'unscheduled' }])
     expect(v.plan.unscheduled).toEqual(['id1'])
     expect(v.plan.decisions).toEqual([])
     v = new DayfitService(file, clock).replan()
-    expect(v.plan.unscheduled).toEqual([])
-    expect(v.plan.decisions).toEqual([{ kind: 'no-fit', itemId: 'id1' }])
+    expect(v.plan.unscheduled).toEqual(['id1'])
+    clock.set(27, 9, 0)
+    expect(new DayfitService(file, clock).view().plan.unscheduled).toEqual([])
   })
 
   it('a non-tick call rolls the day over lazily and resets nudges', () => {
@@ -513,6 +514,46 @@ describe('DayfitService in-app alerts', () => {
     const v = svc.view()
     expect(v.alerts).toEqual([])
     expect(v.trayLabel).toBeNull()
+  })
+})
+
+describe('DayfitService polish', () => {
+  it('nudges wait while a DND or high-priority task runs', () => {
+    svc.addItems([
+      newItem({ title: 'A', priority: 'high' }),
+      newItem({ title: 'B', durationMin: 60, dnd: true })
+    ])
+    const b = svc.view().plan.blocks.find((x) => x.itemId === 'id2')!
+    clock.set(26, 9, 31)
+    expect(svc.tick(0).nudges).toEqual([])
+    clock.set(26, Math.floor((b.end + 1) / 60), (b.end + 1) % 60)
+    expect(svc.tick(0).nudges).toContain('id1')
+  })
+
+  it('+15 min stops before a planned lunch', () => {
+    svc.updateSettings({ lunch: 780 })
+    clock.set(26, 12, 30)
+    svc.addItems([newItem({ title: 'T', durationMin: 25 })])
+    clock.set(26, 12, 56)
+    svc.tick(0)
+    const v = svc.answerNudge('id1', 'extend')
+    const lunch = v.plan.blocks.filter((x) => x.kind === 'lunch')
+    expect(lunch.map((x) => x.start)).toEqual([780])
+    expect(v.plan.lunchClash).toBeNull()
+  })
+
+  it('checkOut Tomorrow clears suggested call slots', () => {
+    svc.addItems([newItem({ title: 'Call John', type: 'call', durationMin: 15 })])
+    expect(loadState(file).items[0].suggestedSlots.length).toBeGreaterThan(0)
+    svc.checkOut([{ itemId: 'id1', choice: 'tomorrow' }])
+    expect(loadState(file).items[0].suggestedSlots).toEqual([])
+  })
+
+  it('review answers survive a restart', () => {
+    svc.addItems([newItem()])
+    svc.answerDecisions([{ itemId: 'id1', choice: 'unscheduled' }])
+    const again = new DayfitService(file, clock)
+    expect(again.replan().plan.unscheduled).toContain('id1')
   })
 })
 

@@ -30,11 +30,11 @@ const ev = (event: ReminderEvent): NotifyInput => ({
 })
 
 describe('buildNotificationOptions', () => {
-  it('break on darwin has Snooze then Drank', () => {
+  it('break on darwin has Drank then Snooze', () => {
     const o = buildNotificationOptions(ev(brk), 'darwin')
     expect(o.actions).toEqual([
-      { type: 'button', text: 'Snooze 10 min' },
-      { type: 'button', text: 'Drank' }
+      { type: 'button', text: 'Drank' },
+      { type: 'button', text: 'Snooze 10 min' }
     ])
   })
 
@@ -43,7 +43,7 @@ describe('buildNotificationOptions', () => {
       { type: 'event', event: brk, snoozeMin: 90, portalUrl: '' },
       'darwin'
     )
-    expect(o.actions?.[0]).toEqual({ type: 'button', text: 'Snooze 60 min' })
+    expect(o.actions?.map((a) => a.text)).toContain('Snooze 60 min')
   })
 
   it('attendance shows Open portal only for a valid link, then Punched', () => {
@@ -60,7 +60,7 @@ describe('buildNotificationOptions', () => {
         { type: 'event', event: punch, snoozeMin: 10, portalUrl },
         'darwin'
       ).actions?.map((a) => a.text)
-    expect(texts('https://hr.example.com')).toEqual(['Open portal', 'Punched'])
+    expect(texts('https://hr.example.com')).toEqual(['Punched', 'Open portal'])
     expect(texts('')).toEqual(['Punched'])
     expect(texts('javascript:x')).toEqual(['Punched'])
     for (const kind of ['heads-up', 'overtime', 'lunch'] as const)

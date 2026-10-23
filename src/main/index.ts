@@ -8,6 +8,8 @@ import { registerIpc } from './ipc'
 import { planUpdatedNotice, showNotification } from './notify'
 import { DayfitService, type ViewState } from './service'
 import { createPopover } from './tray'
+import { createSeenHandler } from './seen'
+import type { BreakPart } from '../core/breaks'
 import { isPortalUrl } from '../core/portalUrl'
 
 const TICK_MS = 30_000
@@ -45,6 +47,8 @@ if (!app.requestSingleInstanceLock()) {
       popover.send('dayfit:state', view)
       return view
     }
+    // Registered before anything can show the popover (first run, hotkey, notifications).
+    popover.onShow(guarded('seen', createSeenHandler(service, publish)))
 
     // Only a validated http(s) link ever reaches the browser.
     const openPortal = guarded('open portal', (): void => {
@@ -52,12 +56,6 @@ if (!app.requestSingleInstanceLock()) {
       if (isPortalUrl(url)) void shell.openExternal(url)
     })
     registerIpc(service, publish, { hide: () => popover.hide(), openPortal })
-    // Opening the popover means the latest reminder has been seen: clear the menu-bar label.
-    popover.onShow(
-      guarded('seen', () => {
-        publish(service.markSeen())
-      })
-    )
     const initial = publish(service.view())
     // A menu bar app shows nothing at launch; open the popover once so first-run setup is seen.
     if (!initial.settings.firstRunDone) popover.show()
@@ -66,8 +64,8 @@ if (!app.requestSingleInstanceLock()) {
       onDrank: guarded('water action', () => {
         publish(service.logWater())
       }),
-      onSnooze: guarded('snooze action', () => {
-        publish(service.snoozeBreak())
+      onSnooze: guarded('snooze action', (parts: BreakPart[]) => {
+        publish(service.snoozeBreak(parts))
       }),
       onNudge: guarded('nudge action', (id: string, a: 'done' | 'extend' | 'move') => {
         const view = publish(service.answerNudge(id, a))

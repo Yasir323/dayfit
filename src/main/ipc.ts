@@ -16,7 +16,6 @@ export const IPC_METHODS = [
   'markPunched',
   'snoozeBreak',
   'dismissAlert',
-  'markSeen',
   'checkOut',
   'setManualBusy',
   'updateSettings'

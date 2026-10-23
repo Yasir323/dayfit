@@ -4,6 +4,7 @@ import type {
   Block,
   DateStr,
   Decision,
+  DecisionAnswer,
   Item,
   LunchAnswer,
   LunchClash,
@@ -40,6 +41,8 @@ export interface AppState {
   lunchAnswer: { date: DateStr; answer: LunchAnswer } | null
   /** Reminder banners not yet acted on (in-app fallback for dropped notifications). */
   alerts: Alert[]
+  /** Today's review answers (unscheduled / use-other-half); cleared at rollover. */
+  answers: DecisionAnswer[]
   /** Label next to the menu-bar icon until the popover is opened. */
   unseen: string | null
   nudges: NudgeState
@@ -60,6 +63,7 @@ export const defaultState = (): AppState => ({
   endOfDay: clone(EMPTY_END_OF_DAY_STATE),
   lunchAnswer: null,
   alerts: [],
+  answers: [],
   unseen: null,
   nudges: {},
   overdue: [],
