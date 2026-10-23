@@ -7,6 +7,7 @@ import type { NudgeState } from '../core/nudge'
 import type { ReminderState } from '../core/reminders'
 import { EMPTY_REMINDER_STATE } from '../core/reminders'
 import { EMPTY_BREAK_STATE } from '../core/breaks'
+import { EMPTY_END_OF_DAY_STATE, type EndOfDayState } from '../core/endOfDay'
 
 export interface DayPlan {
   blocks: Block[]
@@ -22,6 +23,7 @@ export interface AppState {
   plans: Record<DateStr, DayPlan>
   waterMl: Record<DateStr, number>
   reminder: ReminderState
+  endOfDay: EndOfDayState
   nudges: NudgeState
   overdue: string[]
   manualBusy: boolean | null
@@ -37,6 +39,7 @@ export const defaultState = (): AppState => ({
   plans: {},
   waterMl: {},
   reminder: clone(EMPTY_REMINDER_STATE),
+  endOfDay: clone(EMPTY_END_OF_DAY_STATE),
   nudges: {},
   overdue: [],
   manualBusy: null,
@@ -86,6 +89,9 @@ export function loadState(file: string): AppState {
           fired: isPlainObject(r) && Array.isArray(r.fired) ? r.fired : [],
           breaks: clone(EMPTY_BREAK_STATE)
         }
+  state.endOfDay = isPlainObject(parsed.endOfDay)
+    ? deepMerge(defaults.endOfDay, parsed.endOfDay)
+    : clone(EMPTY_END_OF_DAY_STATE)
   // Walks are reminders now; plans saved before that may still hold walk blocks.
   for (const d of Object.keys(state.plans)) {
     const plan = state.plans[d]

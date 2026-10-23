@@ -25,9 +25,12 @@ const dayfit = {
   confirmCall: call('confirmCall'),
   setLock: call('setLock'),
   logWater: call('logWater'),
+  markPunched: call('markPunched'),
+  checkOut: call('checkOut'),
   setManualBusy: call('setManualBusy'),
   updateSettings: call('updateSettings'),
   hide: () => ipcRenderer.send('dayfit:hide'),
+  openPortal: () => ipcRenderer.send('dayfit:openPortal'),
   onState: subscribe('dayfit:state'),
   onFocus: subscribe('dayfit:focus')
 } as DayfitApi

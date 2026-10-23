@@ -78,6 +78,8 @@ export function makeView(over: Partial<ViewState> = {}): ViewState {
     manualBusy: null,
     waterMl: 500,
     hotkeyOk: true,
+    attendance: { in: false, out: false },
+    checkedOut: false,
     ...over
   }
 }

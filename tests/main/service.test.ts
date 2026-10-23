@@ -6,6 +6,7 @@ import type { Block, NewItem } from '../../src/core/types'
 import { DayfitService, type Clock, type ViewState } from '../../src/main/service'
 import { loadState } from '../../src/main/store'
 import { EMPTY_BREAK_STATE } from '../../src/core/breaks'
+import { EMPTY_END_OF_DAY_STATE } from '../../src/core/endOfDay'
 
 const D = '2026-10-26' // Monday
 const D1 = '2026-10-27'
@@ -231,6 +232,7 @@ describe('DayfitService', () => {
   })
 
   it('snoozeBreak re-queues the last break', () => {
+    svc.markPunched('in')
     svc.tick(0)
     let fired: string[] = []
     for (let m = 1; m <= 20 && fired.length === 0; m++) {
@@ -256,6 +258,48 @@ describe('DayfitService', () => {
     clock.set(27, 8, 0)
     svc.view()
     expect(loadState(file).reminder.breaks).toEqual(EMPTY_BREAK_STATE)
+  })
+
+  it('check-in fires on the first tick at 09:00 and markPunched stops it', () => {
+    expect(svc.tick(0).events.map((e) => e.kind)).toContain('attendance-in')
+    expect(svc.view().attendance.in).toBe(true)
+    expect(svc.markPunched('in').attendance.in).toBe(false)
+    clock.set(26, 9, 10)
+    expect(svc.tick(0).events.map((e) => e.kind)).not.toContain('attendance-in')
+  })
+
+  it('checkOut applies choices and starts check-out', () => {
+    svc.addItems([newItem({ title: 'A' }), newItem({ title: 'B' }), newItem({ title: 'C' })])
+    svc.markPunched('in')
+    const v = svc.checkOut([
+      { itemId: 'id1', choice: 'tomorrow' },
+      { itemId: 'id2', choice: 'unscheduled' },
+      { itemId: 'id3', choice: 'drop' }
+    ])
+    const s = loadState(file)
+    expect(s.items.find((i) => i.id === 'id1')?.date).toBe(D1)
+    expect(v.plan.blocks.some((b) => b.itemId === 'id1')).toBe(false)
+    expect(v.plan.unscheduled).toContain('id2')
+    expect(s.items.find((i) => i.id === 'id3')?.status).toBe('dropped')
+    expect(v.checkedOut).toBe(true)
+    clock.set(26, 9, 1)
+    expect(svc.tick(0).events.map((e) => e.kind)).toContain('attendance-out')
+  })
+
+  it('checkOut skips items that are no longer open', () => {
+    svc.addItems([newItem()])
+    svc.updateItem('id1', { status: 'done' })
+    expect(() => svc.checkOut([{ itemId: 'id1', choice: 'drop' }])).not.toThrow()
+    expect(loadState(file).items[0].status).toBe('done')
+    expect(() => svc.checkOut([{ itemId: 'gone', choice: 'drop' }])).not.toThrow()
+  })
+
+  it('rollover resets end-of-day state', () => {
+    svc.markPunched('in')
+    svc.checkOut([])
+    clock.set(27, 8, 0)
+    svc.view()
+    expect(loadState(file).endOfDay).toEqual(EMPTY_END_OF_DAY_STATE)
   })
 
   it('caps the minutes counted between ticks at 5', () => {

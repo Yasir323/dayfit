@@ -4,9 +4,11 @@ import type { ReminderEvent } from '../core/reminders'
 import { clampSnooze } from '../core/breaks'
 import type { NudgeAnswer } from '../core/nudge'
 import type { ViewState } from './service'
+import { isPortalUrl } from '../core/portalUrl'
+import type { AttendanceKind } from '../core/endOfDay'
 
 export type NotifyInput =
-  | { type: 'event'; event: ReminderEvent; snoozeMin: number }
+  | { type: 'event'; event: ReminderEvent; snoozeMin: number; portalUrl: string }
   | { type: 'nudge'; itemId: string; title: string }
   | { type: 'info'; title: string; body: string }
 
@@ -23,8 +25,12 @@ export interface NotifyHandlers {
   onSnooze(): void
   /** Nudge action button. */
   onNudge(itemId: string, answer: NudgeAnswer): void
-  /** Plain click (and the only interaction on Windows). `nudge` is true for nudge notifications. */
-  onOpen(nudge: boolean): void
+  /** Attendance "Punched" button. */
+  onPunched(kind: AttendanceKind): void
+  /** Attendance "Open portal" button. */
+  onOpenPortal(): void
+  /** Plain click (and the only interaction on Windows): where the popover should open. */
+  onOpen(target: 'nudge' | 'checkout' | null): void
 }
 
 const NUDGE_ACTIONS: { text: string; answer: NudgeAnswer }[] = [
@@ -38,6 +44,18 @@ const breakActions = (event: ReminderEvent, snoozeMin: number): string[] => [
   `Snooze ${clampSnooze(snoozeMin)} min`,
   ...(event.parts.includes('water') ? ['Drank'] : [])
 ]
+
+const attendanceKind = (event: ReminderEvent): AttendanceKind | null =>
+  event.kind === 'attendance-in' ? 'in' : event.kind === 'attendance-out' ? 'out' : null
+
+/** Action texts for an event notification, in button order; the click handler maps by text. */
+function eventActions(input: Extract<NotifyInput, { type: 'event' }>): string[] {
+  const { event } = input
+  if (event.kind === 'break') return breakActions(event, input.snoozeMin)
+  if (attendanceKind(event) !== null)
+    return [...(isPortalUrl(input.portalUrl) ? ['Open portal'] : []), 'Punched']
+  return []
+}
 
 export function buildNotificationOptions(
   input: NotifyInput,
@@ -60,13 +78,8 @@ export function buildNotificationOptions(
     title: event.title,
     body: event.body,
     silent: event.silent,
-    ...(mac && event.kind === 'break'
-      ? {
-          actions: breakActions(event, input.snoozeMin).map((text) => ({
-            type: 'button' as const,
-            text
-          }))
-        }
+    ...(mac && eventActions(input).length > 0
+      ? { actions: eventActions(input).map((text) => ({ type: 'button' as const, text })) }
       : {})
   }
 }
@@ -81,14 +94,26 @@ export function showNotification(
 ): void {
   if (!Notification.isSupported()) return
   const n = new Notification(buildNotificationOptions(input, platform))
-  n.on('click', () => handlers.onOpen(input.type === 'nudge'))
+  n.on('click', () =>
+    handlers.onOpen(
+      input.type === 'nudge'
+        ? 'nudge'
+        : input.type === 'event' && input.event.kind === 'heads-up'
+          ? 'checkout'
+          : null
+    )
+  )
   n.on('action', (_e, index) => {
     if (input.type === 'nudge') {
       const a = NUDGE_ACTIONS[index]
       if (a) handlers.onNudge(input.itemId, a.answer)
-    } else if (input.type === 'event' && input.event.kind === 'break') {
-      if (index === 0) handlers.onSnooze()
-      else if (index === 1) handlers.onDrank()
+    } else if (input.type === 'event') {
+      const text = eventActions(input)[index]
+      const kind = attendanceKind(input.event)
+      if (text === 'Drank') handlers.onDrank()
+      else if (text?.startsWith('Snooze')) handlers.onSnooze()
+      else if (text === 'Open portal') handlers.onOpenPortal()
+      else if (text === 'Punched' && kind !== null) handlers.onPunched(kind)
     }
   })
   live.add(n)

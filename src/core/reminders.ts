@@ -1,7 +1,8 @@
 import { EMPTY_BREAK_STATE, stepBreaks, type BreakPart, type BreakState } from './breaks'
+import type { EndOfDayKind } from './endOfDay'
 import type { Block, Item, Minutes, Settings } from './types'
 
-export type ReminderKind = 'meeting-soon' | 'meeting-now' | 'break'
+export type ReminderKind = 'meeting-soon' | 'meeting-now' | 'break' | EndOfDayKind
 export interface ReminderEvent {
   kind: ReminderKind
   itemId: string | null

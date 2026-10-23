@@ -34,7 +34,9 @@ const view = (over: Partial<ViewState['settings']> = {}): ViewState =>
     busy: false,
     manualBusy: null,
     waterMl: 0,
-    hotkeyOk: true
+    hotkeyOk: true,
+    attendance: { in: false, out: false },
+    checkedOut: false
   }) as ViewState
 
 beforeEach(() => {

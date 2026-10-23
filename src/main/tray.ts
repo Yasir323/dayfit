@@ -6,7 +6,7 @@ import trayIco from '../../resources/tray.ico?asset'
 import { createBlurGuard } from './blurGuard'
 import type { ViewState } from './service'
 
-export type FocusTarget = 'quick-add' | 'nudge' | 'review'
+export type FocusTarget = 'quick-add' | 'nudge' | 'review' | 'checkout'
 
 const WIDTH = 380
 const HEIGHT = 580

@@ -17,10 +17,13 @@ export interface DayfitApi {
   confirmCall: Async<'confirmCall'>
   setLock: Async<'setLock'>
   logWater: Async<'logWater'>
+  markPunched: Async<'markPunched'>
+  checkOut: Async<'checkOut'>
   setManualBusy: Async<'setManualBusy'>
   updateSettings: Async<'updateSettings'>
   /** Hides the popover (Esc). */
   hide(): void
+  openPortal(): void
   onState(cb: (v: ViewState) => void): () => void
   onFocus(cb: (target: FocusTarget) => void): () => void
 }

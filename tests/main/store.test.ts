@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { DEFAULT_SETTINGS } from '../../src/core/types'
 import { defaultState, loadState, saveState } from '../../src/main/store'
 import { EMPTY_BREAK_STATE } from '../../src/core/breaks'
+import { EMPTY_END_OF_DAY_STATE } from '../../src/core/endOfDay'
 
 let dir: string
 let file: string
@@ -78,6 +79,13 @@ describe('store', () => {
     delete older.endOfDay
     fs.writeFileSync(file, JSON.stringify({ ...s, settings: older }))
     expect(loadState(file).settings.endOfDay).toEqual(DEFAULT_SETTINGS.endOfDay)
+  })
+
+  it('older state without endOfDay loads with an empty end-of-day state', () => {
+    const older: Record<string, unknown> = { ...defaultState() }
+    delete older.endOfDay
+    fs.writeFileSync(file, JSON.stringify(older))
+    expect(loadState(file).endOfDay).toEqual(EMPTY_END_OF_DAY_STATE)
   })
 
   it('returns defaults for a missing file', () => {

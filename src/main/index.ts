@@ -1,4 +1,4 @@
-import { app, globalShortcut, powerMonitor } from 'electron'
+import { app, globalShortcut, powerMonitor, shell } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { APP_ID } from './appId'
@@ -8,6 +8,7 @@ import { registerIpc } from './ipc'
 import { planUpdatedNotice, showNotification } from './notify'
 import { DayfitService, type ViewState } from './service'
 import { createPopover } from './tray'
+import { isPortalUrl } from '../core/portalUrl'
 
 const TICK_MS = 30_000
 
@@ -44,7 +45,12 @@ if (!app.requestSingleInstanceLock()) {
       return view
     }
 
-    registerIpc(service, publish, { hide: () => popover.hide() })
+    // Only a validated http(s) link ever reaches the browser.
+    const openPortal = guarded('open portal', (): void => {
+      const url = service.view().settings.endOfDay.portalUrl.trim()
+      if (isPortalUrl(url)) void shell.openExternal(url)
+    })
+    registerIpc(service, publish, { hide: () => popover.hide(), openPortal })
     const initial = publish(service.view())
     // A menu bar app shows nothing at launch; open the popover once so first-run setup is seen.
     if (!initial.settings.firstRunDone) popover.show()
@@ -62,14 +68,24 @@ if (!app.requestSingleInstanceLock()) {
         const notice = planUpdatedNotice(view)
         if (notice) showNotification(notice, process.platform, handlers)
       }),
-      onOpen: (nudge: boolean) => (nudge ? popover.focus('nudge') : popover.show())
+      onPunched: guarded('punch action', (kind: 'in' | 'out') => {
+        publish(service.markPunched(kind))
+      }),
+      onOpenPortal: openPortal,
+      onOpen: (target: 'nudge' | 'checkout' | null) =>
+        target ? popover.focus(target) : popover.show()
     }
 
     const tick = guarded('tick', (): void => {
       const { events, nudges, view } = service.tick(powerMonitor.getSystemIdleTime())
       for (const event of events)
         showNotification(
-          { type: 'event', event, snoozeMin: view.settings.breaks.snoozeMin },
+          {
+            type: 'event',
+            event,
+            snoozeMin: view.settings.breaks.snoozeMin,
+            portalUrl: view.settings.endOfDay.portalUrl
+          },
           process.platform,
           handlers
         )

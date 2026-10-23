@@ -13,6 +13,8 @@ export const IPC_METHODS = [
   'confirmCall',
   'setLock',
   'logWater',
+  'markPunched',
+  'checkOut',
   'setManualBusy',
   'updateSettings'
 ] as const satisfies readonly (keyof DayfitService)[]
@@ -23,6 +25,8 @@ export type IpcMethod = (typeof IPC_METHODS)[number]
 export interface ShellActions {
   /** `dayfit:hide` (Esc in the popover). */
   hide(): void
+  /** `dayfit:openPortal` (attendance banner): opens the HRMS link in the browser. */
+  openPortal(): void
 }
 
 /**
@@ -41,4 +45,5 @@ export function registerIpc(
     })
   }
   ipcMain.on('dayfit:hide', () => shell.hide())
+  ipcMain.on('dayfit:openPortal', () => shell.openPortal())
 }

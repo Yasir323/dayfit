@@ -5,6 +5,14 @@ import { itemsForDate, rolloverItems } from '../core/recurrence'
 import { dueReminders, EMPTY_REMINDER_STATE, isBusy, type ReminderEvent } from '../core/reminders'
 import { diffMoves, frozenBlocks } from '../core/replan'
 import { snoozeBreak } from '../core/breaks'
+import {
+  attendanceDue,
+  markPunched,
+  startCheckout,
+  stepEndOfDay,
+  EMPTY_END_OF_DAY_STATE,
+  type AttendanceKind
+} from '../core/endOfDay'
 import { planDay } from '../core/scheduler'
 import { addDays, minutesOf, toDateStr, weekday } from '../core/time'
 import {
@@ -37,6 +45,10 @@ export interface ViewState {
   busy: boolean
   manualBusy: boolean | null
   waterMl: number
+  /** Attendance punches owed right now (banner). */
+  attendance: { in: boolean; out: boolean }
+  /** "Done for today" pressed on the check-out screen. */
+  checkedOut: boolean
   /** False when the quick-add shortcut could not be registered (set by the shell). */
   hotkeyOk: boolean
 }
@@ -224,6 +236,32 @@ export class DayfitService {
     return this.buildView()
   }
 
+  /** Attendance "Punched": stops that day's reminder for check-in or check-out. */
+  markPunched(kind: AttendanceKind): ViewState {
+    this.begin()
+    this.state.endOfDay = markPunched(this.state.endOfDay, kind)
+    this.save()
+    return this.buildView()
+  }
+
+  /** "Done for today": applies each unfinished item's choice, then starts the check-out punch. */
+  checkOut(choices: { itemId: string; choice: 'tomorrow' | 'unscheduled' | 'drop' }[]): ViewState {
+    this.begin()
+    const tomorrow = addDays(this.today(), 1)
+    for (const { itemId, choice } of choices) {
+      const item = this.find(itemId)
+      // Items finished or removed since the screen opened are left alone.
+      if (!item || item.status !== 'open') continue
+      if (choice === 'tomorrow') {
+        item.date = tomorrow
+        item.lockedStart = null
+      } else if (choice === 'drop') item.status = 'dropped'
+      else this.answers = [...this.answers.filter((a) => a.itemId !== itemId), { itemId, choice }]
+    }
+    this.state.endOfDay = startCheckout(this.state.endOfDay)
+    return this.replanAndSave()
+  }
+
   logWater(): ViewState {
     this.begin()
     const today = this.today()
@@ -264,7 +302,7 @@ export class DayfitService {
     const now = this.nowMin()
     const blocks = this.todayPlan().blocks
     const items = itemsForDate(s.items, today)
-    const before = JSON.stringify(s.reminder)
+    const before = JSON.stringify([s.reminder, s.endOfDay])
 
     const r = dueReminders({
       now,
@@ -278,6 +316,20 @@ export class DayfitService {
       state: s.reminder
     })
     s.reminder = r.state
+    const eod = stepEndOfDay({
+      now,
+      idleSec,
+      blocks,
+      items,
+      settings: s.settings,
+      manualBusy: s.manualBusy,
+      state: s.endOfDay
+    })
+    s.endOfDay = eod.state
+    const events: ReminderEvent[] = [
+      ...r.events,
+      ...eod.events.map((e) => ({ ...e, itemId: null, silent: false, parts: [] }))
+    ]
 
     // While busy, nudge notifications wait (uncounted) for the first non-busy tick;
     // the item still shows as overdue in the app.
@@ -291,10 +343,10 @@ export class DayfitService {
     if (
       nudges.length > 0 ||
       s.overdue.length !== overdueBefore ||
-      JSON.stringify(s.reminder) !== before
+      JSON.stringify([s.reminder, s.endOfDay]) !== before
     )
       this.save()
-    return { events: r.events, nudges, view: this.buildView() }
+    return { events, nudges, view: this.buildView() }
   }
 
   // --- internals ---
@@ -349,6 +401,7 @@ export class DayfitService {
     const s = this.state
     s.items = rolloverItems(s.items, today)
     s.reminder = structuredClone(EMPTY_REMINDER_STATE)
+    s.endOfDay = structuredClone(EMPTY_END_OF_DAY_STATE)
     s.nudges = {}
     s.overdue = []
     s.lastDate = today
@@ -450,6 +503,8 @@ export class DayfitService {
       busy: isBusy(plan.blocks, now, s.manualBusy),
       manualBusy: s.manualBusy,
       waterMl: s.waterMl[today] ?? 0,
+      attendance: attendanceDue(s.endOfDay, now, s.settings),
+      checkedOut: s.endOfDay.checkedOut,
       hotkeyOk: this.hotkeyOk
     })
   }

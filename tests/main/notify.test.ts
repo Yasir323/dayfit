@@ -22,7 +22,12 @@ const brk: ReminderEvent = {
   silent: false,
   parts: ['eye', 'water']
 }
-const ev = (event: ReminderEvent): NotifyInput => ({ type: 'event', event, snoozeMin: 10 })
+const ev = (event: ReminderEvent): NotifyInput => ({
+  type: 'event',
+  event,
+  snoozeMin: 10,
+  portalUrl: ''
+})
 
 describe('buildNotificationOptions', () => {
   it('break on darwin has Snooze then Drank', () => {
@@ -34,8 +39,37 @@ describe('buildNotificationOptions', () => {
   })
 
   it('the Snooze button shows the clamped length', () => {
-    const o = buildNotificationOptions({ type: 'event', event: brk, snoozeMin: 90 }, 'darwin')
+    const o = buildNotificationOptions(
+      { type: 'event', event: brk, snoozeMin: 90, portalUrl: '' },
+      'darwin'
+    )
     expect(o.actions?.[0]).toEqual({ type: 'button', text: 'Snooze 60 min' })
+  })
+
+  it('attendance shows Open portal only for a valid link, then Punched', () => {
+    const punch: ReminderEvent = {
+      kind: 'attendance-in',
+      itemId: null,
+      title: 'Punch in',
+      body: 'Mark your attendance for today.',
+      silent: false,
+      parts: []
+    }
+    const texts = (portalUrl: string): (string | undefined)[] | undefined =>
+      buildNotificationOptions(
+        { type: 'event', event: punch, snoozeMin: 10, portalUrl },
+        'darwin'
+      ).actions?.map((a) => a.text)
+    expect(texts('https://hr.example.com')).toEqual(['Open portal', 'Punched'])
+    expect(texts('')).toEqual(['Punched'])
+    expect(texts('javascript:x')).toEqual(['Punched'])
+    for (const kind of ['heads-up', 'overtime', 'lunch'] as const)
+      expect(
+        buildNotificationOptions(
+          { type: 'event', event: { ...punch, kind }, snoozeMin: 10, portalUrl: 'https://x.io' },
+          'darwin'
+        ).actions
+      ).toBeUndefined()
   })
 
   it('no Drank without water', () => {
