@@ -30,7 +30,7 @@ Everything below "Full backlog" is unprioritised beyond the v1 / later split.
 ## Known issues and polish (from reviews)
 
 - [ ] Sign dev builds (Apple Development cert) so macOS shows notifications
-- [ ] Visual check of the redesign and break notifications in the running app (`npm run dev`)
+- [x] Visual check of the redesign and break notifications in the running app (`npm run dev`)
 - [x] Empty state missing when only Tomorrow/Later have items
 - [x] Footer not sticky
 - [x] Household items with a fixed start hide label and deadline
@@ -84,7 +84,7 @@ Calendar sync, Slack/Teams, AI and mood detection stay in "Later versions".
 - [ ] Keyboard navigation in the popover (tabs, list rows, actions)
 - [x] Backup: export/import data as JSON from Settings
 - [x] Leftover minors (5 items under "Known issues and polish")
-- [ ] Visual check in the running app (`npm run dev`)
+- [x] Visual check in the running app (`npm run dev`)
 
 ### Release (end)
 - [ ] App icon and packaging for Mac + Windows

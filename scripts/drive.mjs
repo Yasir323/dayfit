@@ -1,0 +1,151 @@
+// Screenshot driver for a visual check: launches the built app (`npx electron-vite build` first)
+// against a throwaway profile, sets up a day around the current time, and screenshots each screen.
+// Usage: node scripts/drive.mjs [outDir]
+import { _electron as electron } from 'playwright-core'
+import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
+
+const APP_DIR = path.resolve(import.meta.dirname, '..')
+const OUT = path.resolve(process.argv[2] ?? path.join(os.tmpdir(), 'dayfit-shots'))
+fs.mkdirSync(OUT, { recursive: true })
+const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'dayfit-profile-'))
+
+const bin =
+  process.platform === 'darwin'
+    ? path.join(APP_DIR, 'node_modules/electron/dist/Electron.app/Contents/MacOS/Electron')
+    : path.join(APP_DIR, 'node_modules/electron/dist/electron')
+
+const app = await electron.launch({
+  executablePath: bin,
+  args: [APP_DIR],
+  env: { ...process.env, DAYFIT_USER_DATA: profile },
+  timeout: 30_000
+})
+const page = await app.firstWindow()
+await page.waitForLoadState('domcontentloaded')
+const show = () => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].show())
+const pause = (ms) => new Promise((r) => setTimeout(r, ms))
+const shot = async (name) => {
+  await pause(400)
+  const f = path.join(OUT, `${name}.png`)
+  await page.screenshot({ path: f })
+  console.log('shot', f)
+}
+const click = (role, name) => page.getByRole(role, { name, exact: true }).first().click()
+const api = (fn, ...args) => page.evaluate(([f, a]) => window.dayfit[f](...a), [fn, args])
+
+try {
+  await show()
+  await page.getByRole('dialog').first().waitFor({ timeout: 10_000 })
+  await shot('01-first-run')
+
+  // A working day around now, lunch an hour in, then a few items.
+  const d = new Date()
+  const now = d.getHours() * 60 + d.getMinutes()
+  const start = Math.max(0, now - 60)
+  const end = Math.min(24 * 60 - 5, now + 360)
+  const v = await api('updateSettings', {
+    firstRunDone: true,
+    workStart: start,
+    workEnd: end,
+    lunch: now + 90
+  })
+  const today = v.today
+  const item = (o) => ({
+    title: 'Task',
+    type: 'task',
+    durationMin: 30,
+    label: null,
+    priority: 'med',
+    half: null,
+    date: today,
+    fixedStart: null,
+    deadline: null,
+    repeat: { kind: 'none' },
+    dnd: false,
+    ...o
+  })
+  const round = (m) => Math.ceil(m / 5) * 5
+  await api('addItems', [
+    item({ title: 'Write the quarterly planning document', durationMin: 45, priority: 'high' }),
+    item({ title: 'Payments refactor', type: 'deep', durationMin: 90 }),
+    item({ title: 'Standup', type: 'fixed', fixedStart: round(now + 20), durationMin: 15 }),
+    item({
+      title: 'Water the plants',
+      type: 'household',
+      durationMin: 10,
+      repeat: { kind: 'daily' }
+    }),
+    item({ title: 'Call the bank', type: 'call', durationMin: 15 })
+  ])
+  await api('logWater')
+  await api('logCoffee')
+  await page.reload()
+  await page.getByRole('navigation', { name: 'Main' }).waitFor()
+
+  for (const [view, name] of [
+    ['List', '02-today-list'],
+    ['Calendar', '03-today-calendar'],
+    ['Timeline', '04-today-timeline']
+  ]) {
+    await click('tab', view)
+    await shot(name)
+  }
+
+  await click('button', 'Add')
+  await shot('05-quick-add')
+  await click('button', 'Settings')
+  await shot('06-settings')
+  await page.mouse.wheel(0, 3000)
+  await shot('07-settings-bottom')
+  await click('button', 'Today')
+
+  // Focus timer on the first task.
+  await click('tab', 'List')
+  await api('startFocus', (await api('view')).items.find((i) => i.type === 'task').id, 25)
+  await page.reload()
+  await page.getByRole('navigation', { name: 'Main' }).waitFor()
+  await shot('08-focus')
+  await api('stopFocus')
+
+  // Lunch clash: a meeting over lunch.
+  await api('addItems', [
+    item({ title: 'Client call', type: 'fixed', fixedStart: round(now + 85), durationMin: 60 })
+  ])
+  await page.reload()
+  await page.getByRole('dialog', { name: 'Review your plan' }).waitFor({ timeout: 5_000 })
+  await shot('09-lunch-clash')
+  await page.getByText('Skip today', { exact: true }).click()
+  await click('button', 'Apply')
+  await page.getByRole('dialog', { name: 'Review your plan' }).waitFor({ state: 'detached' })
+
+  // Check-out, then the day summary.
+  await api('updateSettings', { workEnd: round(now + 30) })
+  await page.reload()
+  await page.getByRole('navigation', { name: 'Main' }).waitFor()
+  // A shorter day leaves items over: send them to tomorrow.
+  const review = page.getByRole('dialog', { name: 'Review your plan' })
+  if (await review.isVisible()) {
+    for (const t of await review.getByText('Tomorrow', { exact: true }).all()) await t.click()
+    await click('button', 'Apply')
+    await review.waitFor({ state: 'detached' })
+  }
+  await shot('10-evening-today')
+  await click('button', 'Check out')
+  await shot('11-check-out')
+  await click('button', 'Done for today')
+  await shot('12-day-summary')
+  await click('button', 'Close')
+  await click('tab', 'Week')
+  await shot('13-week')
+  await click('tab', 'Tomorrow')
+  await shot('14-tomorrow')
+} catch (e) {
+  await shot('zz-failure').catch(() => {})
+  console.error(e)
+  process.exitCode = 1
+} finally {
+  await app.close()
+  fs.rmSync(profile, { recursive: true, force: true })
+}

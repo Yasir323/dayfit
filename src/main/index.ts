@@ -17,6 +17,9 @@ import { isPortalUrl } from '../core/portalUrl'
 
 const TICK_MS = 30_000
 
+// The screenshot driver (scripts/drive.mjs) runs against a throwaway profile.
+if (process.env.DAYFIT_USER_DATA) app.setPath('userData', process.env.DAYFIT_USER_DATA)
+
 if (!app.requestSingleInstanceLock()) {
   app.quit()
 } else {

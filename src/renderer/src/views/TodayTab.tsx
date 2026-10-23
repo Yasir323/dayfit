@@ -95,42 +95,46 @@ export function TodayTab({
           <h1>Today</h1>
           <span className="muted">{dayHeader(view.today)}</span>
         </div>
-        {water.enabled && (
-          <div className="water">
-            <Icon name="drop" size={14} />
-            <div
-              role="progressbar"
-              aria-label="Water today"
-              aria-valuenow={view.waterMl}
-              aria-valuemin={0}
-              aria-valuemax={water.targetMl}
-              className="water-bar"
-            >
-              <span style={{ width: `${Math.min(100, (view.waterMl / water.targetMl) * 100)}%` }} />
+        <div className="intake">
+          {water.enabled && (
+            <div className="water">
+              <Icon name="drop" size={14} />
+              <div
+                role="progressbar"
+                aria-label="Water today"
+                aria-valuenow={view.waterMl}
+                aria-valuemin={0}
+                aria-valuemax={water.targetMl}
+                className="water-bar"
+              >
+                <span
+                  style={{ width: `${Math.min(100, (view.waterMl / water.targetMl) * 100)}%` }}
+                />
+              </div>
+              <span>
+                {view.waterMl} / {water.targetMl} ml
+              </span>
+              <button
+                type="button"
+                className="btn-ghost"
+                onClick={() => void run(() => api.logWater())}
+              >
+                + glass
+              </button>
             </div>
+          )}
+          <div className="water coffee">
             <span>
-              {view.waterMl} / {water.targetMl} ml
+              {view.coffee} / {view.settings.coffee.capCups} cups
             </span>
             <button
               type="button"
               className="btn-ghost"
-              onClick={() => void run(() => api.logWater())}
+              onClick={() => void run(() => api.logCoffee())}
             >
-              + glass
+              + coffee
             </button>
           </div>
-        )}
-        <div className="water coffee">
-          <span>
-            {view.coffee} / {view.settings.coffee.capCups} cups
-          </span>
-          <button
-            type="button"
-            className="btn-ghost"
-            onClick={() => void run(() => api.logCoffee())}
-          >
-            + coffee
-          </button>
         </div>
       </header>
 
@@ -152,39 +156,41 @@ export function TodayTab({
         {shownKind === 'tomorrow' && <TomorrowView view={view} />}
       </div>
 
-      {view.focus && (
-        <div className="focus-bar" role="status">
-          <span>{`Focus · ${view.focus.title} · ${view.focus.minutesLeft} min left`}</span>
-          <button type="button" className="btn" onClick={() => void run(() => api.stopFocus())}>
-            Stop focus
-          </button>
-        </div>
-      )}
-      <footer className="today-footer">
-        <div className="busy-toggle" role="group" aria-label="Busy mode">
-          {BUSY_MODES.map(([label, value]) => (
-            <button
-              key={label}
-              type="button"
-              aria-pressed={view.manualBusy === value}
-              onClick={() => void run(() => api.setManualBusy(value))}
-            >
-              {label}
+      <div className="today-bottom">
+        {view.focus && (
+          <div className="focus-bar" role="status">
+            <span>{`Focus · ${view.focus.title} · ${view.focus.minutesLeft} min left`}</span>
+            <button type="button" className="btn" onClick={() => void run(() => api.stopFocus())}>
+              Stop focus
             </button>
-          ))}
-        </div>
-        <span className="next-up">{nextUp(view)}</span>
-        {view.now >= view.settings.workEnd - CHECKOUT_BUTTON_LEAD_MIN && (
-          <button
-            type="button"
-            className="btn checkout-btn"
-            disabled={view.checkedOut}
-            onClick={onCheckOut}
-          >
-            {view.checkedOut ? 'Checked out' : 'Check out'}
-          </button>
+          </div>
         )}
-      </footer>
+        <footer className="today-footer">
+          <div className="busy-toggle" role="group" aria-label="Busy mode">
+            {BUSY_MODES.map(([label, value]) => (
+              <button
+                key={label}
+                type="button"
+                aria-pressed={view.manualBusy === value}
+                onClick={() => void run(() => api.setManualBusy(value))}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <span className="next-up">{nextUp(view)}</span>
+          {view.now >= view.settings.workEnd - CHECKOUT_BUTTON_LEAD_MIN && (
+            <button
+              type="button"
+              className="btn checkout-btn"
+              disabled={view.checkedOut}
+              onClick={onCheckOut}
+            >
+              {view.checkedOut ? 'Checked out' : 'Check out'}
+            </button>
+          )}
+        </footer>
+      </div>
     </div>
   )
 }
