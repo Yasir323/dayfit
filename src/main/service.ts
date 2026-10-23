@@ -28,7 +28,8 @@ import {
   type NewItem,
   type Settings
 } from '../core/types'
-import { loadState, saveState, type AppState, type DayPlan } from './store'
+import { openDb, type Db } from './db'
+import { loadState, saveState, type AppState, type DayPlan, type StateSource } from './store'
 
 export interface Clock {
   now(): Date
@@ -96,12 +97,15 @@ export class DayfitService {
   /** Clock snapshot taken once per public call, so date and minutes always agree. */
   private at: Date
 
+  private readonly db: Db
+
   constructor(
-    private readonly file: string,
+    source: StateSource,
     private readonly clock: Clock,
     private readonly idGen: () => string = randomUUID
   ) {
-    this.state = loadState(file)
+    this.db = typeof source === 'string' ? openDb(source) : source
+    this.state = loadState(this.db)
     this.at = clock.now()
   }
 
@@ -480,7 +484,7 @@ export class DayfitService {
   }
 
   private save(): void {
-    saveState(this.file, this.state)
+    saveState(this.db, this.state)
   }
 
   /** Day rollover, run lazily whenever the local date has changed since the last run. */

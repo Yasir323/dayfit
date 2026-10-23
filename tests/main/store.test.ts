@@ -4,6 +4,7 @@ import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { DEFAULT_SETTINGS } from '../../src/core/types'
 import { defaultState, loadState, saveState } from '../../src/main/store'
+import { openDb } from '../../src/main/db'
 import { EMPTY_BREAK_STATE } from '../../src/core/breaks'
 import { EMPTY_END_OF_DAY_STATE } from '../../src/core/endOfDay'
 
@@ -15,6 +16,13 @@ beforeEach(() => {
 })
 afterEach(() => fs.rmSync(dir, { recursive: true, force: true }))
 
+/** Puts a raw (possibly older-shaped) state document into the database, as an old app would. */
+function writeRaw(raw: unknown): void {
+  const db = openDb(file)
+  db.writeState(raw)
+  db.close()
+}
+
 describe('store', () => {
   it('round trips state', () => {
     const s = defaultState()
@@ -23,7 +31,6 @@ describe('store', () => {
     s.manualBusy = true
     saveState(file, s)
     expect(loadState(file)).toEqual(s)
-    expect(fs.existsSync(file + '.tmp')).toBe(false)
   })
 
   it('fills missing dnd on load from type and fixed start', () => {
@@ -38,7 +45,7 @@ describe('store', () => {
         { ...base, ...rest, ...more, id: 'b', type: 'task', fixedStart: null }
       ]
     }
-    fs.writeFileSync(file, JSON.stringify(raw))
+    writeRaw(raw)
     expect(loadState(file).items.map((i) => i.dnd)).toEqual([true, false])
   })
 
@@ -47,7 +54,7 @@ describe('store', () => {
     const task = { itemId: 'a', kind: 'task', start: 600, end: 630, chunk: null, reason: '' }
     const walk = { itemId: null, kind: 'walk', start: 690, end: 700, chunk: null, reason: '' }
     const plan = { blocks: [task, walk], decisions: [], unscheduled: [], moves: [] }
-    fs.writeFileSync(file, JSON.stringify({ ...s, plans: { '2026-10-23': plan } }))
+    writeRaw({ ...s, plans: { '2026-10-23': plan } })
     expect(loadState(file).plans['2026-10-23'].blocks).toEqual([task])
   })
 
@@ -59,14 +66,14 @@ describe('store', () => {
       lastWaterAt: null,
       fired: ['x']
     }
-    fs.writeFileSync(file, JSON.stringify({ ...defaultState(), reminder: old }))
+    writeRaw({ ...defaultState(), reminder: old })
     expect(loadState(file).reminder).toEqual({ fired: ['x'], breaks: EMPTY_BREAK_STATE })
   })
 
   it('ignores the removed busy setting', () => {
     const s = defaultState()
     const settings = { ...s.settings, busy: { allowGentle: true }, water: { targetMl: 3000 } }
-    fs.writeFileSync(file, JSON.stringify({ ...s, settings }))
+    writeRaw({ ...s, settings })
     const loaded = loadState(file).settings
     expect('busy' in loaded).toBe(false)
     expect(loaded.breaks.snoozeMin).toBe(10)
@@ -77,21 +84,21 @@ describe('store', () => {
     const s = defaultState()
     const older: Record<string, unknown> = { ...s.settings }
     delete older.endOfDay
-    fs.writeFileSync(file, JSON.stringify({ ...s, settings: older }))
+    writeRaw({ ...s, settings: older })
     expect(loadState(file).settings.endOfDay).toEqual(DEFAULT_SETTINGS.endOfDay)
   })
 
   it('older state without endOfDay loads with an empty end-of-day state', () => {
     const older: Record<string, unknown> = { ...defaultState() }
     delete older.endOfDay
-    fs.writeFileSync(file, JSON.stringify(older))
+    writeRaw(older)
     expect(loadState(file).endOfDay).toEqual(EMPTY_END_OF_DAY_STATE)
   })
 
   it('older state without lunchAnswer loads with null', () => {
     const older: Record<string, unknown> = { ...defaultState() }
     delete older.lunchAnswer
-    fs.writeFileSync(file, JSON.stringify(older))
+    writeRaw(older)
     expect(loadState(file).lunchAnswer).toBeNull()
   })
 
@@ -99,7 +106,7 @@ describe('store', () => {
     const older: Record<string, unknown> = { ...defaultState() }
     delete older.alerts
     delete older.unseen
-    fs.writeFileSync(file, JSON.stringify(older))
+    writeRaw(older)
     const s = loadState(file)
     expect(s.alerts).toEqual([])
     expect(s.unseen).toBeNull()
@@ -108,7 +115,7 @@ describe('store', () => {
   it('older state without answers loads with []', () => {
     const older: Record<string, unknown> = { ...defaultState() }
     delete older.answers
-    fs.writeFileSync(file, JSON.stringify(older))
+    writeRaw(older)
     expect(loadState(file).answers).toEqual([])
   })
 
@@ -142,20 +149,16 @@ describe('store', () => {
     const backups = fs.readdirSync(dir).filter((f) => f.startsWith('dayfit.json.corrupt-'))
     expect(backups).toHaveLength(1)
     expect(fs.readFileSync(path.join(dir, backups[0]), 'utf8')).toBe('{bad')
-    expect(fs.existsSync(file)).toBe(false)
   })
 
   it('wrong version is backed up and replaced with defaults', () => {
-    fs.writeFileSync(file, JSON.stringify({ version: 2 }))
+    writeRaw({ version: 2 })
     expect(loadState(file)).toEqual(defaultState())
     expect(fs.readdirSync(dir).some((f) => f.startsWith('dayfit.json.corrupt-'))).toBe(true)
   })
 
   it('merges partial settings deeply over defaults and fills missing fields', () => {
-    fs.writeFileSync(
-      file,
-      JSON.stringify({ version: 1, settings: { hotkey: 'X', water: { targetMl: 3000 } } })
-    )
+    writeRaw({ version: 1, settings: { hotkey: 'X', water: { targetMl: 3000 } } })
     const s = loadState(file)
     expect(s.settings.hotkey).toBe('X')
     expect(s.settings.water).toEqual({
@@ -173,6 +176,6 @@ describe('store', () => {
     const nested = path.join(dir, 'a', 'b', 'dayfit.json')
     saveState(nested, defaultState())
     expect(fs.existsSync(nested)).toBe(true)
-    expect(fs.readFileSync(nested, 'utf8')).toContain('\n  "version": 1')
+    expect(loadState(nested).version).toBe(1)
   })
 })

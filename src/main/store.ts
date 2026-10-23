@@ -1,5 +1,4 @@
 import fs from 'node:fs'
-import path from 'node:path'
 import type {
   Block,
   DateStr,
@@ -17,6 +16,7 @@ import type { ReminderState } from '../core/reminders'
 import { EMPTY_REMINDER_STATE } from '../core/reminders'
 import type { Alert } from '../core/alerts'
 import { EMPTY_BREAK_STATE } from '../core/breaks'
+import { openDb, type Db } from './db'
 import { EMPTY_END_OF_DAY_STATE, type EndOfDayState } from '../core/endOfDay'
 
 export interface DayPlan {
@@ -82,24 +82,34 @@ function deepMerge<T>(base: T, over: unknown): T {
   return out as T
 }
 
-export function loadState(file: string): AppState {
-  let raw: string
+/** A database, or a path to one (opened and closed around the call). */
+export type StateSource = string | Db
+
+const withDb = <T>(src: StateSource, fn: (db: Db) => T): T => {
+  if (typeof src !== 'string') return fn(src)
+  const db = openDb(src)
   try {
-    raw = fs.readFileSync(file, 'utf8')
-  } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === 'ENOENT') return defaultState()
-    throw e
+    return fn(db)
+  } finally {
+    db.close()
   }
-  let parsed: unknown
-  try {
-    parsed = JSON.parse(raw)
-  } catch {
-    parsed = null
-  }
-  if (!isPlainObject(parsed) || parsed.version !== 1) {
-    fs.renameSync(file, `${file}.corrupt-${Date.now()}`)
+}
+
+export function loadState(src: StateSource): AppState {
+  return withDb(src, (db) => {
+    const parsed = db.readState()
+    if (parsed === null) return defaultState()
+    const state = normalizeState(parsed)
+    if (state) return state
+    // An unknown shape is kept aside for inspection, then the app starts fresh.
+    fs.writeFileSync(`${db.file}.corrupt-${Date.now()}.json`, JSON.stringify(parsed))
     return defaultState()
-  }
+  })
+}
+
+/** Older or partial state → today's shape; null when it isn't Dayfit state at all. */
+export function normalizeState(parsed: unknown): AppState | null {
+  if (!isPlainObject(parsed) || parsed.version !== 1) return null
   const defaults = defaultState()
   const state = { ...defaults, ...parsed } as AppState
   state.settings = deepMerge(defaults.settings, parsed.settings)
@@ -129,9 +139,6 @@ export function loadState(file: string): AppState {
   return state
 }
 
-export function saveState(file: string, s: AppState): void {
-  fs.mkdirSync(path.dirname(file), { recursive: true })
-  const tmp = `${file}.tmp`
-  fs.writeFileSync(tmp, JSON.stringify(s, null, 2))
-  fs.renameSync(tmp, file)
+export function saveState(src: StateSource, s: AppState): void {
+  withDb(src, (db) => db.writeState(s))
 }

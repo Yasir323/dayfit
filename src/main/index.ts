@@ -9,6 +9,7 @@ import { planUpdatedNotice, showNotification } from './notify'
 import { DayfitService, type ViewState } from './service'
 import { createPopover } from './tray'
 import { createSeenHandler } from './seen'
+import { migrateJson, openDb } from './db'
 import type { BreakPart } from '../core/breaks'
 import { isPortalUrl } from '../core/portalUrl'
 
@@ -22,7 +23,11 @@ if (!app.requestSingleInstanceLock()) {
     app.dock?.hide()
     app.on('browser-window-created', (_, window) => optimizer.watchWindowShortcuts(window))
 
-    const service = new DayfitService(join(app.getPath('userData'), 'dayfit.json'), {
+    const userData = app.getPath('userData')
+    const db = openDb(join(userData, 'dayfit.db'))
+    // First launch on the database: bring over the old JSON state once.
+    migrateJson(db, join(userData, 'dayfit.json'))
+    const service = new DayfitService(db, {
       now: () => new Date()
     })
     const popover = createPopover()
