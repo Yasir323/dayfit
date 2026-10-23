@@ -2,7 +2,6 @@ import '@testing-library/jest-dom/vitest'
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { DEFAULT_SETTINGS, type Block, type Item } from '../../src/core/types'
 import type { ViewState } from '../../src/main/service'
 
 const api = vi.hoisted(() => ({
@@ -24,93 +23,15 @@ vi.mock('../../src/renderer/src/api', () => ({ api }))
 
 import { App } from '../../src/renderer/src/App'
 import { NudgeBanner } from '../../src/renderer/src/views/NudgeBanner'
-import { Today } from '../../src/renderer/src/views/Today'
-
-const TODAY = '2026-10-23'
-
-const item = (id: string, title: string, extra: Partial<Item> = {}): Item => ({
-  id,
-  title,
-  type: 'task',
-  durationMin: 30,
-  label: null,
-  priority: 'med',
-  half: null,
-  date: TODAY,
-  fixedStart: null,
-  deadline: null,
-  repeat: { kind: 'none' },
-  status: 'open',
-  lockedStart: null,
-  suggestedSlots: [],
-  createdAt: 1,
-  ...extra
-})
-
-const block = (
-  itemId: string | null,
-  kind: Block['kind'],
-  start: number,
-  end: number,
-  extra: Partial<Block> = {}
-): Block => ({
-  itemId,
-  kind,
-  start,
-  end,
-  chunk: null,
-  reason: 'Fits',
-  ...extra
-})
-
-function makeView(over: Partial<ViewState> = {}): ViewState {
-  return {
-    today: TODAY,
-    now: 600,
-    settings: { ...DEFAULT_SETTINGS, firstRunDone: true },
-    plan: {
-      blocks: [
-        block('standup', 'fixed', 540, 555, { reason: 'Fixed' }),
-        block('deep', 'deep', 560, 620, {
-          chunk: { index: 0, of: 2 },
-          reason: 'Split: no 120m gap'
-        }),
-        block('deep', 'deep', 625, 685, {
-          chunk: { index: 1, of: 2 },
-          reason: 'Split: no 120m gap'
-        }),
-        block(null, 'walk', 690, 700, { reason: 'Walk break' })
-      ],
-      decisions: [],
-      unscheduled: [],
-      moves: []
-    },
-    items: [
-      item('standup', 'Standup', {
-        type: 'fixed',
-        fixedStart: 540,
-        durationMin: 15,
-        repeat: { kind: 'daily' }
-      }),
-      item('deep', 'Payments refactor', { type: 'deep', durationMin: 120 })
-    ],
-    upcoming: [],
-    tomorrow: [],
-    week: [],
-    awaitingCalls: [],
-    nudges: [],
-    busy: false,
-    manualBusy: null,
-    waterMl: 500,
-    hotkeyOk: true,
-    ...over
-  }
-}
+import { TimelineView } from '../../src/renderer/src/views/TimelineView'
+import { TodayTab } from '../../src/renderer/src/views/TodayTab'
+import { block, item, makeView } from './fixtures'
 
 let pushState: (v: ViewState) => void = () => {}
 let pushFocus: (t: string) => void = () => {}
 
 beforeEach(() => {
+  localStorage.clear()
   for (const fn of Object.values(api)) fn.mockReset()
   api.onState.mockImplementation((cb: (v: ViewState) => void) => {
     pushState = cb
@@ -125,7 +46,7 @@ afterEach(cleanup)
 
 describe('Today timeline', () => {
   it('shows 4 blocks and labels the first deep chunk "1/2"', () => {
-    render(<Today view={makeView()} onView={vi.fn()} />)
+    render(<TimelineView view={makeView()} onView={vi.fn()} />)
     const blocks = within(screen.getByRole('list', { name: 'Timeline' })).getAllByRole('listitem')
     expect(blocks).toHaveLength(4)
     expect(within(blocks[1]).getByText('1/2')).toBeInTheDocument()
@@ -135,7 +56,7 @@ describe('Today timeline', () => {
 
   it('offers no done action on repeating items, and delete drops fixed items', async () => {
     api.updateItem.mockResolvedValue(makeView())
-    render(<Today view={makeView()} onView={vi.fn()} />)
+    render(<TimelineView view={makeView()} onView={vi.fn()} />)
     const blocks = within(screen.getByRole('list', { name: 'Timeline' })).getAllByRole('listitem')
     expect(within(blocks[0]).queryByRole('button', { name: 'Done' })).toBeNull()
     expect(within(blocks[1]).getByRole('button', { name: 'Done' })).toBeInTheDocument()
@@ -146,14 +67,14 @@ describe('Today timeline', () => {
 
   it('delete drops a one-off flexible item at once', async () => {
     api.updateItem.mockResolvedValue(makeView())
-    render(<Today view={makeView()} onView={vi.fn()} />)
+    render(<TimelineView view={makeView()} onView={vi.fn()} />)
     const blocks = within(screen.getByRole('list', { name: 'Timeline' })).getAllByRole('listitem')
     await userEvent.click(within(blocks[1]).getByRole('button', { name: 'Delete' }))
     expect(api.updateItem).toHaveBeenCalledWith('deep', { status: 'dropped' })
   })
 
   it('deleting a repeating item asks to delete the whole series; No keeps it', async () => {
-    render(<Today view={makeView()} onView={vi.fn()} />)
+    render(<TimelineView view={makeView()} onView={vi.fn()} />)
     const blocks = within(screen.getByRole('list', { name: 'Timeline' })).getAllByRole('listitem')
     await userEvent.click(within(blocks[0]).getByRole('button', { name: 'Delete' }))
     expect(within(blocks[0]).getByText('Delete the whole series?')).toBeInTheDocument()
@@ -169,7 +90,7 @@ describe('Today timeline', () => {
       plan: { ...base.plan, unscheduled: ['u1'] },
       items: [...base.items, item('u1', 'Do taxes')]
     })
-    render(<Today view={v} onView={vi.fn()} />)
+    render(<TimelineView view={v} onView={vi.fn()} />)
     const list = screen.getByRole('region', { name: 'Unscheduled' })
     expect(within(list).getByText('Do taxes')).toBeInTheDocument()
     await userEvent.click(within(list).getByRole('button', { name: 'Plan now' }))
@@ -178,7 +99,7 @@ describe('Today timeline', () => {
 
   it('maps the busy toggle to setManualBusy', async () => {
     api.setManualBusy.mockResolvedValue(makeView())
-    render(<Today view={makeView()} onView={vi.fn()} />)
+    render(<TodayTab view={makeView()} onView={vi.fn()} />)
     expect(screen.getByRole('button', { name: 'Auto' })).toHaveAttribute('aria-pressed', 'true')
     await userEvent.click(screen.getByRole('button', { name: 'Busy' }))
     expect(api.setManualBusy).toHaveBeenCalledWith(true)
@@ -198,14 +119,14 @@ describe('Awaiting calls', () => {
   it('Copy writes the free-slot text', () => {
     const writeText = vi.fn().mockResolvedValue(undefined)
     Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
-    render(<Today view={view} onView={vi.fn()} />)
+    render(<TimelineView view={view} onView={vi.fn()} />)
     fireEvent.click(screen.getByRole('button', { name: 'Copy' }))
     expect(writeText).toHaveBeenCalledWith("I'm free at 09:20, 10:20 or 11:20")
   })
 
   it('a chip asks before booking, then confirms the call', async () => {
     api.confirmCall.mockResolvedValue(view)
-    render(<Today view={view} onView={vi.fn()} />)
+    render(<TimelineView view={view} onView={vi.fn()} />)
     await userEvent.click(screen.getByRole('button', { name: '10:20' }))
     expect(screen.getByText('Book 10:20?')).toBeInTheDocument()
     expect(api.confirmCall).not.toHaveBeenCalled()
@@ -215,7 +136,7 @@ describe('Awaiting calls', () => {
 
   it('delete drops an awaiting call', async () => {
     api.updateItem.mockResolvedValue(view)
-    render(<Today view={view} onView={vi.fn()} />)
+    render(<TimelineView view={view} onView={vi.fn()} />)
     const section = screen.getByRole('region', { name: 'Awaiting time' })
     await userEvent.click(within(section).getByRole('button', { name: 'Delete' }))
     expect(api.updateItem).toHaveBeenCalledWith('c1', { status: 'dropped' })
@@ -229,7 +150,7 @@ describe('App shell', () => {
       const base = makeView({ items: [...makeView().items, item('x', 'X')] })
       api.view.mockResolvedValue(base)
       render(<App />)
-      await screen.findByRole('list', { name: 'Timeline' })
+      await screen.findByRole('heading', { name: 'Today' })
       act(() =>
         pushState({
           ...base,
@@ -264,7 +185,7 @@ describe('App shell', () => {
   it('switches to the Add tab on quick-add focus', async () => {
     api.view.mockResolvedValue(makeView())
     render(<App />)
-    await screen.findByRole('list', { name: 'Timeline' })
+    await screen.findByRole('heading', { name: 'Today' })
     act(() => pushFocus('quick-add'))
     expect(screen.getByRole('textbox', { name: 'Quick add' })).toBeInTheDocument()
   })
@@ -286,14 +207,16 @@ describe('NudgeBanner', () => {
 describe('Today details', () => {
   it('extends the timeline to an out-of-hours fixed item', () => {
     const early = item('early', 'Gym', { type: 'fixed', fixedStart: 420, durationMin: 30 })
-    render(<Today view={makeView({ items: [...makeView().items, early] })} onView={vi.fn()} />)
+    render(
+      <TimelineView view={makeView({ items: [...makeView().items, early] })} onView={vi.fn()} />
+    )
     expect(screen.getByText('07:00')).toBeInTheDocument()
     expect(screen.getByText('08:00')).toBeInTheDocument()
   })
 
   it('+ glass logs water', async () => {
     api.logWater.mockResolvedValue(makeView())
-    render(<Today view={makeView()} onView={vi.fn()} />)
+    render(<TodayTab view={makeView()} onView={vi.fn()} />)
     expect(screen.getByText('500 / 2000 ml')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: '+ glass' }))
     expect(api.logWater).toHaveBeenCalledTimes(1)
@@ -306,7 +229,7 @@ describe('Today details', () => {
       plan: { ...base.plan, blocks: [...base.plan.blocks, block('t1', 'task', 720, 750)] },
       items: [...base.items, item('t1', 'Write report')]
     })
-    render(<Today view={v} onView={vi.fn()} />)
+    render(<TimelineView view={v} onView={vi.fn()} />)
     const blocks = within(screen.getByRole('list', { name: 'Timeline' })).getAllByRole('listitem')
     expect(within(blocks[0]).queryByRole('button', { name: 'Lock' })).toBeNull()
     expect(within(blocks[1]).queryByRole('button', { name: 'Lock' })).toBeNull()
@@ -319,7 +242,7 @@ describe('Today details', () => {
       date: '2026-10-24',
       deadline: { date: '2026-10-26', time: null }
     })
-    render(<Today view={makeView({ upcoming: [later] })} onView={vi.fn()} />)
+    render(<TimelineView view={makeView({ upcoming: [later] })} onView={vi.fn()} />)
     expect(screen.queryByText('Tax form')).toBeNull()
     await userEvent.click(screen.getByRole('button', { name: 'Upcoming (1)' }))
     expect(screen.getByText('Tax form')).toBeInTheDocument()
@@ -329,7 +252,7 @@ describe('Today details', () => {
   it('shows an error when the clipboard is unavailable', async () => {
     Object.defineProperty(navigator, 'clipboard', { value: undefined, configurable: true })
     const call = item('c1', 'Call John', { type: 'call', suggestedSlots: [560] })
-    render(<Today view={makeView({ awaitingCalls: [call] })} onView={vi.fn()} />)
+    render(<TimelineView view={makeView({ awaitingCalls: [call] })} onView={vi.fn()} />)
     fireEvent.click(screen.getByRole('button', { name: 'Copy' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('Could not copy')
   })
@@ -337,12 +260,12 @@ describe('Today details', () => {
   it('drops a pending booking when the call slots change', async () => {
     const call = item('c1', 'Call John', { type: 'call', suggestedSlots: [560, 620] })
     const { rerender } = render(
-      <Today view={makeView({ awaitingCalls: [call] })} onView={vi.fn()} />
+      <TimelineView view={makeView({ awaitingCalls: [call] })} onView={vi.fn()} />
     )
     await userEvent.click(screen.getByRole('button', { name: '10:20' }))
     expect(screen.getByText('Book 10:20?')).toBeInTheDocument()
     const moved = { ...call, suggestedSlots: [620, 680] }
-    rerender(<Today view={makeView({ awaitingCalls: [moved] })} onView={vi.fn()} />)
+    rerender(<TimelineView view={makeView({ awaitingCalls: [moved] })} onView={vi.fn()} />)
     expect(screen.queryByText('Book 10:20?')).toBeNull()
     expect(screen.getByRole('button', { name: '11:20' })).toBeInTheDocument()
   })
@@ -353,7 +276,7 @@ describe('App flows', () => {
     const base = makeView({ items: [...makeView().items, item('x', 'X')] })
     api.view.mockResolvedValue(base)
     render(<App />)
-    await screen.findByRole('list', { name: 'Timeline' })
+    await screen.findByRole('heading', { name: 'Today' })
     act(() =>
       pushState({ ...base, plan: { ...base.plan, moves: [{ itemId: 'x', from: 600, to: null }] } })
     )
@@ -372,8 +295,7 @@ describe('App flows', () => {
     render(<App />)
     const row = await screen.findByRole('group', { name: 'Later thing' })
     expect(screen.getByText("Payments refactor — time's up")).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('tab', { name: 'Dump' }))
-    expect(screen.getByRole('group', { name: 'Later thing' })).toBeInTheDocument()
+    expect(screen.getByRole('navigation', { name: 'Main', hidden: true })).toHaveAttribute('inert')
     await userEvent.click(within(row).getByLabelText('Drop'))
     await userEvent.click(screen.getByRole('button', { name: 'Apply' }))
     expect(api.answerDecisions).toHaveBeenCalledWith([{ itemId: 'u1', choice: 'drop' }])
@@ -384,7 +306,7 @@ describe('App flows', () => {
     api.view.mockResolvedValue(makeView())
     api.addItems.mockResolvedValue(makeView())
     render(<App />)
-    await userEvent.click(await screen.findByRole('tab', { name: 'Add' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Add' }))
     await userEvent.type(screen.getByRole('textbox', { name: 'Quick add' }), 'Write report{Enter}')
     await vi.waitFor(() => expect(api.addItems).toHaveBeenCalledTimes(1))
     expect(screen.getByRole('textbox', { name: 'Quick add' })).toBeInTheDocument()
@@ -392,13 +314,13 @@ describe('App flows', () => {
       screen.getByRole('textbox', { name: 'Quick add' }),
       'Write more{Control>}{Enter}{/Control}'
     )
-    expect(await screen.findByRole('list', { name: 'Timeline' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Today' })).toBeInTheDocument()
   })
 
   it('Esc hides the popover', async () => {
     api.view.mockResolvedValue(makeView())
     render(<App />)
-    await screen.findByRole('list', { name: 'Timeline' })
+    await screen.findByRole('heading', { name: 'Today' })
     fireEvent.keyDown(window, { key: 'Escape' })
     expect(api.hide).toHaveBeenCalledTimes(1)
     fireEvent.keyDown(window, { key: 'a' })
@@ -408,10 +330,10 @@ describe('App flows', () => {
   it("onFocus('nudge') opens Today and focuses the banner", async () => {
     api.view.mockResolvedValue(makeView({ nudges: ['deep'] }))
     render(<App />)
-    await userEvent.click(await screen.findByRole('tab', { name: 'Settings' }))
-    expect(screen.queryByRole('list', { name: 'Timeline' })).toBeNull()
+    await userEvent.click(await screen.findByRole('button', { name: 'Settings' }))
+    expect(screen.queryByRole('heading', { name: 'Today' })).toBeNull()
     act(() => pushFocus('nudge'))
-    expect(screen.getByRole('list', { name: 'Timeline' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Today' })).toBeInTheDocument()
     expect(screen.getByRole('group', { name: 'Nudge: Payments refactor' })).toHaveFocus()
   })
 })

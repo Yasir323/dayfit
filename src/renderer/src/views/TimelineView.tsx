@@ -14,11 +14,6 @@ const PX_PER_MIN = 1.5
 /** Keeps very short blocks tall enough for their action buttons. */
 const MIN_BLOCK_PX = 18
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-const BUSY_MODES: [string, boolean | null][] = [
-  ['Auto', null],
-  ['Busy', true],
-  ['Available', false]
-]
 
 /** "I'm free at 09:20, 10:20 or 11:20" */
 function freeText(slots: Minutes[]): string {
@@ -47,7 +42,7 @@ function span(view: ViewState): { start: Minutes; end: Minutes } {
   }
 }
 
-export function Today({ view, onView }: Props): React.JSX.Element {
+export function TimelineView({ view, onView }: Props): React.JSX.Element {
   const [failure, setFailure] = useState<string | null>(null)
   const [booking, setBooking] = useState<{ id: string; slot: Minutes; slots: string } | null>(null)
   const [showUpcoming, setShowUpcoming] = useState(false)
@@ -159,36 +154,10 @@ export function Today({ view, onView }: Props): React.JSX.Element {
     )
   }
 
-  const water = view.settings.water
   const unscheduled = view.plan.unscheduled.flatMap((id) => byId.get(id) ?? [])
 
   return (
-    <div className="today">
-      <header className="today-header">
-        {water.enabled && (
-          <div className="water">
-            <span>
-              {view.waterMl} / {water.targetMl} ml
-            </span>
-            <button type="button" onClick={() => void run(() => api.logWater())}>
-              + glass
-            </button>
-          </div>
-        )}
-        <div className="busy-toggle" role="group" aria-label="Busy mode">
-          {BUSY_MODES.map(([label, value]) => (
-            <button
-              key={label}
-              type="button"
-              aria-pressed={view.manualBusy === value}
-              onClick={() => void run(() => api.setManualBusy(value))}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      </header>
-
+    <div className="timeline-view">
       {failure && (
         <p className="error" role="alert">
           {failure}

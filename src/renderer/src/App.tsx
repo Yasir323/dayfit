@@ -8,17 +8,10 @@ import { FirstRun } from './views/FirstRun'
 import { QuickAdd } from './views/QuickAdd'
 import { Review } from './views/Review'
 import { Settings } from './views/Settings'
-import { Today } from './views/Today'
+import { TodayTab } from './views/TodayTab'
+import { TabBar, type Tab } from './ui/TabBar'
 import './App.css'
 
-type Tab = 'today' | 'add' | 'dump' | 'settings'
-
-const TABS: [Tab, string][] = [
-  ['today', 'Today'],
-  ['add', 'Add'],
-  ['dump', 'Dump'],
-  ['settings', 'Settings']
-]
 const TOAST_MS = 6000
 
 export function App(): React.JSX.Element {
@@ -88,24 +81,10 @@ export function App(): React.JSX.Element {
 
   return (
     <div className="app">
-      <nav className="tabs" role="tablist">
-        {TABS.map(([t, label]) => (
-          <button
-            key={t}
-            type="button"
-            role="tab"
-            aria-selected={tab === t}
-            onClick={() => setTab(t)}
-          >
-            {label}
-          </button>
-        ))}
-      </nav>
-
-      {!(review && firstRunDone) && banners}
+      {!(review && firstRunDone) && banners.length > 0 && <div className="banners">{banners}</div>}
 
       <main className="tab-body">
-        {tab === 'today' && <Today view={view} onView={setView} />}
+        {tab === 'today' && <TodayTab view={view} onView={setView} />}
         {tab === 'add' && (
           <QuickAdd
             settings={view.settings}
@@ -129,9 +108,11 @@ export function App(): React.JSX.Element {
         {tab === 'settings' && <Settings view={view} onView={setView} />}
       </main>
 
+      <TabBar value={tab} onChange={setTab} inert={!firstRunDone || review} />
+
       {review && firstRunDone && (
         // Banners move inside the overlay so a nudge is never hidden behind Review.
-        <div className="overlay">
+        <div className="overlay" role="dialog" aria-modal="true" aria-label="Review your plan">
           {banners}
           <Review
             key={JSON.stringify(view.plan.decisions)}
@@ -142,7 +123,7 @@ export function App(): React.JSX.Element {
         </div>
       )}
       {!firstRunDone && (
-        <div className="overlay">
+        <div className="overlay" role="dialog" aria-modal="true" aria-label="Set up Dayfit">
           <FirstRun settings={view.settings} today={view.today} onDone={setView} />
         </div>
       )}

@@ -11,37 +11,122 @@ body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: var(--bg-2);
+  background: var(--bg);
   color: var(--text);
-  font:
-    13px system-ui,
-    sans-serif;
+  font-family: var(--font);
+  font-size: 13px;
 }
 .app button {
   font: inherit;
   cursor: pointer;
 }
-.tabs {
-  display: flex;
-  border-bottom: 1px solid var(--border);
-  background: var(--surface);
-}
-.tabs button {
-  flex: 1;
-  padding: 8px 0;
-  border: 0;
-  border-bottom: 2px solid transparent;
-  background: none;
-  color: var(--muted);
-}
-.tabs button[aria-selected='true'] {
-  border-bottom-color: var(--accent);
-  color: var(--text);
-  font-weight: 600;
-}
 .tab-body {
   flex: 1;
+  overflow-x: hidden;
   overflow-y: auto;
+}
+
+/* Bottom tab bar */
+.tabbar {
+  display: flex;
+  flex: none;
+  border-top: 1px solid var(--hairline);
+  background: var(--bg-2);
+}
+.tabbar button {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 7px 0 6px;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-size: 10.5px;
+}
+.tabbar button[aria-current='page'] {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.banners {
+  flex: none;
+}
+
+/* Today tab */
+.today-tab {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+.today-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s2);
+  padding: 14px var(--s4) var(--s1);
+}
+.today-header h1 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+}
+.today-title {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.today-title .muted {
+  font-size: 12px;
+}
+.water {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.water .btn-ghost {
+  color: var(--accent);
+  font-size: 12px;
+}
+.today-body {
+  flex: 1;
+}
+.placeholder {
+  padding: var(--s4);
+}
+.today-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s2);
+  padding: 6px var(--s4);
+  border-top: 1px solid var(--hairline);
+  color: var(--muted);
+  font-size: 11.5px;
+}
+.busy-toggle {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: var(--r-sm);
+  background: var(--hairline);
+}
+.busy-toggle button {
+  border: 0;
+  background: none;
+  border-radius: 4px;
+  padding: 2px 7px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.busy-toggle button[aria-pressed='true'] {
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 600;
 }
 
 /* Nudge banner */
@@ -72,50 +157,18 @@ body {
   background: var(--surface);
 }
 
-/* Today */
-.today {
-  padding: 8px 12px 12px;
+/* Timeline view */
+.timeline-view {
+  padding: var(--s2) var(--s3) var(--s3);
 }
-.today-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-.water {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  white-space: nowrap;
-}
-.water button,
-.busy-toggle button,
 .awaiting button,
 .unscheduled button,
 .upcoming-toggle {
-  padding: 3px 7px;
-  border: 1px solid var(--border-strong);
-  border-radius: 6px;
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
   background: var(--surface);
-}
-.busy-toggle {
-  display: flex;
-}
-.busy-toggle button {
-  border-radius: 0;
-  margin-left: -1px;
-}
-.busy-toggle button:first-child {
-  border-radius: 6px 0 0 6px;
-}
-.busy-toggle button:last-child {
-  border-radius: 0 6px 6px 0;
-}
-.busy-toggle button[aria-pressed='true'] {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--on-accent);
+  font-size: 12px;
 }
 .timeline {
   position: relative;
