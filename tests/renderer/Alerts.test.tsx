@@ -1,0 +1,98 @@
+import '@testing-library/jest-dom/vitest'
+import { cleanup, render, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import type { Alert } from '../../src/core/alerts'
+import type { ViewState } from '../../src/main/service'
+
+const api = vi.hoisted(() => ({
+  view: vi.fn(),
+  snoozeBreak: vi.fn(),
+  logWater: vi.fn(),
+  dismissAlert: vi.fn(),
+  hide: vi.fn(),
+  onState: vi.fn((cb?: (v: ViewState) => void) => {
+    void cb
+    return () => {}
+  }),
+  onFocus: vi.fn((cb?: (t: string) => void) => {
+    void cb
+    return () => {}
+  })
+}))
+vi.mock('../../src/renderer/src/api', () => ({ api }))
+
+import { App } from '../../src/renderer/src/App'
+import { makeView } from './fixtures'
+
+const alert = (over: Partial<Alert>): Alert => ({
+  id: 'break:600:0',
+  kind: 'break',
+  title: 'Break time',
+  body: 'Look 20 ft away · Drink water (0 / 2000 ml)',
+  parts: ['eye', 'water'],
+  at: 600,
+  ...over
+})
+
+async function show(alerts: Alert[]): Promise<void> {
+  api.view.mockResolvedValue(makeView({ alerts }))
+  render(<App />)
+  await screen.findByRole('navigation', { name: 'Main' })
+}
+
+beforeEach(() => {
+  localStorage.clear()
+  for (const fn of Object.values(api)) fn.mockReset()
+  api.onState.mockReturnValue(() => {})
+  api.onFocus.mockReturnValue(() => {})
+  for (const fn of [api.snoozeBreak, api.logWater, api.dismissAlert])
+    fn.mockResolvedValue(makeView())
+})
+afterEach(cleanup)
+
+describe('alert banners', () => {
+  it('break banner: Snooze, Drank, Dismiss', async () => {
+    await show([alert({})])
+    const banner = screen.getByRole('region', { name: 'Break time' })
+    expect(within(banner).getByText(/Drink water/)).toBeInTheDocument()
+    await userEvent.click(within(banner).getByRole('button', { name: 'Snooze 10 min' }))
+    expect(api.snoozeBreak).toHaveBeenCalledTimes(1)
+    cleanup()
+    await show([alert({})])
+    await userEvent.click(screen.getByRole('button', { name: 'Drank' }))
+    expect(api.logWater).toHaveBeenCalledTimes(1)
+    expect(api.dismissAlert).toHaveBeenCalledWith('break:600:0')
+    cleanup()
+    api.dismissAlert.mockClear()
+    await show([alert({ parts: ['eye'] })])
+    expect(screen.queryByRole('button', { name: 'Drank' })).toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: 'Dismiss' }))
+    expect(api.dismissAlert).toHaveBeenCalledWith('break:600:0')
+  })
+
+  it('heads-up banner opens check-out', async () => {
+    await show([
+      alert({ id: 'heads-up:1065:0', kind: 'heads-up', title: 'Wrapping up in 15 min', parts: [] })
+    ])
+    const banner = screen.getByRole('region', { name: 'Wrapping up in 15 min' })
+    await userEvent.click(within(banner).getByRole('button', { name: 'Check out' }))
+    expect(screen.getByRole('dialog', { name: 'Wrap up today' })).toBeInTheDocument()
+    expect(api.dismissAlert).toHaveBeenCalledWith('heads-up:1065:0')
+  })
+
+  it('lunch banner only dismisses', async () => {
+    await show([alert({ id: 'lunch:780:0', kind: 'lunch', title: 'Lunch time', parts: [] })])
+    const banner = screen.getByRole('region', { name: 'Lunch time' })
+    expect(
+      within(banner)
+        .getAllByRole('button')
+        .map((b) => b.textContent)
+    ).toEqual(['Dismiss'])
+  })
+
+  it('no alerts, no regions', async () => {
+    await show([])
+    expect(document.querySelector('.banners')).toBeNull()
+  })
+})

@@ -8,6 +8,7 @@ import { FirstRun } from './views/FirstRun'
 import { QuickAdd } from './views/QuickAdd'
 import { Review } from './views/Review'
 import { AttendanceBanner } from './views/AttendanceBanner'
+import { AlertBanner } from './views/AlertBanner'
 import { CheckOut } from './views/CheckOut'
 import { Settings } from './views/Settings'
 import { TodayTab } from './views/TodayTab'
@@ -79,6 +80,17 @@ export function App(): React.JSX.Element {
       .filter((k) => view.attendance[k])
       .map((k) => (
         <AttendanceBanner key={`punch-${k}`} kind={k} portalUrl={portalUrl} onView={setView} />
+      )),
+    ...[...view.alerts]
+      .reverse()
+      .map((a) => (
+        <AlertBanner
+          key={a.id}
+          alert={a}
+          snoozeMin={view.settings.breaks.snoozeMin}
+          onView={setView}
+          onCheckOut={() => setCheckout(true)}
+        />
       )),
     ...view.nudges.map((id, k) => (
       <NudgeBanner
