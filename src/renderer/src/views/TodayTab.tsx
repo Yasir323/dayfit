@@ -4,6 +4,8 @@ import type { ViewState } from '../api'
 import { dayHeader } from '../lib/dates'
 import { Icon } from '../ui/Icon'
 import { Segmented } from '../ui/Segmented'
+import { nextUp } from '../lib/agenda'
+import { CalendarView } from './CalendarView'
 import { ListView } from './ListView'
 import { TimelineView } from './TimelineView'
 
@@ -98,7 +100,9 @@ export function TodayTab({ view, onView, onAddTask = () => {} }: Props): React.J
 
       <div className="today-body">
         {kind === 'list' && <ListView view={view} onView={onView} onAddTask={onAddTask} />}
-        {kind === 'calendar' && <p className="placeholder muted">Calendar view</p>}
+        {kind === 'calendar' && (
+          <CalendarView view={view} onShowList={() => choose('list')} onAddTask={onAddTask} />
+        )}
         {kind === 'timeline' && <TimelineView view={view} onView={onView} />}
       </div>
 
@@ -115,6 +119,7 @@ export function TodayTab({ view, onView, onAddTask = () => {} }: Props): React.J
             </button>
           ))}
         </div>
+        <span className="next-up">{nextUp(view)}</span>
       </footer>
     </div>
   )

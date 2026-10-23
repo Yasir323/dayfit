@@ -95,9 +95,6 @@ body {
 .today-body {
   flex: 1;
 }
-.placeholder {
-  padding: var(--s4);
-}
 .today-footer {
   display: flex;
   align-items: center;
@@ -478,4 +475,105 @@ body {
 }
 .empty {
   padding: var(--s4) var(--s4) 0;
+}
+
+/* Calendar view */
+.week-strip {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  margin: 0;
+  padding: var(--s1) var(--s3) 10px;
+  list-style: none;
+  border-bottom: 1px solid var(--hairline);
+}
+.day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 5px 0;
+  border-radius: 8px;
+  color: var(--faint);
+  font-size: 11px;
+}
+.day-num {
+  font-size: 15px;
+  font-weight: 600;
+}
+.day.is-today {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+.dots {
+  display: flex;
+  gap: 2px;
+  height: 4px;
+}
+.dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--border-strong);
+}
+.day.is-today .dot {
+  background: var(--on-accent);
+}
+.agenda {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.agenda-row {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  padding: 7px var(--s4);
+  border-bottom: 1px solid var(--hairline);
+}
+.agenda-time {
+  width: 40px;
+  flex: none;
+  color: var(--muted);
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+  padding-top: 1px;
+}
+.kind-bar {
+  flex: none;
+  width: 3px;
+  border-radius: 2px;
+}
+.kind-fixed {
+  background: var(--k-fixed);
+}
+.kind-deep {
+  background: var(--k-deep);
+}
+.kind-task {
+  background: var(--k-task);
+}
+.kind-walk {
+  background: var(--k-walk);
+}
+.agenda-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.loose-row {
+  display: block;
+  width: 100%;
+  padding: 8px var(--s4);
+  border: 0;
+  border-bottom: 1px solid var(--hairline);
+  background: none;
+  color: var(--accent);
+  text-align: left;
+  font-size: 12px;
+}
+.next-up:empty {
+  display: none;
 }
