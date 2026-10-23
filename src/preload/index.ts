@@ -25,6 +25,7 @@ const dayfit = {
   confirmCall: call('confirmCall'),
   setLock: call('setLock'),
   logWater: call('logWater'),
+  logCoffee: call('logCoffee'),
   markPunched: call('markPunched'),
   snoozeBreak: call('snoozeBreak'),
   startFocus: call('startFocus'),

@@ -10,6 +10,7 @@ const api = vi.hoisted(() => ({
   setLock: vi.fn(),
   confirmCall: vi.fn(),
   logWater: vi.fn(),
+  logCoffee: vi.fn(),
   setManualBusy: vi.fn(),
   answerNudge: vi.fn(),
   answerDecisions: vi.fn(),
@@ -252,6 +253,14 @@ describe('Today details', () => {
     expect(screen.getByText('2500 / 2000 ml')).toBeInTheDocument()
     const fill = screen.getByRole('progressbar', { name: 'Water today' }).firstElementChild
     expect(fill).toHaveStyle({ width: '100%' })
+  })
+
+  it('+ coffee logs a cup and shows the count against the cap', async () => {
+    api.logCoffee.mockResolvedValue(makeView())
+    render(<TodayTab view={makeView({ coffee: 1 })} onView={vi.fn()} />)
+    expect(screen.getByText('1 / 3 cups')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: '+ coffee' }))
+    expect(api.logCoffee).toHaveBeenCalledTimes(1)
   })
 
   it('+ glass logs water', async () => {

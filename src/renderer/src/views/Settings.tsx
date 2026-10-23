@@ -199,6 +199,16 @@ export function Settings({ view, onView }: Props): React.JSX.Element {
         <legend>Planning</legend>
         <div className="group-card">
           {num('Buffer (min)', s.bufferMin, (n) => send({ bufferMin: n }))}
+          {num('Caffeine cap (cups/day)', s.coffee.capCups, (n) =>
+            send({ coffee: { ...s.coffee, capCups: n } })
+          )}
+          <Field
+            label="No coffee after"
+            type="time"
+            value={formatClock(s.coffee.cutoff)}
+            parse={parseTime}
+            onValid={(v) => send({ coffee: { ...s.coffee, cutoff: v } })}
+          />
           {num('Gap after back-to-back meetings (min)', s.meetingGapMin, (n) =>
             send({ meetingGapMin: n })
           )}

@@ -171,6 +171,40 @@ describe('heads-up, overtime, lunch', () => {
     expect(next).toEqual(['overtime'])
   })
 
+  it('afternoon slump: once, coffee or water copy, held by DND, needs activity', () => {
+    const p = { ...EMPTY_END_OF_DAY_STATE, inDone: true, outDone: true, lunchFired: true }
+    const at = (
+      o: Opts & { coffeeToday?: number } = {},
+      from = 830,
+      to = 970
+    ): [number, string, string][] => {
+      const fired: [number, string, string][] = []
+      let s = p
+      for (let now = from; now <= to; now++) {
+        const r = stepEndOfDay({
+          now,
+          idleSec: o.idleSec ?? 0,
+          blocks: o.blocks ?? [],
+          items: o.items ?? [],
+          settings: o.settings ?? S,
+          manualBusy: null,
+          coffeeToday: o.coffeeToday ?? 0,
+          state: s
+        })
+        for (const e of r.events) if (e.kind === 'slump') fired.push([now, e.title, e.body])
+        s = r.state
+      }
+      return fired
+    }
+    expect(at()).toEqual([[840, 'Afternoon slump', 'Slump time — coffee or a short walk?']])
+    expect(at({ coffeeToday: 3 })[0][2]).toBe('Slump time — water and a short walk?')
+    const early = { ...S, coffee: { ...S.coffee, cutoff: 830 } }
+    expect(at({ settings: early })[0][2]).toBe('Slump time — water and a short walk?')
+    const held = { blocks: [blk('task', 835, 870)], items: [dndItem] }
+    expect(at(held)[0][0]).toBe(870)
+    expect(at({ idleSec: 900 })).toEqual([])
+  })
+
   it('copy is exact', () => {
     const lunch = blk('lunch', 780, 825, null)
     const all = [

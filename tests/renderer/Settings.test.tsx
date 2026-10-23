@@ -39,7 +39,8 @@ const view = (over: Partial<ViewState['settings']> = {}): ViewState =>
     checkedOut: false,
     alerts: [],
     trayLabel: null,
-    focus: null
+    focus: null,
+    coffee: 0
   }) as ViewState
 
 beforeEach(() => {
@@ -189,6 +190,16 @@ describe('Settings', () => {
       endOfDay: { ...DEFAULT_SETTINGS.endOfDay, portalUrl: 'https://hr.example.com' }
     })
     expect(within(eod).getByRole('spinbutton', { name: 'Lunch length (min)' })).toHaveValue(45)
+  })
+
+  it('sends the caffeine cap and cut-off', () => {
+    render(<Settings view={view()} />)
+    const cap = screen.getByLabelText('Caffeine cap (cups/day)')
+    fireEvent.change(cap, { target: { value: '2' } })
+    fireEvent.blur(cap)
+    expect(api.updateSettings).toHaveBeenLastCalledWith({ coffee: { capCups: 2, cutoff: 900 } })
+    fireEvent.change(screen.getByLabelText('No coffee after'), { target: { value: '14:00' } })
+    expect(api.updateSettings).toHaveBeenLastCalledWith({ coffee: { capCups: 3, cutoff: 840 } })
   })
 
   it('sends the meeting gap', () => {

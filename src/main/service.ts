@@ -49,6 +49,7 @@ export interface ViewState {
   busy: boolean
   manualBusy: boolean | null
   waterMl: number
+  coffee: number
   /** Attendance punches owed right now (banner). */
   attendance: { in: boolean; out: boolean }
   /** "Done for today" pressed on the check-out screen. */
@@ -404,6 +405,14 @@ export class DayfitService {
     )
   }
 
+  logCoffee(): ViewState {
+    this.begin()
+    const today = this.today()
+    this.state.coffee[today] = (this.state.coffee[today] ?? 0) + 1
+    this.save()
+    return this.buildView()
+  }
+
   logWater(): ViewState {
     this.begin()
     const today = this.today()
@@ -474,6 +483,7 @@ export class DayfitService {
       items,
       settings: s.settings,
       manualBusy: s.manualBusy,
+      coffeeToday: s.coffee[today] ?? 0,
       state: s.endOfDay
     })
     s.endOfDay = eod.state
@@ -722,6 +732,7 @@ export class DayfitService {
       ),
       manualBusy: s.manualBusy,
       waterMl: s.waterMl[today] ?? 0,
+      coffee: s.coffee[today] ?? 0,
       attendance: attendanceDue(s.endOfDay, now, s.settings),
       checkedOut: s.endOfDay.checkedOut,
       alerts: s.alerts,

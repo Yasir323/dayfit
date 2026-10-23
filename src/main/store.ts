@@ -35,6 +35,7 @@ export interface AppState {
   items: Item[]
   plans: Record<DateStr, DayPlan>
   waterMl: Record<DateStr, number>
+  coffee: Record<DateStr, number>
   reminder: ReminderState
   endOfDay: EndOfDayState
   /** Today's lunch-clash answer; ignored once the date moves on. */
@@ -61,6 +62,7 @@ export const defaultState = (): AppState => ({
   items: [],
   plans: {},
   waterMl: {},
+  coffee: {},
   reminder: clone(EMPTY_REMINDER_STATE),
   endOfDay: clone(EMPTY_END_OF_DAY_STATE),
   lunchAnswer: null,

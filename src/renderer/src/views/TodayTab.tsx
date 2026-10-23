@@ -118,6 +118,18 @@ export function TodayTab({
             </button>
           </div>
         )}
+        <div className="water coffee">
+          <span>
+            {view.coffee} / {view.settings.coffee.capCups} cups
+          </span>
+          <button
+            type="button"
+            className="btn-ghost"
+            onClick={() => void run(() => api.logCoffee())}
+          >
+            + coffee
+          </button>
+        </div>
       </header>
 
       <Segmented label="View" options={views} value={shownKind} onChange={choose} />

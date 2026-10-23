@@ -83,6 +83,7 @@ export function makeView(over: Partial<ViewState> = {}): ViewState {
     alerts: [],
     trayLabel: null,
     focus: null,
+    coffee: 0,
     ...over
   }
 }

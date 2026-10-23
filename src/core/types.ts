@@ -86,6 +86,8 @@ export interface Settings {
   walk: { enabled: boolean; intervalMin: number; durationMin: number }
   meetingAlert: { enabled: boolean; leadMin: number }
   breaks: { snoozeMin: number }
+  /** Caffeine cap and the time after which coffee isn't suggested. */
+  coffee: { capCups: number; cutoff: Minutes }
   endOfDay: {
     attendance: boolean
     portalUrl: string // '' when not set; only http(s) links are kept
@@ -111,6 +113,7 @@ export const DEFAULT_SETTINGS: Settings = {
   walk: { enabled: true, intervalMin: 120, durationMin: 10 },
   meetingAlert: { enabled: true, leadMin: 5 },
   breaks: { snoozeMin: 10 },
+  coffee: { capCups: 3, cutoff: 900 },
   endOfDay: { attendance: true, portalUrl: '', lunchMin: 45, headsUp: true, overtime: true },
   hotkey: 'CommandOrControl+Shift+Space',
   launchAtLogin: true,

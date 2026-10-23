@@ -519,6 +519,15 @@ describe('DayfitService in-app alerts', () => {
   })
 })
 
+describe('DayfitService coffee', () => {
+  it('logCoffee counts cups for today', () => {
+    expect(svc.view().coffee).toBe(0)
+    svc.logCoffee()
+    expect(svc.logCoffee().coffee).toBe(2)
+    expect(loadState(file).coffee[D]).toBe(2)
+  })
+})
+
 describe('DayfitService focus timer', () => {
   it('a session sets busy, ends once after its time, restores busy and queues a break', () => {
     svc.addItems([newItem({ title: 'Write' })])

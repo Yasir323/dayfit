@@ -119,6 +119,14 @@ describe('store', () => {
     expect(loadState(file).answers).toEqual([])
   })
 
+  it('older state without coffee loads with {}', () => {
+    const older: Record<string, unknown> = { ...defaultState() }
+    delete older.coffee
+    writeRaw(older)
+    expect(loadState(file).coffee).toEqual({})
+    expect(loadState(file).settings.coffee).toEqual({ capCups: 3, cutoff: 900 })
+  })
+
   it('returns defaults for a missing file', () => {
     expect(loadState(file)).toEqual(defaultState())
   })

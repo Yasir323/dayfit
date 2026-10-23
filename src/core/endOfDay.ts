@@ -7,9 +7,13 @@ export const OVERTIME_AFTER_MIN = 15
 /** Idle for this long or more counts as away: reminders wait for the user to come back. */
 export const ACTIVE_IDLE_SEC = 300
 export const CHECKOUT_BUTTON_LEAD_MIN = 60
+/** The afternoon slump window. */
+export const SLUMP_START = 840
+export const SLUMP_END = 960
 
 export type AttendanceKind = 'in' | 'out'
-export type EndOfDayKind = 'attendance-in' | 'attendance-out' | 'heads-up' | 'overtime' | 'lunch'
+export type EndOfDayKind =
+  'attendance-in' | 'attendance-out' | 'heads-up' | 'overtime' | 'lunch' | 'slump'
 export interface EndOfDayEvent {
   kind: EndOfDayKind
   title: string
@@ -26,6 +30,7 @@ export interface EndOfDayState {
   overtimeFired: boolean
   lunchFired: boolean
   checkedOut: boolean
+  slumpFired?: boolean
 }
 
 export const EMPTY_END_OF_DAY_STATE: EndOfDayState = {
@@ -45,7 +50,8 @@ const COPY: Record<EndOfDayKind, { title: string; body: string }> = {
   'attendance-out': { title: 'Punch out', body: 'Mark your attendance before you leave.' },
   'heads-up': { title: 'Wrapping up in 15 min', body: "Review what's left for today." },
   overtime: { title: "You're past your hours", body: 'Time to stop for today.' },
-  lunch: { title: 'Lunch time', body: 'Step away from the desk.' }
+  lunch: { title: 'Lunch time', body: 'Step away from the desk.' },
+  slump: { title: 'Afternoon slump', body: 'Slump time — coffee or a short walk?' }
 }
 
 /** Which attendance punches are owed right now (drives the banner and the reminders). */
@@ -71,6 +77,8 @@ export function stepEndOfDay(input: {
   items: Item[]
   settings: Settings
   manualBusy: boolean | null
+  /** Cups logged today (the slump suggestion skips coffee at the cap). */
+  coffeeToday?: number
   state: EndOfDayState
 }): { events: EndOfDayEvent[]; state: EndOfDayState } {
   const { now, settings: s } = input
@@ -116,7 +124,20 @@ export function stepEndOfDay(input: {
     state.lunchFired = true
     kinds.push('lunch')
   }
-  return { events: kinds.map((kind) => ({ kind, ...COPY[kind] })), state }
+  const slump = !state.slumpFired && active && !held && now >= SLUMP_START && now < SLUMP_END
+  if (slump) {
+    state.slumpFired = true
+    kinds.push('slump')
+  }
+  const coffeeOk = (input.coffeeToday ?? 0) < s.coffee.capCups && now < s.coffee.cutoff
+  return {
+    events: kinds.map((kind) =>
+      kind === 'slump' && !coffeeOk
+        ? { kind, title: COPY.slump.title, body: 'Slump time — water and a short walk?' }
+        : { kind, ...COPY[kind] }
+    ),
+    state
+  }
 }
 
 export function markPunched(state: EndOfDayState, kind: AttendanceKind): EndOfDayState {

@@ -13,6 +13,7 @@ export const IPC_METHODS = [
   'confirmCall',
   'setLock',
   'logWater',
+  'logCoffee',
   'markPunched',
   'snoozeBreak',
   'startFocus',
