@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Icon, type IconName } from '../ui/Icon'
 import { addDays, formatClock, parseClock } from '../../../core/time'
 import { validateFields } from './validateFields'
+import { defaultDnd } from '../../../core/types'
 import type { DateStr, Half, ItemType, NewItem, Priority, Repeat } from '../../../core/types'
 
 const PRESETS = [15, 30, 45, 60, 90, 120]
@@ -92,6 +93,19 @@ export function ItemChips({ value, onChange, today, defaultDurations }: Props): 
     // the deadline's date follows the Day field while they matched
     if (patch.date && value.deadline && value.deadline.date === value.date && !patch.deadline)
       patch = { ...patch, deadline: { ...value.deadline, date: patch.date } }
+    // DND follows type and start time while it still matches their default
+    if (
+      (patch.type !== undefined || patch.fixedStart !== undefined) &&
+      patch.dnd === undefined &&
+      value.dnd === defaultDnd(value.type, value.fixedStart)
+    )
+      patch = {
+        ...patch,
+        dnd: defaultDnd(
+          patch.type ?? value.type,
+          patch.fixedStart !== undefined ? patch.fixedStart : value.fixedStart
+        )
+      }
     onChange({ ...value, ...patch })
   }
   // a preset arriving from outside (parsed syntax) leaves custom mode

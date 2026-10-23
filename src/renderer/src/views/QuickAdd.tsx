@@ -94,6 +94,7 @@ export function QuickAdd({ settings, today, onAdded }: Props): React.JSX.Element
       if (
         (patch.type !== undefined || patch.fixedStart !== undefined) &&
         patch.dnd === undefined &&
+        cur.fields.dnd === undefined &&
         d.dnd === defaultDnd(d.type, d.fixedStart)
       ) {
         patch.dnd = defaultDnd(

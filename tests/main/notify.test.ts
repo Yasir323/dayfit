@@ -33,6 +33,11 @@ describe('buildNotificationOptions', () => {
     ])
   })
 
+  it('the Snooze button shows the clamped length', () => {
+    const o = buildNotificationOptions({ type: 'event', event: brk, snoozeMin: 90 }, 'darwin')
+    expect(o.actions?.[0]).toEqual({ type: 'button', text: 'Snooze 60 min' })
+  })
+
   it('no Drank without water', () => {
     const o = buildNotificationOptions(ev({ ...brk, parts: ['eye'] }), 'darwin')
     expect(o.actions).toEqual([{ type: 'button', text: 'Snooze 10 min' }])

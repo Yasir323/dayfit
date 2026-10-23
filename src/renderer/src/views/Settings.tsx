@@ -3,7 +3,14 @@ import { formatClock } from '../../../core/time'
 import type { ItemType, Settings as SettingsShape } from '../../../core/types'
 import { api } from '../api'
 import type { ViewState } from '../api'
-import { LUNCH_ERROR, checkEnd, parseLunch, parsePositive, parseTime } from './settingsValidation'
+import {
+  LUNCH_ERROR,
+  checkEnd,
+  parseLunch,
+  parsePositive,
+  parseSnooze,
+  parseTime
+} from './settingsValidation'
 import type { Parsed } from './settingsValidation'
 import './Settings.css'
 
@@ -81,13 +88,14 @@ function Field<T>({
 const num = (
   label: string,
   value: number,
-  onValid: (n: number) => Promise<boolean>
+  onValid: (n: number) => Promise<boolean>,
+  parse: (s: string) => Parsed<number> = parsePositive
 ): React.JSX.Element => (
   <Field
     label={label}
     type="number"
     value={String(value)}
-    parse={parsePositive}
+    parse={parse}
     onValid={onValid}
     onBlurOnly
   />
@@ -255,8 +263,11 @@ export function Settings({ view, onView }: Props): React.JSX.Element {
           )}
         </div>
         <div className="group-card">
-          {num('Snooze length (min)', s.breaks.snoozeMin, (n) =>
-            send({ breaks: { snoozeMin: n } })
+          {num(
+            'Snooze length (min)',
+            s.breaks.snoozeMin,
+            (n) => send({ breaks: { snoozeMin: n } }),
+            parseSnooze
           )}
         </div>
         <div className="group-card">

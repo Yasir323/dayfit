@@ -154,6 +154,15 @@ describe('Settings', () => {
     expect(api.updateSettings).toHaveBeenCalledWith({ breaks: { snoozeMin: 15 } })
   })
 
+  it('rejects a snooze length outside 1–60', () => {
+    render(<Settings view={view()} />)
+    const snooze = screen.getByLabelText('Snooze length (min)')
+    fireEvent.change(snooze, { target: { value: '90' } })
+    fireEvent.blur(snooze)
+    expect(screen.getByRole('alert')).toHaveTextContent('Must be 1–60')
+    expect(api.updateSettings).not.toHaveBeenCalled()
+  })
+
   it('groups settings into titled sections', () => {
     render(<Settings view={view()} />)
     for (const name of ['Working hours', 'Planning', 'Reminders', 'Shortcut and startup'])

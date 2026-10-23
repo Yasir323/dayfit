@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom/vitest'
-import { cleanup, render, screen, within } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { DEFAULT_SETTINGS } from '../../src/core/types'
@@ -58,6 +58,26 @@ describe('QuickAdd', () => {
     await userEvent.click(chip('DND'))
     await userEvent.click(screen.getByRole('switch', { name: 'Do not disturb' }))
     await userEvent.type(box, ' 15m')
+    expect(chip('DND')).toHaveAccessibleName('DND: on')
+  })
+
+  it('DND follows type and start time set through the chips', async () => {
+    const { box } = setup()
+    await userEvent.type(box, 'Plan')
+    await pick('Type', 'deep')
+    expect(chip('DND')).toHaveAccessibleName('DND: on')
+    await pick('Type', 'task')
+    expect(chip('DND')).toHaveAccessibleName('DND: off')
+    await pick('Type', 'household')
+    fireEvent.change(await control('Start time'), { target: { value: '09:30' } })
+    expect(chip('DND')).toHaveAccessibleName('DND: on')
+  })
+
+  it('explicit !dnd survives removing a type word', () => {
+    const { box } = setup()
+    fireEvent.change(box, { target: { value: 'Report ~deep !dnd' } })
+    expect(chip('DND')).toHaveAccessibleName('DND: on')
+    fireEvent.change(box, { target: { value: 'Report !dnd' } })
     expect(chip('DND')).toHaveAccessibleName('DND: on')
   })
 

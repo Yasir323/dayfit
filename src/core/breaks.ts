@@ -142,13 +142,17 @@ export function stepBreaks(input: {
   return { fire, state }
 }
 
+/** Snooze length actually used: a whole number of minutes in 1–60. */
+export const clampSnooze = (min: number): number =>
+  Math.min(60, Math.max(1, Math.round(Number.isFinite(min) ? min : 10)))
+
 /** Re-queues the last fired break for `snoozeMin` (clamped to 1–60) minutes. */
 export function snoozeBreak(state: BreakState, now: Minutes, snoozeMin: number): BreakState {
   if (state.lastFired.length === 0) return state
   return {
     ...state,
     pending: ordered([...state.pending, ...state.lastFired]),
-    snoozeUntil: now + Math.min(60, Math.max(1, snoozeMin)),
+    snoozeUntil: now + clampSnooze(snoozeMin),
     lastFired: []
   }
 }

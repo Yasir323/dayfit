@@ -13,6 +13,15 @@ export function parsePositive(s: string): Parsed<number> {
   return { ok: true, value: n }
 }
 
+export const SNOOZE_ERROR = 'Must be 1–60'
+
+export function parseSnooze(s: string): Parsed<number> {
+  const n = Number(s)
+  if (s.trim() === '' || !Number.isInteger(n) || n < 1 || n > 60)
+    return { ok: false, error: SNOOZE_ERROR }
+  return { ok: true, value: n }
+}
+
 export function parseTime(s: string): Parsed<Minutes> {
   const m = parseClock(s)
   return m === null ? { ok: false, error: 'Enter a time' } : { ok: true, value: m }

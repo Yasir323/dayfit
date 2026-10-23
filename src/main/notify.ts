@@ -1,6 +1,7 @@
 import { Notification, type NotificationConstructorOptions } from 'electron'
 import { movesText } from '../core/movesText'
 import type { ReminderEvent } from '../core/reminders'
+import { clampSnooze } from '../core/breaks'
 import type { NudgeAnswer } from '../core/nudge'
 import type { ViewState } from './service'
 
@@ -34,7 +35,7 @@ const NUDGE_ACTIONS: { text: string; answer: NudgeAnswer }[] = [
 
 /** Snooze first (index 0), then Drank (index 1) when water is part of the break. */
 const breakActions = (event: ReminderEvent, snoozeMin: number): string[] => [
-  `Snooze ${snoozeMin} min`,
+  `Snooze ${clampSnooze(snoozeMin)} min`,
   ...(event.parts.includes('water') ? ['Drank'] : [])
 ]
 
