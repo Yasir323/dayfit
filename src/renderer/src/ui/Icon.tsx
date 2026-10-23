@@ -17,6 +17,7 @@ export type IconName =
   | 'tag'
   | 'calendar'
   | 'half'
+  | 'edit'
 
 // 24×24 stroke icons (drawn for Dayfit; no icon font or network asset).
 const PATHS: Record<IconName, React.ReactNode> = {
@@ -75,6 +76,7 @@ const PATHS: Record<IconName, React.ReactNode> = {
       <path d="M8 3v4M16 3v4M4 10h16" />
     </>
   ),
+  edit: <path d="M5 19l1-4 10-10 3 3-10 10-4 1zM14 7l3 3" />,
   half: (
     <>
       <circle cx="12" cy="12" r="8" />

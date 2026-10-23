@@ -10,6 +10,9 @@ import { Review } from './views/Review'
 import { AttendanceBanner } from './views/AttendanceBanner'
 import { AlertBanner } from './views/AlertBanner'
 import { CheckOut } from './views/CheckOut'
+import { EditItem } from './views/EditItem'
+import { EditContext } from './lib/editContext'
+import type { Item } from '../../core/types'
 import { Settings } from './views/Settings'
 import { TodayTab } from './views/TodayTab'
 import { TabBar, type Tab } from './ui/TabBar'
@@ -24,6 +27,7 @@ export function App(): React.JSX.Element {
   const [seenMoves, setSeenMoves] = useState<string | null>(null)
   const [nudgeFocus, setNudgeFocus] = useState(0)
   const [checkout, setCheckout] = useState(false)
+  const [editing, setEditing] = useState<Item | null>(null)
   const nudgeRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -110,82 +114,102 @@ export function App(): React.JSX.Element {
     ))
   ]
   const wrapUp = checkout && firstRunDone && !review
-  const overlay = !firstRunDone || review || wrapUp
+  const editOpen = editing !== null && firstRunDone && !review && !wrapUp
+  const overlay = !firstRunDone || review || wrapUp || editOpen
 
   return (
-    <div className="app">
-      {!(review && firstRunDone) && banners.length > 0 && <div className="banners">{banners}</div>}
-
-      {toast && (
-        <div className="toast" role="status">
-          {toast.text}
-        </div>
-      )}
-      <main className="tab-body" inert={overlay}>
-        {tab === 'today' && (
-          <TodayTab
-            view={view}
-            onView={setView}
-            onAddTask={() => setTab('add')}
-            onCheckOut={openCheckout}
-          />
+    <EditContext.Provider value={setEditing}>
+      <div className="app">
+        {!(review && firstRunDone) && banners.length > 0 && (
+          <div className="banners">{banners}</div>
         )}
-        {tab === 'add' && (
-          <QuickAdd
-            settings={view.settings}
-            today={view.today}
-            onAdded={(v, openToday) => {
-              setView(v)
-              if (openToday) setTab('today')
-            }}
-          />
+
+        {toast && (
+          <div className="toast" role="status">
+            {toast.text}
+          </div>
         )}
-        {tab === 'dump' && (
-          <BrainDump
-            settings={view.settings}
-            today={view.today}
-            onPlanned={(v) => {
-              setView(v)
-              setTab('today')
-            }}
-          />
+        <main className="tab-body" inert={overlay}>
+          {tab === 'today' && (
+            <TodayTab
+              view={view}
+              onView={setView}
+              onAddTask={() => setTab('add')}
+              onCheckOut={openCheckout}
+            />
+          )}
+          {tab === 'add' && (
+            <QuickAdd
+              settings={view.settings}
+              today={view.today}
+              onAdded={(v, openToday) => {
+                setView(v)
+                if (openToday) setTab('today')
+              }}
+            />
+          )}
+          {tab === 'dump' && (
+            <BrainDump
+              settings={view.settings}
+              today={view.today}
+              onPlanned={(v) => {
+                setView(v)
+                setTab('today')
+              }}
+            />
+          )}
+          {tab === 'settings' && <Settings view={view} onView={setView} />}
+        </main>
+
+        <TabBar value={tab} onChange={setTab} inert={overlay} />
+
+        {wrapUp && (
+          <div className="overlay" role="dialog" aria-modal="true" aria-label="Wrap up today">
+            <CheckOut
+              view={view}
+              onDone={(v) => {
+                setView(v)
+                setCheckout(false)
+              }}
+              onCancel={() => setCheckout(false)}
+            />
+          </div>
         )}
-        {tab === 'settings' && <Settings view={view} onView={setView} />}
-      </main>
 
-      <TabBar value={tab} onChange={setTab} inert={overlay} />
-
-      {wrapUp && (
-        <div className="overlay" role="dialog" aria-modal="true" aria-label="Wrap up today">
-          <CheckOut
-            view={view}
-            onDone={(v) => {
-              setView(v)
-              setCheckout(false)
-            }}
-            onCancel={() => setCheckout(false)}
-          />
-        </div>
-      )}
-
-      {review && firstRunDone && (
-        // Banners move inside the overlay so a nudge is never hidden behind Review.
-        <div className="overlay" role="dialog" aria-modal="true" aria-label="Review your plan">
-          {banners}
-          <Review
-            key={JSON.stringify([view.plan.decisions, view.plan.lunchClash ?? null])}
-            decisions={view.plan.decisions}
-            items={[...view.items, ...view.upcoming]}
-            onDone={setView}
-            view={view}
-          />
-        </div>
-      )}
-      {!firstRunDone && (
-        <div className="overlay" role="dialog" aria-modal="true" aria-label="Set up Dayfit">
-          <FirstRun settings={view.settings} today={view.today} onDone={setView} />
-        </div>
-      )}
-    </div>
+        {review && firstRunDone && (
+          // Banners move inside the overlay so a nudge is never hidden behind Review.
+          <div className="overlay" role="dialog" aria-modal="true" aria-label="Review your plan">
+            {banners}
+            <Review
+              key={JSON.stringify([view.plan.decisions, view.plan.lunchClash ?? null])}
+              decisions={view.plan.decisions}
+              items={[...view.items, ...view.upcoming]}
+              onDone={setView}
+              view={view}
+            />
+          </div>
+        )}
+        {!firstRunDone && (
+          <div className="overlay" role="dialog" aria-modal="true" aria-label="Set up Dayfit">
+            <FirstRun settings={view.settings} today={view.today} onDone={setView} />
+          </div>
+        )}
+        {editOpen && editing && (
+          <div className="overlay" role="dialog" aria-modal="true" aria-label="Edit item">
+            <EditItem
+              key={editing.id}
+              item={editing}
+              today={view.today}
+              settings={view.settings}
+              onDone={(v) => {
+                setView(v)
+                setEditing(null)
+              }}
+              onCancel={() => setEditing(null)}
+            />
+          </div>
+        )}
+      </div>
+    </EditContext.Provider>
   )
 }
