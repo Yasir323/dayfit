@@ -26,7 +26,11 @@ const NUDGE_LABEL = "Time's up"
 
 /** Short text shown next to the menu-bar icon for a reminder. */
 export function labelFor(event: ReminderEvent, s: Settings): string {
-  switch (event.kind) {
+  return labelForKind(event.kind, s)
+}
+
+export function labelForKind(kind: ReminderKind, s: Settings): string {
+  switch (kind) {
     case 'break':
       return 'Break'
     case 'attendance-in':
@@ -43,6 +47,24 @@ export function labelFor(event: ReminderEvent, s: Settings): string {
       return `Meeting ${s.meetingAlert.leadMin}m`
     case 'meeting-now':
       return 'Meeting now'
+  }
+}
+
+/**
+ * The user acted on these alerts (here or from a notification): drop them, and clear the
+ * menu-bar label if it was theirs.
+ */
+export function clearAlerts(
+  alerts: Alert[],
+  unseen: string | null,
+  gone: (a: Alert) => boolean,
+  s: Settings
+): { alerts: Alert[]; unseen: string | null } {
+  const removed = alerts.filter(gone)
+  const labels = new Set(removed.map((a) => labelForKind(a.kind, s)))
+  return {
+    alerts: alerts.filter((a) => !gone(a)),
+    unseen: unseen !== null && labels.has(unseen) ? null : unseen
   }
 }
 

@@ -475,6 +475,38 @@ describe('DayfitService in-app alerts', () => {
     expect(svc.snoozeBreak().alerts).toEqual([])
   })
 
+  it('logWater after a water break removes the banner and the Break label', () => {
+    svc.updateSettings({ water: { ...svc.view().settings.water, intervalMin: 1 } })
+    firstBreak()
+    expect(svc.view().alerts[0].parts).toContain('water')
+    const v = svc.logWater()
+    expect(v.alerts).toEqual([])
+    expect(v.trayLabel).toBeNull()
+  })
+
+  it('snoozeBreak and dismissing the break clear the Break label', () => {
+    firstBreak()
+    expect(svc.snoozeBreak().trayLabel).toBeNull()
+    clock.set(26, 10, 0)
+    svc.tick(0)
+    for (let m = 1; m <= 25 && svc.view().alerts.length === 0; m++) {
+      clock.set(26, 10, m)
+      svc.tick(0)
+    }
+    expect(svc.view().trayLabel).toBe('Break')
+    expect(svc.dismissAlert(svc.view().alerts[0].id).trayLabel).toBeNull()
+  })
+
+  it('checkOut drops the wrap-up and past-hours banners', () => {
+    svc.markPunched('in')
+    clock.set(26, 17, 45)
+    svc.tick(0)
+    expect(svc.view().alerts.map((a) => a.kind)).toContain('heads-up')
+    const v = svc.checkOut([])
+    expect(v.alerts.map((a) => a.kind)).not.toContain('heads-up')
+    expect(v.trayLabel).not.toBe('Wrap up')
+  })
+
   it('rollover clears alerts and label', () => {
     firstBreak()
     clock.set(27, 8, 0)

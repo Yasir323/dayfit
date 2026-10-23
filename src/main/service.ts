@@ -4,7 +4,7 @@ import { applyNudgeAnswer, dueNudges, type NudgeAnswer } from '../core/nudge'
 import { itemsForDate, rolloverItems } from '../core/recurrence'
 import { dueReminders, EMPTY_REMINDER_STATE, isBusy, type ReminderEvent } from '../core/reminders'
 import { diffMoves, frozenBlocks } from '../core/replan'
-import { recordAlerts, type Alert } from '../core/alerts'
+import { clearAlerts, recordAlerts, type Alert } from '../core/alerts'
 import { snoozeBreak } from '../core/breaks'
 import {
   attendanceDue,
@@ -250,13 +250,23 @@ export class DayfitService {
   snoozeBreak(): ViewState {
     this.begin()
     const s = this.state
-    s.alerts = s.alerts.filter((a) => a.kind !== 'break')
+    this.clearAlerts((a) => a.kind === 'break')
     s.reminder = {
       ...s.reminder,
       breaks: snoozeBreak(s.reminder.breaks, this.nowMin(), s.settings.breaks.snoozeMin)
     }
     this.save()
     return this.buildView()
+  }
+
+  /** Drops alerts the user has acted on; true when anything changed. */
+  private clearAlerts(gone: (a: Alert) => boolean): boolean {
+    const s = this.state
+    const r = clearAlerts(s.alerts, s.unseen, gone, s.settings)
+    const changed = r.alerts.length !== s.alerts.length || r.unseen !== s.unseen
+    s.alerts = r.alerts
+    s.unseen = r.unseen
+    return changed
   }
 
   /** The popover was opened: the menu-bar label has been seen. */
@@ -272,9 +282,7 @@ export class DayfitService {
   /** Closes one reminder banner; an id that is already gone is ignored. */
   dismissAlert(id: string): ViewState {
     this.begin()
-    const before = this.state.alerts.length
-    this.state.alerts = this.state.alerts.filter((a) => a.id !== id)
-    if (this.state.alerts.length !== before) this.save()
+    if (this.clearAlerts((a) => a.id === id)) this.save()
     return this.buildView()
   }
 
@@ -309,6 +317,8 @@ export class DayfitService {
       }
     }
     this.state.endOfDay = startCheckout(this.state.endOfDay)
+    // Checked out: the wrap-up and past-hours banners are done with.
+    this.clearAlerts((a) => a.kind === 'heads-up' || a.kind === 'overtime')
     return this.replanAndSave((frozen) =>
       frozen.filter((b) => b.itemId === null || !unscheduled.has(b.itemId))
     )
@@ -318,6 +328,8 @@ export class DayfitService {
     this.begin()
     const today = this.today()
     this.state.waterMl[today] = (this.state.waterMl[today] ?? 0) + this.state.settings.water.glassMl
+    // A glass logged anywhere answers a pending water break.
+    this.clearAlerts((a) => a.kind === 'break' && a.parts.includes('water'))
     this.save()
     return this.buildView()
   }

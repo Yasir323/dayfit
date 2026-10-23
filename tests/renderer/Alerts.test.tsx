@@ -62,7 +62,7 @@ describe('alert banners', () => {
     await show([alert({})])
     await userEvent.click(screen.getByRole('button', { name: 'Drank' }))
     expect(api.logWater).toHaveBeenCalledTimes(1)
-    expect(api.dismissAlert).toHaveBeenCalledWith('break:600:0')
+    expect(api.dismissAlert).not.toHaveBeenCalled()
     cleanup()
     api.dismissAlert.mockClear()
     await show([alert({ parts: ['eye'] })])

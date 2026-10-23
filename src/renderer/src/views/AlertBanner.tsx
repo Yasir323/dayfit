@@ -40,12 +40,7 @@ export function AlertBanner({ alert, snoozeMin, onView, onCheckOut }: Props): Re
           <button
             type="button"
             className="btn-primary"
-            onClick={() =>
-              void run(async () => {
-                await api.logWater()
-                return dismiss()
-              })
-            }
+            onClick={() => void run(() => api.logWater())}
           >
             Drank
           </button>
