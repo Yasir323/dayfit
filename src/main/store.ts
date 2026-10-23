@@ -1,6 +1,6 @@
 import fs from 'node:fs'
 import path from 'node:path'
-import type { Block, DateStr, Decision, Item, Settings } from '../core/types'
+import type { Block, DateStr, Decision, Item, LunchClash, Settings } from '../core/types'
 import { DEFAULT_SETTINGS, defaultDnd } from '../core/types'
 import type { Move } from '../core/replan'
 import type { NudgeState } from '../core/nudge'
@@ -14,6 +14,9 @@ export interface DayPlan {
   decisions: Decision[]
   unscheduled: string[]
   moves: Move[]
+  /** Absent in plans saved before lunch clashes existed. */
+  lunchClash?: LunchClash | null
+  lunchAnswerRejected?: boolean
 }
 
 export interface AppState {

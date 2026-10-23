@@ -45,10 +45,23 @@ export interface DecisionAnswer {
   itemId: string
   choice: DecisionChoice
 }
+/** Today's answer to a lunch clash: skip, or lunch at an exact time and length. */
+export type LunchAnswer = { kind: 'skip' } | { kind: 'at'; start: Minutes; len: number }
+/** Lunch can't sit at its usual time; the user picks shorten / move / a time / skip. */
+export interface LunchClash {
+  reason: 'clash' | 'passed'
+  usual: Minutes
+  clashWith: string | null
+  shorten: { start: Minutes; len: number } | null
+  move: Minutes | null
+}
 export interface PlanResult {
   blocks: Block[]
   decisions: Decision[]
   unscheduled: string[]
+  lunchClash: LunchClash | null
+  /** The saved lunch answer no longer fits (a new clash); the caller should forget it. */
+  lunchAnswerRejected: boolean
 }
 export interface Settings {
   workStart: Minutes

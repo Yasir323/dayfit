@@ -11,6 +11,8 @@ import {
   type Half,
   type Item,
   type ItemType,
+  type LunchAnswer,
+  type LunchClash,
   type Minutes,
   type PlanResult,
   type Priority,
@@ -24,6 +26,8 @@ export interface PlanInput {
   settings: Settings
   frozen: Block[] // kept verbatim (done / in progress / overdue)
   answers: DecisionAnswer[]
+  /** Today's lunch-clash answer, if the user gave one. */
+  lunch?: LunchAnswer | null
 }
 
 const DEEP_CHUNK_MIN = 60
@@ -425,39 +429,114 @@ function blockOrder(items: Item[]): (a: Block, b: Block) => number {
     (id(a) < id(b) ? -1 : id(a) > id(b) ? 1 : 0)
 }
 
-// Step 2b: lunch, before flexible work. Nearest free start to the lunch time (ties: earlier).
-function placeLunch(plan: Plan, s: Settings): void {
-  if (s.lunch === null || plan.blocks.some((b) => b.kind === 'lunch')) return
-  const target = s.lunch
-  const len = s.endOfDay.lunchMin
-  let best: Minutes | null = null
-  for (const f of plan.free) {
-    if (f.end - f.start < len) continue
-    const start = Math.min(Math.max(target, f.start), f.end - len)
-    const d = Math.abs(start - target)
-    if (
-      best === null ||
-      d < Math.abs(best - target) ||
-      (d === Math.abs(best - target) && start < best)
-    )
-      best = start
+export const MIN_SHORT_LUNCH_MIN = 30
+
+const fitsFree = (free: Interval[], start: Minutes, len: number): boolean =>
+  free.some((f) => f.start <= start && start + len <= f.end)
+
+/** Earliest start at or after `from` where `len` fits in free time, or null. */
+function nextSlot(free: Interval[], from: Minutes, len: number): Minutes | null {
+  for (const f of [...free].sort((a, b) => a.start - b.start)) {
+    const start = Math.max(f.start, from)
+    if (start + len <= f.end) return start
   }
-  // No room anywhere in working hours: no lunch today.
-  if (best === null) return
-  commit(plan, {
-    itemId: null,
-    kind: 'lunch',
-    start: best,
-    end: best + len,
-    chunk: null,
-    reason: 'Lunch'
-  })
+  return null
+}
+
+const titleOf = (b: Block, items: Item[]): string =>
+  items.find((i) => i.id === b.itemId)?.title ?? 'Busy'
+
+// Step 2b: lunch, before flexible work. Only fixed, locked and frozen blocks are in its way; when
+// it can't sit at its usual time the user decides (LunchClash) instead of it moving silently.
+function placeLunch(plan: Plan, input: PlanInput): { clash: LunchClash | null; rejected: boolean } {
+  const s = input.settings
+  if (s.lunch === null || plan.blocks.some((b) => b.kind === 'lunch'))
+    return { clash: null, rejected: false }
+  const answer = input.lunch ?? null
+  if (answer?.kind === 'skip') return { clash: null, rejected: false }
+  const put = (start: Minutes, len: number): void =>
+    commit(plan, {
+      itemId: null,
+      kind: 'lunch',
+      start,
+      end: start + len,
+      chunk: null,
+      reason: 'Lunch'
+    })
+  let rejected = false
+  if (answer?.kind === 'at') {
+    if (fitsFree(plan.free, answer.start, answer.len)) {
+      put(answer.start, answer.len)
+      return { clash: null, rejected: false }
+    }
+    rejected = true
+  }
+  const usual = s.lunch
+  const len = s.endOfDay.lunchMin
+  if (usual < plan.window.start)
+    return {
+      clash: {
+        reason: 'passed',
+        usual,
+        clashWith: null,
+        shorten: null,
+        move: nextSlot(plan.free, plan.window.start, len)
+      },
+      rejected
+    }
+  if (fitsFree(plan.free, usual, len)) {
+    put(usual, len)
+    return { clash: null, rejected }
+  }
+  const pad = s.bufferMin
+  const blocker = [...plan.blocks]
+    .sort((a, b) => a.start - b.start)
+    .find((b) => b.start < usual + len + pad && b.end > usual - pad)
+  const around = plan.free.find((f) => f.start <= usual && usual < f.end)
+  const n = around ? Math.min(len, around.end - usual) : 0
+  return {
+    clash: {
+      reason: 'clash',
+      usual,
+      clashWith: blocker ? titleOf(blocker, input.items) : 'Busy',
+      shorten: n >= MIN_SHORT_LUNCH_MIN ? { start: usual, len: n } : null,
+      move: nextSlot(plan.free, usual, len)
+    },
+    rejected
+  }
+}
+
+/**
+ * Why lunch can't start at `start` for `len` minutes, or null when it can. Immovable means a fixed
+ * block, a locked block, or one that has already started.
+ */
+export function lunchPickError(
+  start: Minutes,
+  len: number,
+  blocks: Block[],
+  items: Item[],
+  s: Settings,
+  now: Minutes
+): string | null {
+  if (start < s.workStart || start + len > s.workEnd) return 'Outside working hours'
+  if (start < now) return 'That time has passed'
+  const pad = s.bufferMin
+  const hit = [...blocks]
+    .sort((a, b) => a.start - b.start)
+    .find(
+      (b) =>
+        (b.kind === 'fixed' || b.reason === 'Locked' || b.start <= now) &&
+        b.kind !== 'lunch' &&
+        b.start < start + len + pad &&
+        b.end > start - pad
+    )
+  return hit ? `Clashes with ${titleOf(hit, items)}` : null
 }
 
 export function planDay(raw: PlanInput): PlanResult {
   const input = { ...raw, items: releaseBlockedLocks(raw) }
   const plan = startPlan(input)
-  placeLunch(plan, input.settings)
+  const lunch = placeLunch(plan, input)
   placeDeepWork(plan, input.items, input.frozen)
   placeTasks(plan, input)
   return {
@@ -465,6 +544,8 @@ export function planDay(raw: PlanInput): PlanResult {
     decisions: plan.decisions,
     unscheduled: input.items
       .filter((i) => plan.answers.get(i.id) === 'unscheduled')
-      .map((i) => i.id)
+      .map((i) => i.id),
+    lunchClash: lunch.clash,
+    lunchAnswerRejected: lunch.rejected
   }
 }

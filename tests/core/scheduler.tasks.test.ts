@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { planDay, type PlanInput } from '../../src/core/scheduler'
+import { lunchPickError, planDay, type PlanInput } from '../../src/core/scheduler'
 import { DEFAULT_SETTINGS, type Block, type Item, type Settings } from '../../src/core/types'
 
 const D = '2026-10-23'
@@ -286,6 +286,10 @@ describe('planDay part 2: tasks', () => {
 describe('planDay: lunch', () => {
   const S = { ...noWalks, lunch: 780 }
   const lunchOf = (bs: Block[]): Block[] => bs.filter((b) => b.kind === 'lunch')
+  const call = (start: number, len: number): Item => ({
+    ...fixed(start, len),
+    title: 'Client call'
+  })
   const lunch: Block = {
     itemId: null,
     kind: 'lunch',
@@ -294,32 +298,101 @@ describe('planDay: lunch', () => {
     chunk: null,
     reason: 'Lunch'
   }
+  const plan = (items: Item[], o: Partial<PlanInput> = {}): ReturnType<typeof planDay> =>
+    planDay(input(items, { settings: S, ...o }))
 
-  test('lunch blocks time at the lunch setting', () => {
-    expect(lunchOf(planDay(input([], { settings: S })).blocks)).toEqual([lunch])
-    const t = task(30, { half: 'pm' })
-    const r = planDay(input([t], { settings: S }))
-    expect(overlaps(blockOf(r.blocks, t.id)!, 780, 825)).toBe(false)
+  test('lunch sits at its usual time when free', () => {
+    const r = plan([])
+    expect(lunchOf(r.blocks)).toEqual([lunch])
+    expect(r.lunchClash).toBeNull()
   })
 
-  test('lunch moves to the nearest free slot when a fixed item covers it', () => {
-    // 5m buffers: fixed 765–825 frees up to 760 (candidate 715, 65 away) and from 830 (50 away)
-    expect(lunchOf(planDay(input([fixed(765, 60)], { settings: S })).blocks)[0].start).toBe(830)
-    // fixed 780–810 frees up to 775 (candidate 730, 50 away) and from 815 (35 away)
-    expect(lunchOf(planDay(input([fixed(780, 30)], { settings: S })).blocks)[0].start).toBe(815)
+  test('a fixed item over lunch raises a clash instead of moving lunch', () => {
+    const r = plan([call(800, 60)])
+    expect(lunchOf(r.blocks)).toEqual([])
+    // free time ends at 795 (15 min after 780, too short); after the call it resumes at 865
+    expect(r.lunchClash).toEqual({
+      reason: 'clash',
+      usual: 780,
+      clashWith: 'Client call',
+      shorten: null,
+      move: 865
+    })
+  })
+
+  test('shorten offered when ≥ 30 min fits before the clash', () => {
+    expect(plan([call(820, 30)]).lunchClash?.shorten).toEqual({ start: 780, len: 35 })
+  })
+
+  test('back-to-back fixed items are one obstacle for move', () => {
+    expect(plan([call(790, 30), call(825, 30)]).lunchClash?.move).toBe(860)
+  })
+
+  test('move is null when nothing fits before workEnd', () => {
+    expect(plan([call(790, 290)]).lunchClash?.move).toBeNull()
+  })
+
+  test('lunch time passed asks instead of placing late', () => {
+    const r = plan([], { now: 900 })
+    expect(lunchOf(r.blocks)).toEqual([])
+    expect(r.lunchClash).toEqual({
+      reason: 'passed',
+      usual: 780,
+      clashWith: null,
+      shorten: null,
+      move: 900
+    })
+  })
+
+  test('answered at-time places lunch exactly; tasks move around it', () => {
+    const t = task(30, { half: 'pm' })
+    const r = plan([call(800, 60), t], { lunch: { kind: 'at', start: 865, len: 45 } })
+    expect(lunchOf(r.blocks).map((b) => [b.start, b.end])).toEqual([[865, 910]])
+    expect(overlaps(blockOf(r.blocks, t.id)!, 865, 910)).toBe(false)
+    expect(r.lunchClash).toBeNull()
+  })
+
+  test('skip answer means no lunch and no clash', () => {
+    const r = plan([call(800, 60)], { lunch: { kind: 'skip' } })
+    expect(lunchOf(r.blocks)).toEqual([])
+    expect(r.lunchClash).toBeNull()
+  })
+
+  test('answer that now clashes is rejected and the clash returns', () => {
+    const r = plan([call(790, 30)], { lunch: { kind: 'at', start: 780, len: 45 } })
+    expect(r.lunchAnswerRejected).toBe(true)
+    expect(r.lunchClash?.reason).toBe('clash')
+    expect(plan([]).lunchAnswerRejected).toBe(false)
+  })
+
+  test('frozen lunch: no clash even if a fixed item now overlaps', () => {
+    const r = plan([call(810, 30)], { now: 800, frozen: [lunch] })
+    expect(lunchOf(r.blocks)).toEqual([lunch])
+    expect(r.lunchClash).toBeNull()
+  })
+
+  test('lunchMin below 30 never offers shorten', () => {
+    const settings = { ...S, endOfDay: { ...S.endOfDay, lunchMin: 25 } }
+    expect(plan([call(800, 60)], { settings }).lunchClash?.shorten).toBeNull()
   })
 
   test('no lunch without a lunch time', () => {
-    expect(lunchOf(planDay(input([], { settings: { ...S, lunch: null } })).blocks)).toEqual([])
+    const r = plan([], { settings: { ...S, lunch: null } })
+    expect(lunchOf(r.blocks)).toEqual([])
+    expect(r.lunchClash).toBeNull()
   })
 
-  test('lunch never before now; frozen lunch not duplicated', () => {
-    expect(lunchOf(planDay(input([], { settings: S, now: 800 })).blocks)[0].start).toBe(800)
-    const r = planDay(input([], { settings: S, now: 800, frozen: [lunch] }))
-    expect(lunchOf(r.blocks)).toEqual([lunch])
-  })
-
-  test('no room means no lunch', () => {
-    expect(lunchOf(planDay(input([fixed(540, 540)], { settings: S })).blocks)).toEqual([])
+  test('lunchPickError boundaries', () => {
+    const c = call(800, 60)
+    const blocks: Block[] = [
+      { itemId: c.id, kind: 'fixed', start: 800, end: 860, chunk: null, reason: 'Fixed' }
+    ]
+    const err = (start: number): string | null => lunchPickError(start, 45, blocks, [c], S, 600)
+    expect(err(600)).toBeNull()
+    expect(err(1035)).toBeNull()
+    expect(err(1036)).toBe('Outside working hours')
+    expect(err(530)).toBe('Outside working hours')
+    expect(err(599)).toBe('That time has passed')
+    expect(err(830)).toBe('Clashes with Client call')
   })
 })
