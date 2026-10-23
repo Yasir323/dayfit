@@ -78,6 +78,21 @@ describe('Timeline drag and drop', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('That time has passed')
   })
 
+  it('a task that has started does not drag', () => {
+    const base = makeView()
+    const v = makeView({
+      items: [...base.items, item('s', 'Started task', { durationMin: 20 })],
+      plan: { ...base.plan, blocks: [...base.plan.blocks, block('s', 'task', 590, 610)] }
+    })
+    render(<TimelineView view={v} onView={vi.fn()} />)
+    const b = blockOf('Started task')
+    expect(b).not.toHaveClass('is-draggable')
+    fireEvent.mouseDown(b, { clientY: 100, button: 0 })
+    fireEvent.mouseMove(window, { clientY: 160 })
+    fireEvent.mouseUp(window, { clientY: 160 })
+    expect(api.setLock).not.toHaveBeenCalled()
+  })
+
   it('fixed blocks do not drag', () => {
     render(<TimelineView view={withTask()} onView={vi.fn()} />)
     const b = blockOf('Standup')

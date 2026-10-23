@@ -132,6 +132,17 @@ describe('DayfitService', () => {
     expect(blockOf(v, 'id1')).toMatchObject({ start: 540, end: 570 })
   })
 
+  it('answering done on a repeating item marks it done for today only', () => {
+    svc.addItems([newItem({ repeat: { kind: 'daily' } })])
+    clock.set(26, 9, 30)
+    svc.tick(0)
+    const v = svc.answerNudge('id1', 'done')
+    expect(v.items[0].status).toBe('done')
+    expect(loadState(file).items[0]).toMatchObject({ status: 'open', doneDates: [D] })
+    clock.set(27, 9, 0)
+    expect(svc.view().items[0].status).toBe('open')
+  })
+
   it('a done item keeps only the part of its block before now', () => {
     svc.addItems([newItem({ durationMin: 60 })])
     clock.set(26, 9, 20)
@@ -835,6 +846,16 @@ describe('DayfitService daily summary', () => {
     expect(svc.view().daySummary?.breaksTaken).toBe(0)
   })
 
+  it('a focus session on deep work is not counted twice', () => {
+    svc.addItems([newItem({ title: 'Deep', type: 'deep', durationMin: 60 })])
+    svc.startFocus('id1', 25)
+    clock.set(26, 9, 26)
+    svc.tick(0)
+    svc.updateItem('id1', { status: 'done' })
+    // Done at 09:26: the deep block counts 09:00–09:26; the session adds nothing on top.
+    expect(svc.checkOut([]).daySummary?.focusMin).toBe(26)
+  })
+
   it('a finished focus session adds its minutes', () => {
     svc.addItems([newItem()])
     svc.startFocus('id1', 25)
@@ -895,6 +916,18 @@ describe('DayfitService backup', () => {
     expect(b.app).toBe('dayfit')
     expect(b.state.items.map((i) => i.title)).toEqual(['Keep me'])
     expect(b.days.map((d) => d.date)).toEqual([D])
+  })
+
+  it('a backup the planner cannot use changes nothing', () => {
+    svc.addItems([newItem({ title: 'Keep me' })])
+    svc.checkOut([])
+    const b = svc.exportData()
+    b.state.items = [{ title: 'broken' } as unknown as (typeof b.state.items)[number]]
+    b.days = []
+    expect(() => svc.importData(b)).toThrow('The backup could not be loaded')
+    expect(svc.view().items.map((i) => i.title)).toEqual(['Keep me'])
+    expect(loadState(file).items.map((i) => i.title)).toEqual(['Keep me'])
+    expect(svc.week()[6].summary).toMatchObject({ date: D })
   })
 
   it('import replaces the state and days, then replans', () => {

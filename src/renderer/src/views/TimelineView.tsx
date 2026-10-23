@@ -127,15 +127,17 @@ export function TimelineView({ view, onView }: Props): React.JSX.Element {
             const item = b.itemId === null ? undefined : byId.get(b.itemId)
             const title = b.kind === 'lunch' ? 'Lunch' : (item?.title ?? 'Busy')
             const done = item !== undefined && item.status !== 'open'
-            // Single-block tasks and lunch can be dragged; fixed items and deep chunks can't.
+            // Single-block tasks and lunch that haven't started can be dragged; fixed items and
+            // deep chunks can't.
             const draggable =
-              b.kind === 'lunch' ||
-              (b.kind === 'task' &&
-                item !== undefined &&
-                !done &&
-                item.fixedStart === null &&
-                firstBlock.has(b) &&
-                !chunked.has(item.id))
+              b.start > view.now &&
+              (b.kind === 'lunch' ||
+                (b.kind === 'task' &&
+                  item !== undefined &&
+                  !done &&
+                  item.fixedStart === null &&
+                  firstBlock.has(b) &&
+                  !chunked.has(item.id)))
             const dragging = drag?.block === b
             const shown = dragging ? b.start + drag.delta : b.start
             return (

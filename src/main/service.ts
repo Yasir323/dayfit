@@ -145,12 +145,15 @@ export class DayfitService {
     if (!item) return this.buildView()
     const { status, ...rest } = patch
     Object.assign(item, rest, { id: item.id, createdAt: item.createdAt })
-    // A repeating item is done for today only: the series stays open.
-    if (status === 'done' && item.repeat.kind !== 'none') {
-      const today = this.today()
-      item.doneDates = [...new Set([...(item.doneDates ?? []), today])]
-    } else if (status !== undefined) item.status = status
+    if (status === 'done') this.markDone(item)
+    else if (status !== undefined) item.status = status
     return this.replanAndSave()
+  }
+
+  /** A repeating item is done for today only (the series stays open); a one-off is done. */
+  private markDone(item: Item): void {
+    if (item.repeat.kind === 'none') item.status = 'done'
+    else item.doneDates = [...new Set([...(item.doneDates ?? []), this.today()])]
   }
 
   replan(): ViewState {
@@ -204,12 +207,13 @@ export class DayfitService {
     delete this.state.nudges[id]
     const block = this.latestBlock(id)
     if (!block) {
-      if (answer === 'done' && item.repeat.kind === 'none') item.status = 'done'
+      if (answer === 'done') this.markDone(item)
       return this.replanAndSave()
     }
     const result = applyNudgeAnswer(item, block, answer, now)
     if (result.item.status === 'done' && item.repeat.kind !== 'none') {
-      // Keep the series open; just stop nudging it for the rest of today.
+      // Keep the series open: done for today, and no more nudges today.
+      this.markDone(item)
       this.state.nudges[id] = { count: NUDGES_EXHAUSTED, lastAt: now }
     } else {
       Object.assign(item, result.item)
@@ -319,11 +323,21 @@ export class DayfitService {
 
   /** Replaces all data with a parsed backup, then plans today from it. */
   importData(backup: Backup): ViewState {
-    this.db.replaceDays(backup.days)
-    this.state = structuredClone(backup.state)
-    this.lastTickAt = null
-    this.begin()
-    return this.replanAndSave()
+    const prevState = this.state
+    const prevDays = this.db.days('0000-01-01', '9999-12-31')
+    try {
+      this.db.replaceDays(backup.days)
+      this.state = structuredClone(backup.state)
+      this.lastTickAt = null
+      this.begin()
+      return this.replanAndSave()
+    } catch {
+      // Nothing changes when the backup can't be planned (a damaged or hand-edited file).
+      this.state = prevState
+      this.db.replaceDays(prevDays)
+      this.save()
+      throw new Error('The backup could not be loaded')
+    }
   }
 
   /** The last 7 days' saved summaries, oldest first; null for a day with none. */
@@ -546,7 +560,8 @@ export class DayfitService {
 
     // A focus session past its end finishes once: busy goes back, and a short break is queued.
     if (s.focus && at >= s.focus.endsAt) {
-      this.stats().focusMin += s.focus.minutes
+      // Deep work is counted from its done blocks; a session on it would count twice.
+      if (this.find(s.focus.itemId)?.type !== 'deep') this.stats().focusMin += s.focus.minutes
       s.manualBusy = s.focus.prevManualBusy
       s.focus = null
       const pending = new Set([...s.reminder.breaks.pending, 'eye', 'stretch'])
