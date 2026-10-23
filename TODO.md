@@ -13,9 +13,11 @@ Everything below "Full backlog" is unprioritised beyond the v1 / later split.
 - [ ] Call slot suggestions ("Call John: 11:30 or 14:15")
 - [ ] Today view (timeline of the planned day)
 - [ ] Reminders: meeting alerts
-- [ ] Reminders: water toward daily target
-- [ ] Reminders: eye rest (20-20-20)
-- [ ] Reminders: stretch and walk, placed in real gaps
+- [x] Reminders: water toward daily target (progress bar; reminders every 60 min)
+- [x] Reminders: eye rest (20-20-20)
+- [x] Reminders: stretch and walk (reminders only, no planned slot)
+- [x] Combined break notification (eye/water/stretch/walk) with snooze and per-task DND
+- [ ] Snooze/Drank from the popover on Windows (notifications have no buttons there)
 - [ ] Busy mode: mutes Dayfit's own notifications during deep work and fixed items
 - [ ] Local-only storage, no account, no cloud
 - [ ] Open source release (license TBD)
