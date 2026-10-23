@@ -164,13 +164,21 @@ describe('heads-up, overtime, lunch', () => {
     expect(run(punched, 780, 825, { blocks: [lunch], idleSec: 900 }).fired).toEqual([])
   })
 
+  it('overtime waits a tick when punch-out fires on the same tick', () => {
+    const s = { ...EMPTY_END_OF_DAY_STATE, inDone: true, lastOutAt: 1085 }
+    expect(step(s, 1095).events.map((e) => e.kind)).toEqual(['attendance-out'])
+    const next = step(step(s, 1095).state, 1096).events.map((e) => e.kind)
+    expect(next).toEqual(['overtime'])
+  })
+
   it('copy is exact', () => {
     const lunch = blk('lunch', 780, 825, null)
     const all = [
       ...step(EMPTY_END_OF_DAY_STATE, 540).events,
       ...step(punched, 780, { blocks: [lunch] }).events,
       ...step(punched, 1065).events,
-      ...step({ ...EMPTY_END_OF_DAY_STATE, inDone: true }, 1095).events
+      ...step({ ...EMPTY_END_OF_DAY_STATE, inDone: true }, 1095).events,
+      ...step({ ...EMPTY_END_OF_DAY_STATE, inDone: true, outDone: true }, 1095).events
     ]
     expect(all.map((e) => [e.kind, e.title, e.body])).toEqual([
       ['attendance-in', 'Punch in', 'Mark your attendance for today.'],

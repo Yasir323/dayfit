@@ -28,6 +28,7 @@ const CLASH: LunchClash = {
   reason: 'clash',
   usual: 780,
   clashWith: 'Client call',
+  outOfHours: false,
   shorten: null,
   move: 865
 }

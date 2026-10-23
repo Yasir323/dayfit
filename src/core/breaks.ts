@@ -49,20 +49,15 @@ export function isHeld(
 ): boolean {
   if (manualBusy !== null) return manualBusy
   const holding = new Set(items.filter(holds).map((i) => i.id))
-  const byItem = new Map<string, Block[]>()
-  for (const b of blocks) {
-    if (b.itemId === null || !holding.has(b.itemId)) continue
-    if (now >= b.start && now < b.end) return true
-    byItem.set(b.itemId, [...(byItem.get(b.itemId) ?? []), b])
-  }
-  // A short planned gap between two blocks of the same item (deep chunks) is not a real break.
-  for (const own of byItem.values()) {
-    own.sort((a, b) => a.start - b.start)
-    for (let k = 1; k < own.length; k++) {
-      const prev = own[k - 1]
-      const next = own[k]
-      if (now >= prev.end && now < next.start && next.start - prev.end <= bufferMin) return true
-    }
+  const held = blocks
+    .filter((b) => b.itemId !== null && holding.has(b.itemId))
+    .sort((a, b) => a.start - b.start)
+  if (held.some((b) => now >= b.start && now < b.end)) return true
+  // A short planned gap between focus blocks (deep chunks, back-to-back DND items) is not a break.
+  for (let k = 1; k < held.length; k++) {
+    const prev = held[k - 1]
+    const next = held[k]
+    if (now >= prev.end && now < next.start && next.start - prev.end <= bufferMin) return true
   }
   return false
 }
@@ -112,6 +107,8 @@ export function stepBreaks(input: {
   // Accumulate: eye counts active screen time, the rest count working minutes.
   for (const p of TIMED) if (s[p].enabled) state.workMin[p] += elapsedMin
   if (s.eye.enabled) {
+    // The fallback counter only runs while Eye is off; start it fresh next time.
+    state.checkMin = 0
     if (idleSec >= s.eye.idleResetMin * 60) state.eyeActiveMin = 0
     else state.eyeActiveMin += elapsedMin
   } else state.checkMin += elapsedMin
@@ -146,12 +143,21 @@ export function stepBreaks(input: {
 export const clampSnooze = (min: number): number =>
   Math.min(60, Math.max(1, Math.round(Number.isFinite(min) ? min : 10)))
 
-/** Re-queues the last fired break for `snoozeMin` (clamped to 1–60) minutes. */
-export function snoozeBreak(state: BreakState, now: Minutes, snoozeMin: number): BreakState {
-  if (state.lastFired.length === 0) return state
+/**
+ * Re-queues a break for `snoozeMin` (clamped to 1–60) minutes: `parts` from the snoozed
+ * notification when given, else the last fired break.
+ */
+export function snoozeBreak(
+  state: BreakState,
+  now: Minutes,
+  snoozeMin: number,
+  parts: BreakPart[] = []
+): BreakState {
+  const again = parts.length > 0 ? parts : state.lastFired
+  if (again.length === 0) return state
   return {
     ...state,
-    pending: ordered([...state.pending, ...state.lastFired]),
+    pending: ordered([...state.pending, ...again]),
     snoozeUntil: now + clampSnooze(snoozeMin),
     lastFired: []
   }

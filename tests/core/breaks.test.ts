@@ -212,6 +212,13 @@ describe('holding', () => {
     expect(tickN(EMPTY_BREAK_STATE, 540, 20, o).fires.map((f) => f.now)).toEqual([559])
   })
 
+  it('a short gap between two different DND items still holds', () => {
+    const items = [mk('a', { dnd: true }), mk('b', { dnd: true })]
+    const blocks = [blk('task', 545, 600, 'a'), blk('task', 605, 660, 'b')]
+    const r = tickN(EMPTY_BREAK_STATE, 540, 121, { items, blocks })
+    expect(r.fires[0].now).toBe(660)
+  })
+
   it('isHeld ignores blocks of other times', () => {
     const items = [mk('a', { dnd: true })]
     expect(isHeld([blk('task', 600, 630)], items, 599, null, 5)).toBe(false)
@@ -220,7 +227,24 @@ describe('holding', () => {
   })
 })
 
+describe('fallback counter', () => {
+  it('turning Eye back on resets the fallback counter', () => {
+    const off = { ...S, eye: { ...S.eye, enabled: false } }
+    const a = tickN(EMPTY_BREAK_STATE, 540, 15, { settings: off })
+    const b = tickN(a.state, 555, 1)
+    const c = tickN(b.state, 556, 25, { settings: off })
+    // 20 working minutes after Eye went off again, not 5
+    expect(c.state.checkMin).toBe(5)
+  })
+})
+
 describe('snooze', () => {
+  it('snoozes the given parts instead of the last fired break', () => {
+    const s: BreakState = { ...EMPTY_BREAK_STATE, lastFired: ['eye', 'water'] }
+    expect(snoozeBreak(s, 600, 10, ['eye']).pending).toEqual(['eye'])
+    expect(snoozeBreak(s, 600, 10, []).pending).toEqual(['eye', 'water'])
+  })
+
   it('snooze re-fires after x minutes, merged', () => {
     const a = tickN(EMPTY_BREAK_STATE, 540, 20)
     const snoozed = snoozeBreak(a.state, 559, 10)

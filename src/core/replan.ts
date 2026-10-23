@@ -6,12 +6,16 @@ export interface Move {
   to: Minutes | null // null = not placed
 }
 
+/** Move id for the lunch block, which has no item; movesText names it "Lunch". */
+export const LUNCH_MOVE_ID = 'lunch'
+
 function firstStarts(blocks: Block[]): Map<string, Minutes> {
   const m = new Map<string, Minutes>()
   for (const b of blocks) {
-    if (b.itemId === null) continue
-    const cur = m.get(b.itemId)
-    if (cur === undefined || b.start < cur) m.set(b.itemId, b.start)
+    const id = b.kind === 'lunch' ? LUNCH_MOVE_ID : b.itemId
+    if (id === null) continue
+    const cur = m.get(id)
+    if (cur === undefined || b.start < cur) m.set(id, b.start)
   }
   return m
 }

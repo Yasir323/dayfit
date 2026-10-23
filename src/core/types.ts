@@ -54,6 +54,8 @@ export interface LunchClash {
   reason: 'clash' | 'passed'
   usual: Minutes
   clashWith: string | null
+  /** No block is in the way: lunch just doesn't fit inside working hours. */
+  outOfHours: boolean
   shorten: { start: Minutes; len: number } | null
   move: Minutes | null
 }

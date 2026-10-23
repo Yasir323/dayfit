@@ -15,7 +15,7 @@ import {
   type AttendanceKind
 } from '../core/endOfDay'
 import { lunchPickError, planDay } from '../core/scheduler'
-import { addDays, minutesOf, toDateStr, weekday } from '../core/time'
+import { addDays, minutesOf, toDateStr, weekOf } from '../core/time'
 import {
   isFixed,
   type Block,
@@ -65,11 +65,6 @@ const CALL_SLOTS = 3
 /** Matches nudge.ts MAX_NUDGES: a nudge state at this count is never repeated. */
 const NUDGES_EXHAUSTED = 2
 
-/** Monday–Sunday of the week containing `today`; mirrors weekOf in src/renderer/src/lib/dates.ts. */
-const weekDates = (today: DateStr): DateStr[] => {
-  const monday = addDays(today, -((weekday(today) + 6) % 7))
-  return Array.from({ length: 7 }, (_, i) => addDays(monday, i))
-}
 const byFixedThenCreated = (a: Item, b: Item): number =>
   (a.fixedStart ?? Infinity) === (b.fixedStart ?? Infinity)
     ? a.createdAt - b.createdAt
@@ -591,7 +586,7 @@ export class DayfitService {
       tomorrow: itemsForDate(s.items, addDays(today, 1))
         .filter((i) => i.status === 'open')
         .sort(byFixedThenCreated),
-      week: weekDates(today).map((date) => ({
+      week: weekOf(today).map((date) => ({
         date,
         count: itemsForDate(s.items, date).length
       })),

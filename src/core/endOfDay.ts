@@ -104,6 +104,8 @@ export function stepEndOfDay(input: {
     s.endOfDay.overtime &&
     !state.overtimeFired &&
     active &&
+    // One notification per tick: overtime waits if punch-out just fired.
+    !kinds.includes('attendance-out') &&
     now >= s.workEnd + OVERTIME_AFTER_MIN
   ) {
     state.overtimeFired = true

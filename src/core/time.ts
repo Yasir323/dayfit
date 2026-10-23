@@ -56,3 +56,9 @@ export function toDateStr(d: Date): DateStr {
 export function minutesOf(d: Date): Minutes {
   return d.getHours() * 60 + d.getMinutes()
 }
+
+/** Monday–Sunday of the week containing `today`. */
+export function weekOf(today: DateStr): DateStr[] {
+  const monday = addDays(today, -((weekday(today) + 6) % 7))
+  return Array.from({ length: 7 }, (_, i) => addDays(monday, i))
+}

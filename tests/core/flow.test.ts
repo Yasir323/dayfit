@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { suggestCallSlots } from '../../src/core/callSlots'
-import { diffMoves, frozenBlocks } from '../../src/core/replan'
+import { LUNCH_MOVE_ID, diffMoves, frozenBlocks } from '../../src/core/replan'
 import { applyNudgeAnswer, dueNudges } from '../../src/core/nudge'
 import { DEFAULT_SETTINGS as S, type Block, type Item } from '../../src/core/types'
 
@@ -44,6 +44,18 @@ describe('suggestCallSlots', () => {
   it('starts no earlier than now and stays inside work hours', () => {
     expect(suggestCallSlots([], 15, 1060, S)).toEqual([1060])
     expect(suggestCallSlots([], 15, 1070, S)).toEqual([])
+  })
+})
+
+describe('diffMoves: lunch', () => {
+  it('tracks lunch under LUNCH_MOVE_ID', () => {
+    const before = [blk(null, 780, 825, 'lunch')]
+    expect(diffMoves(before, [blk(null, 865, 910, 'lunch')])).toEqual([
+      { itemId: LUNCH_MOVE_ID, from: 780, to: 865 }
+    ])
+    expect(diffMoves([], [blk(null, 780, 825, 'lunch')])).toEqual([
+      { itemId: LUNCH_MOVE_ID, from: null, to: 780 }
+    ])
   })
 })
 

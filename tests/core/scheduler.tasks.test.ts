@@ -315,6 +315,7 @@ describe('planDay: lunch', () => {
       reason: 'clash',
       usual: 780,
       clashWith: 'Client call',
+      outOfHours: false,
       shorten: null,
       move: 865
     })
@@ -339,6 +340,7 @@ describe('planDay: lunch', () => {
       reason: 'passed',
       usual: 780,
       clashWith: null,
+      outOfHours: false,
       shorten: null,
       move: 900
     })
@@ -374,6 +376,12 @@ describe('planDay: lunch', () => {
   test('passed with no room left (e.g. after hours) asks nothing', () => {
     expect(plan([], { now: 1100 }).lunchClash).toBeNull()
     expect(plan([call(900, 180)], { now: 900 }).lunchClash).toBeNull()
+  })
+
+  test('a lunch that only overflows working hours is out of hours, not a clash with Busy', () => {
+    const r = plan([], { settings: { ...S, workEnd: 800 } })
+    expect(r.lunchClash).toMatchObject({ reason: 'clash', clashWith: null, outOfHours: true })
+    expect(plan([call(800, 60)]).lunchClash?.outOfHours).toBe(false)
   })
 
   test('lunchMin below 30 never offers shorten', () => {

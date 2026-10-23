@@ -1,14 +1,11 @@
 import type { DateStr } from '../../../core/types'
-import { addDays, weekday } from '../../../core/time'
+import { weekday } from '../../../core/time'
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 /** Monday–Sunday of the week containing `today`. Mirrored in src/main/service.ts (weekDates). */
-export function weekOf(today: DateStr): DateStr[] {
-  const monday = addDays(today, -((weekday(today) + 6) % 7))
-  return Array.from({ length: 7 }, (_, i) => addDays(monday, i))
-}
+export { weekOf } from '../../../core/time'
 
 export function weekdayShort(d: DateStr): string {
   return DAYS[weekday(d)]

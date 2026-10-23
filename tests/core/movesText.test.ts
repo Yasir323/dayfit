@@ -7,6 +7,18 @@ const items = [
   { id: 'b', title: 'Taxes' }
 ] as Item[]
 
+describe('movesText: lunch', () => {
+  it('names lunch; a newly placed lunch is not a move', () => {
+    expect(movesText([{ itemId: 'lunch', from: 780, to: 865 }], items)).toBe(
+      'Moved: Lunch 13:00 → 14:25'
+    )
+    expect(movesText([{ itemId: 'lunch', from: null, to: 780 }], items)).toBeNull()
+    expect(movesText([{ itemId: 'lunch', from: 780, to: null }], items)).toBe(
+      'Moved: Lunch 13:00 → unplanned'
+    )
+  })
+})
+
 describe('movesText', () => {
   it('lists moved items with old and new times', () => {
     expect(

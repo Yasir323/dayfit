@@ -1,4 +1,4 @@
-import type { Move } from './replan'
+import { LUNCH_MOVE_ID, type Move } from './replan'
 import { formatClock } from './time'
 import type { Item } from './types'
 
@@ -7,7 +7,10 @@ export function movesText(moves: Move[], items: Item[]): string | null {
   const parts = moves
     .filter((m) => m.from !== null)
     .map((m) => {
-      const title = items.find((i) => i.id === m.itemId)?.title ?? 'Item'
+      const title =
+        m.itemId === LUNCH_MOVE_ID
+          ? 'Lunch'
+          : (items.find((i) => i.id === m.itemId)?.title ?? 'Item')
       const to = m.to === null ? 'unplanned' : formatClock(m.to)
       return `${title} ${formatClock(m.from as number)} → ${to}`
     })

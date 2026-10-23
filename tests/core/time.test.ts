@@ -8,8 +8,18 @@ import {
   nextWeekday,
   parseClock,
   toDateStr,
+  weekOf,
   weekday
 } from '../../src/core/time'
+
+describe('weekOf', () => {
+  it('is Monday–Sunday of the week', () => {
+    const w = weekOf('2026-10-23')
+    expect(w[0]).toBe('2026-10-19')
+    expect(w).toHaveLength(7)
+    expect(w[6]).toBe('2026-10-25')
+  })
+})
 
 describe('time utils', () => {
   it('parseClock', () => {

@@ -478,7 +478,7 @@ function placeLunch(plan: Plan, input: PlanInput): { clash: LunchClash | null; r
     const move = nextSlot(plan.free, plan.window.start, len)
     if (move === null) return { clash: null, rejected }
     return {
-      clash: { reason: 'passed', usual, clashWith: null, shorten: null, move },
+      clash: { reason: 'passed', usual, clashWith: null, outOfHours: false, shorten: null, move },
       rejected
     }
   }
@@ -496,7 +496,8 @@ function placeLunch(plan: Plan, input: PlanInput): { clash: LunchClash | null; r
     clash: {
       reason: 'clash',
       usual,
-      clashWith: blocker ? titleOf(blocker, input.items) : 'Busy',
+      clashWith: blocker ? titleOf(blocker, input.items) : null,
+      outOfHours: blocker === undefined,
       shorten: n >= MIN_SHORT_LUNCH_MIN ? { start: usual, len: n } : null,
       move: nextSlot(plan.free, usual, len)
     },
