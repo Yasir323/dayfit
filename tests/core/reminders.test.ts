@@ -172,17 +172,3 @@ describe('stretch', () => {
     expect(after.state.lastStretchAt).toBe(631)
   })
 })
-
-describe('busy mode', () => {
-  const blocks = [block('deep', 540, 700)]
-  it('eye is silent when allowGentle', () => {
-    const r = run(620, { blocks, elapsedMin: 20, state: quiet(620) })
-    expect(r.events).toHaveLength(1)
-    expect(r.events[0]).toMatchObject({ kind: 'eye', silent: true })
-  })
-  it('no eye event when allowGentle is false', () => {
-    const settings = { ...DEFAULT_SETTINGS, busy: { allowGentle: false } }
-    const r = run(620, { blocks, settings, elapsedMin: 20, state: quiet(620) })
-    expect(kinds(r)).toEqual([])
-  })
-})

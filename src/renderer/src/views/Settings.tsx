@@ -264,17 +264,6 @@ export function Settings({ view, onView }: Props): React.JSX.Element {
       </fieldset>
 
       <fieldset>
-        <legend>Busy mode</legend>
-        <div className="group-card">
-          <Toggle
-            label="Gentle reminders during busy mode"
-            checked={s.busy.allowGentle}
-            onChange={(b) => send({ busy: { allowGentle: b } })}
-          />
-        </div>
-      </fieldset>
-
-      <fieldset>
         <legend>Shortcut and startup</legend>
         <div className="group-card">
           <Field

@@ -56,12 +56,12 @@ export interface Settings {
   lunch: Minutes | null
   bufferMin: number
   defaultDurations: Record<ItemType, number>
-  water: { enabled: boolean; targetMl: number; glassMl: number }
+  water: { enabled: boolean; intervalMin: number; targetMl: number; glassMl: number }
   eye: { enabled: boolean; intervalMin: number; idleResetMin: number }
   stretch: { enabled: boolean; intervalMin: number }
   walk: { enabled: boolean; intervalMin: number; durationMin: number }
   meetingAlert: { enabled: boolean; leadMin: number }
-  busy: { allowGentle: boolean }
+  breaks: { snoozeMin: number }
   hotkey: string
   launchAtLogin: boolean
   firstRunDone: boolean
@@ -73,12 +73,12 @@ export const DEFAULT_SETTINGS: Settings = {
   lunch: null,
   bufferMin: 5,
   defaultDurations: { task: 30, call: 15, deep: 120, household: 15, fixed: 30 },
-  water: { enabled: true, targetMl: 2000, glassMl: 250 },
+  water: { enabled: true, intervalMin: 60, targetMl: 2000, glassMl: 250 },
   eye: { enabled: true, intervalMin: 20, idleResetMin: 5 },
   stretch: { enabled: true, intervalMin: 60 },
   walk: { enabled: true, intervalMin: 120, durationMin: 10 },
   meetingAlert: { enabled: true, leadMin: 5 },
-  busy: { allowGentle: true },
+  breaks: { snoozeMin: 10 },
   hotkey: 'CommandOrControl+Shift+Space',
   launchAtLogin: true,
   firstRunDone: false

@@ -95,7 +95,12 @@ describe('store', () => {
     )
     const s = loadState(file)
     expect(s.settings.hotkey).toBe('X')
-    expect(s.settings.water).toEqual({ enabled: true, targetMl: 3000, glassMl: 250 })
+    expect(s.settings.water).toEqual({
+      enabled: true,
+      intervalMin: 60,
+      targetMl: 3000,
+      glassMl: 250
+    })
     expect(s.settings.workStart).toBe(DEFAULT_SETTINGS.workStart)
     expect(s.items).toEqual([])
     expect(s.reminder).toEqual(defaultState().reminder)

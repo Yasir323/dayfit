@@ -142,13 +142,7 @@ describe('Settings', () => {
 
   it('groups settings into titled sections', () => {
     render(<Settings view={view()} />)
-    for (const name of [
-      'Working hours',
-      'Planning',
-      'Reminders',
-      'Busy mode',
-      'Shortcut and startup'
-    ])
+    for (const name of ['Working hours', 'Planning', 'Reminders', 'Shortcut and startup'])
       expect(screen.getByRole('group', { name })).toBeInTheDocument()
   })
 })

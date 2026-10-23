@@ -47,7 +47,7 @@ export function dueReminders(input: {
   const events: ReminderEvent[] = []
   const busy = isBusy(blocks, now, manualBusy)
   const working = now >= settings.workStart && now < settings.workEnd
-  const gentle = settings.busy.allowGentle
+  const gentle = false
 
   // Meeting alerts: ignore busy mode.
   if (settings.meetingAlert.enabled) {
