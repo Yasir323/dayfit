@@ -4,6 +4,7 @@ import type { ViewState } from '../api'
 import { dayHeader } from '../lib/dates'
 import { Icon } from '../ui/Icon'
 import { Segmented } from '../ui/Segmented'
+import { CHECKOUT_BUTTON_LEAD_MIN } from '../../../core/endOfDay'
 import { nextUp } from '../lib/agenda'
 import { CalendarView } from './CalendarView'
 import { ListView } from './ListView'
@@ -44,9 +45,15 @@ interface Props {
   view: ViewState
   onView: (v: ViewState) => void
   onAddTask?: () => void
+  onCheckOut?: () => void
 }
 
-export function TodayTab({ view, onView, onAddTask = () => {} }: Props): React.JSX.Element {
+export function TodayTab({
+  view,
+  onView,
+  onAddTask = () => {},
+  onCheckOut = () => {}
+}: Props): React.JSX.Element {
   const [kind, setKind] = useState<TodayViewKind>(readView)
   const [failure, setFailure] = useState<string | null>(null)
 
@@ -130,6 +137,16 @@ export function TodayTab({ view, onView, onAddTask = () => {} }: Props): React.J
           ))}
         </div>
         <span className="next-up">{nextUp(view)}</span>
+        {view.now >= view.settings.workEnd - CHECKOUT_BUTTON_LEAD_MIN && (
+          <button
+            type="button"
+            className="btn checkout-btn"
+            disabled={view.checkedOut}
+            onClick={onCheckOut}
+          >
+            {view.checkedOut ? 'Checked out' : 'Check out'}
+          </button>
+        )}
       </footer>
     </div>
   )

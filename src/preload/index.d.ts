@@ -4,7 +4,7 @@ type Async<K extends keyof DayfitService> = (
   ...args: Parameters<DayfitService[K]>
 ) => Promise<ViewState>
 
-export type FocusTarget = 'quick-add' | 'nudge' | 'review'
+export type FocusTarget = 'quick-add' | 'nudge' | 'review' | 'checkout'
 
 export interface DayfitApi {
   view: Async<'view'>

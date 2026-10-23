@@ -695,3 +695,7 @@ body {
 .next-up:empty {
   display: none;
 }
+.checkout-btn {
+  flex: none;
+  white-space: nowrap;
+}

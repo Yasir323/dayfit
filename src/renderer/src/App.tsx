@@ -7,6 +7,8 @@ import { NudgeBanner } from './views/NudgeBanner'
 import { FirstRun } from './views/FirstRun'
 import { QuickAdd } from './views/QuickAdd'
 import { Review } from './views/Review'
+import { AttendanceBanner } from './views/AttendanceBanner'
+import { CheckOut } from './views/CheckOut'
 import { Settings } from './views/Settings'
 import { TodayTab } from './views/TodayTab'
 import { TabBar, type Tab } from './ui/TabBar'
@@ -20,6 +22,7 @@ export function App(): React.JSX.Element {
   const [toast, setToast] = useState<{ text: string } | null>(null)
   const [seenMoves, setSeenMoves] = useState<string | null>(null)
   const [nudgeFocus, setNudgeFocus] = useState(0)
+  const [checkout, setCheckout] = useState(false)
   const nudgeRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -29,6 +32,7 @@ export function App(): React.JSX.Element {
       if (target === 'quick-add') setTab('add')
       else setTab('today')
       if (target === 'nudge') setNudgeFocus((n) => n + 1)
+      if (target === 'checkout') setCheckout(true)
     })
     return () => {
       offState()
@@ -69,15 +73,24 @@ export function App(): React.JSX.Element {
   const titleOf = (id: string): string => view.items.find((i) => i.id === id)?.title ?? 'Item'
   const firstRunDone = view.settings.firstRunDone
   const review = view.plan.decisions.length > 0
-  const banners = view.nudges.map((id, k) => (
-    <NudgeBanner
-      key={id}
-      id={id}
-      title={titleOf(id)}
-      onView={setView}
-      ref={k === 0 ? nudgeRef : undefined}
-    />
-  ))
+  const portalUrl = view.settings.endOfDay.portalUrl
+  const banners = [
+    ...(['in', 'out'] as const)
+      .filter((k) => view.attendance[k])
+      .map((k) => (
+        <AttendanceBanner key={`punch-${k}`} kind={k} portalUrl={portalUrl} onView={setView} />
+      )),
+    ...view.nudges.map((id, k) => (
+      <NudgeBanner
+        key={id}
+        id={id}
+        title={titleOf(id)}
+        onView={setView}
+        ref={k === 0 ? nudgeRef : undefined}
+      />
+    ))
+  ]
+  const wrapUp = checkout && firstRunDone && !review
 
   return (
     <div className="app">
@@ -90,7 +103,12 @@ export function App(): React.JSX.Element {
       )}
       <main className="tab-body">
         {tab === 'today' && (
-          <TodayTab view={view} onView={setView} onAddTask={() => setTab('add')} />
+          <TodayTab
+            view={view}
+            onView={setView}
+            onAddTask={() => setTab('add')}
+            onCheckOut={() => setCheckout(true)}
+          />
         )}
         {tab === 'add' && (
           <QuickAdd
@@ -115,7 +133,20 @@ export function App(): React.JSX.Element {
         {tab === 'settings' && <Settings view={view} onView={setView} />}
       </main>
 
-      <TabBar value={tab} onChange={setTab} inert={!firstRunDone || review} />
+      <TabBar value={tab} onChange={setTab} inert={!firstRunDone || review || wrapUp} />
+
+      {wrapUp && (
+        <div className="overlay" role="dialog" aria-modal="true" aria-label="Wrap up today">
+          <CheckOut
+            view={view}
+            onDone={(v) => {
+              setView(v)
+              setCheckout(false)
+            }}
+            onCancel={() => setCheckout(false)}
+          />
+        </div>
+      )}
 
       {review && firstRunDone && (
         // Banners move inside the overlay so a nudge is never hidden behind Review.
