@@ -31,33 +31,36 @@ Everything below "Full backlog" is unprioritised beyond the v1 / later split.
 
 - [ ] Sign dev builds (Apple Development cert) so macOS shows notifications
 - [ ] Visual check of the redesign and break notifications in the running app (`npm run dev`)
-- [ ] Empty state missing when only Tomorrow/Later have items
-- [ ] Footer not sticky
-- [ ] Household items with a fixed start hide label and deadline
-- [ ] Today summary counts done items
-- [ ] Later hides an item's date when it has a deadline
-- [ ] Calendar and List accessibility labels
-- [ ] `⌘` glyph shown on Windows
-- [ ] Quick-add Cancel doesn't clear an earlier error
-- [ ] Only the tab bar is inert behind overlays
-- [ ] Week rule duplicated (service and renderer)
-- [ ] Accent colour contrast
-- [ ] Snooze acts on the latest break, not the clicked older notification
-- [ ] macOS shows only the first action (Snooze); Drank sits under Options
-- [ ] Stale fallback break counter after toggling Eye off/on/off
-- [ ] `!dnd` token highlight has no tinted background
-- [ ] Nudges use the old busy rule; breaks use DND/high priority — reconcile
-- [ ] A break can fire in the buffer between two different DND items
-- [ ] Nudge "+15 min" can push a future lunch block
-- [ ] "Unscheduled" answers (review and check-out) are lost on restart
-- [ ] "Tomorrow" at check-out keeps today's suggested call slots
-- [ ] macOS: "Punched" sits under Options when a portal link is set (only first action shows)
-- [ ] Punch-out and overtime can fire on the same tick
-- [ ] Lunch moves aren't announced in the "plan updated" toast
+- [x] Empty state missing when only Tomorrow/Later have items
+- [x] Footer not sticky
+- [x] Household items with a fixed start hide label and deadline
+- [x] Today summary counts done items
+- [x] Later hides an item's date when it has a deadline
+- [x] Calendar and List accessibility labels
+- [x] `⌘` glyph shown on Windows
+- [x] Quick-add Cancel doesn't clear an earlier error
+- [x] Only the tab bar is inert behind overlays
+- [x] Week rule duplicated (service and renderer)
+- [x] Accent colour contrast
+- [x] Snooze acts on the latest break, not the clicked older notification
+- [x] macOS shows only the first action (Snooze); Drank sits under Options
+- [x] Stale fallback break counter after toggling Eye off/on/off
+- [x] `!dnd` token highlight has no tinted background
+- [x] Nudges use the old busy rule; breaks use DND/high priority — reconcile
+- [x] A break can fire in the buffer between two different DND items
+- [x] Nudge "+15 min" can push a future lunch block
+- [x] "Unscheduled" answers (review and check-out) are lost on restart
+- [x] "Tomorrow" at check-out keeps today's suggested call slots
+- [x] macOS: "Punched" sits under Options when a portal link is set (only first action shows)
+- [x] Punch-out and overtime can fire on the same tick
+- [x] Lunch moves aren't announced in the "plan updated" toast
 - [ ] Answering a lunch clash can surface a second Review straight after Apply
-- [ ] Lunch clash says "clashes with Busy" when lunch only overflows working hours
+- [x] Lunch clash says "clashes with Busy" when lunch only overflows working hours
 - [ ] Review selection resets if the lunch clash changes while it is open
 - [ ] Lunch pick validated against a possibly stale `now` in the renderer
+- [x] Alert banner "Check out" dismisses even if a pending review blocks the check-out screen
+- [x] `markSeen` exposed over IPC but unused by the renderer
+- [x] No test for popover show → markSeen wiring (first-run order depends on line order in index.ts)
 
 ## Next up
 - [ ] Drag and drop on the timeline: drag tasks and lunch to a new time (drop = lock there); fixed items stay put
