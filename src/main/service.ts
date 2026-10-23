@@ -269,6 +269,24 @@ export class DayfitService {
     return this.buildView()
   }
 
+  /** Tomorrow's plan from the start of work, for the evening preview; nothing is saved. */
+  previewTomorrow(): { date: DateStr; blocks: Block[]; items: Item[] } {
+    this.begin()
+    const s = this.state
+    const date = addDays(this.today(), 1)
+    const items = itemsForDate(s.items, date)
+    const plan = planDay({
+      date,
+      now: s.settings.workStart,
+      items,
+      settings: s.settings,
+      frozen: [],
+      answers: [],
+      lunch: null
+    })
+    return { date, blocks: plan.blocks, items }
+  }
+
   /** Notification Snooze: the last break comes back after `breaks.snoozeMin` minutes. */
   /** `parts`: the snoozed notification's parts; the popover banner passes none (last break). */
   snoozeBreak(parts?: BreakPart[]): ViewState {

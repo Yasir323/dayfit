@@ -519,6 +519,23 @@ describe('DayfitService in-app alerts', () => {
   })
 })
 
+describe('DayfitService evening preview', () => {
+  it("previews tomorrow's plan without saving anything", () => {
+    svc.addItems([
+      newItem({ title: 'Standup', type: 'fixed', fixedStart: 570, repeat: { kind: 'daily' } }),
+      newItem({ title: 'Taxes', date: D1 })
+    ])
+    clock.set(26, 17, 30)
+    const before = JSON.stringify(loadState(file))
+    const p = svc.previewTomorrow()
+    expect(p.date).toBe(D1)
+    expect(p.items.map((i) => i.title).sort()).toEqual(['Standup', 'Taxes'])
+    expect(p.blocks.find((b) => b.kind === 'fixed')?.start).toBe(570)
+    expect(p.blocks.some((b) => b.itemId === 'id2')).toBe(true)
+    expect(JSON.stringify(loadState(file))).toBe(before)
+  })
+})
+
 describe('DayfitService lock at a start', () => {
   it('setLock with a start moves the task there', () => {
     clock.set(26, 8, 0) // before work, so the 09:00 block hasn't started

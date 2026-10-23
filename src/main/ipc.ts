@@ -46,6 +46,8 @@ export function registerIpc(
       return onState(fn.apply(service, args))
     })
   }
+  // Read-only queries that return data, not a new view.
+  ipcMain.handle('dayfit:previewTomorrow', () => service.previewTomorrow())
   ipcMain.on('dayfit:hide', () => shell.hide())
   ipcMain.on('dayfit:openPortal', () => shell.openPortal())
 }

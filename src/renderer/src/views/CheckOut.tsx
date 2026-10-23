@@ -14,10 +14,12 @@ interface Props {
   view: ViewState
   onDone: (v: ViewState) => void
   onCancel: () => void
+  /** Closes the screen and opens the Tomorrow view. */
+  onPreview?: () => void
 }
 
 /** "Wrap up today": decide what happens to each unfinished item, then start the punch-out. */
-export function CheckOut({ view, onDone, onCancel }: Props): React.JSX.Element {
+export function CheckOut({ view, onDone, onCancel, onPreview }: Props): React.JSX.Element {
   const rows = checkoutRows(view)
   const [choices, setChoices] = useState<Record<string, Choice>>({})
   const [saving, setSaving] = useState(false)
@@ -69,6 +71,11 @@ export function CheckOut({ view, onDone, onCancel }: Props): React.JSX.Element {
         </p>
       )}
       <div className="review-actions">
+        {onPreview && (
+          <button type="button" className="btn-ghost" onClick={onPreview}>
+            Preview tomorrow
+          </button>
+        )}
         <button type="button" className="btn" onClick={onCancel}>
           Not yet
         </button>

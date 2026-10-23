@@ -28,6 +28,7 @@ export function App(): React.JSX.Element {
   const [nudgeFocus, setNudgeFocus] = useState(0)
   const [checkout, setCheckout] = useState(false)
   const [editing, setEditing] = useState<Item | null>(null)
+  const [previewRequest, setPreviewRequest] = useState(0)
   const nudgeRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -136,6 +137,7 @@ export function App(): React.JSX.Element {
               onView={setView}
               onAddTask={() => setTab('add')}
               onCheckOut={openCheckout}
+              previewRequest={previewRequest}
             />
           )}
           {tab === 'add' && (
@@ -172,6 +174,11 @@ export function App(): React.JSX.Element {
                 setCheckout(false)
               }}
               onCancel={() => setCheckout(false)}
+              onPreview={() => {
+                setCheckout(false)
+                setTab('today')
+                setPreviewRequest((n) => n + 1)
+              }}
             />
           </div>
         )}

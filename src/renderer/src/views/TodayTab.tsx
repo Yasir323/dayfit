@@ -4,13 +4,14 @@ import type { ViewState } from '../api'
 import { dayHeader } from '../lib/dates'
 import { Icon } from '../ui/Icon'
 import { Segmented } from '../ui/Segmented'
+import { TomorrowView } from './TomorrowView'
 import { CHECKOUT_BUTTON_LEAD_MIN } from '../../../core/endOfDay'
 import { nextUp } from '../lib/agenda'
 import { CalendarView } from './CalendarView'
 import { ListView } from './ListView'
 import { TimelineView } from './TimelineView'
 
-export type TodayViewKind = 'list' | 'calendar' | 'timeline'
+export type TodayViewKind = 'list' | 'calendar' | 'timeline' | 'tomorrow'
 
 const VIEWS: [TodayViewKind, string][] = [
   ['list', 'List'],
@@ -46,15 +47,27 @@ interface Props {
   onView: (v: ViewState) => void
   onAddTask?: () => void
   onCheckOut?: () => void
+  /** Bumped by the check-out screen's "Preview tomorrow" to open the Tomorrow view. */
+  previewRequest?: number
 }
 
 export function TodayTab({
   view,
   onView,
   onAddTask = () => {},
-  onCheckOut = () => {}
+  onCheckOut = () => {},
+  previewRequest = 0
 }: Props): React.JSX.Element {
   const [kind, setKind] = useState<TodayViewKind>(readView)
+  const evening = view.now >= view.settings.workEnd - CHECKOUT_BUTTON_LEAD_MIN
+  const views: [TodayViewKind, string][] = evening ? [...VIEWS, ['tomorrow', 'Tomorrow']] : VIEWS
+  const shownKind = kind === 'tomorrow' && !evening && previewRequest === 0 ? 'list' : kind
+  // A new preview request from the check-out screen switches to the Tomorrow view.
+  const [seenRequest, setSeenRequest] = useState(previewRequest)
+  if (seenRequest !== previewRequest) {
+    setSeenRequest(previewRequest)
+    if (previewRequest > 0) setKind('tomorrow')
+  }
   const [failure, setFailure] = useState<string | null>(null)
 
   const choose = (k: TodayViewKind): void => {
@@ -107,7 +120,7 @@ export function TodayTab({
         )}
       </header>
 
-      <Segmented label="View" options={VIEWS} value={kind} onChange={choose} />
+      <Segmented label="View" options={views} value={shownKind} onChange={choose} />
 
       {failure && (
         <p className="error" role="alert">
@@ -116,11 +129,12 @@ export function TodayTab({
       )}
 
       <div className="today-body">
-        {kind === 'list' && <ListView view={view} onView={onView} onAddTask={onAddTask} />}
-        {kind === 'calendar' && (
+        {shownKind === 'list' && <ListView view={view} onView={onView} onAddTask={onAddTask} />}
+        {shownKind === 'calendar' && (
           <CalendarView view={view} onShowList={() => choose('list')} onAddTask={onAddTask} />
         )}
-        {kind === 'timeline' && <TimelineView view={view} onView={onView} />}
+        {shownKind === 'timeline' && <TimelineView view={view} onView={onView} />}
+        {shownKind === 'tomorrow' && <TomorrowView view={view} />}
       </div>
 
       <footer className="today-footer">

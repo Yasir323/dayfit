@@ -31,6 +31,7 @@ const dayfit = {
   checkOut: call('checkOut'),
   setManualBusy: call('setManualBusy'),
   updateSettings: call('updateSettings'),
+  previewTomorrow: () => ipcRenderer.invoke('dayfit:previewTomorrow'),
   hide: () => ipcRenderer.send('dayfit:hide'),
   openPortal: () => ipcRenderer.send('dayfit:openPortal'),
   onState: subscribe('dayfit:state'),
