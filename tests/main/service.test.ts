@@ -519,6 +519,25 @@ describe('DayfitService in-app alerts', () => {
   })
 })
 
+describe('DayfitService lock at a start', () => {
+  it('setLock with a start moves the task there', () => {
+    clock.set(26, 8, 0) // before work, so the 09:00 block hasn't started
+    svc.addItems([newItem({ title: 'A' })])
+    const v = svc.setLock('id1', true, 700)
+    expect(v.plan.blocks.find((b) => b.itemId === 'id1')).toMatchObject({ start: 700, end: 730 })
+    expect(loadState(file).items[0].lockedStart).toBe(700)
+  })
+
+  it('an invalid start is refused with a message', () => {
+    svc.addItems([
+      newItem({ title: 'A' }),
+      newItem({ title: 'Call', type: 'fixed', fixedStart: 700 })
+    ])
+    expect(() => svc.setLock('id1', true, 690)).toThrow('Clashes with Call')
+    expect(loadState(file).items[0].lockedStart).toBeNull()
+  })
+})
+
 describe('DayfitService repeating tasks', () => {
   it('a daily task is planned each day and done counts for one day only', () => {
     svc.addItems([newItem({ title: 'Water plants', repeat: { kind: 'daily' } })])

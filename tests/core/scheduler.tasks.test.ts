@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { lunchPickError, planDay, type PlanInput } from '../../src/core/scheduler'
+import { lunchPickError, planDay, slotError, type PlanInput } from '../../src/core/scheduler'
 import { DEFAULT_SETTINGS, type Block, type Item, type Settings } from '../../src/core/types'
 
 const D = '2026-10-23'
@@ -421,5 +421,22 @@ describe('planDay: gap after back-to-back meetings', () => {
     const t = task(30)
     const r = planDay(input([fixed(600, 30), fixed(700, 30), t], { now: 630 }))
     expect(blockOf(r.blocks, t.id)!.start).toBe(635)
+  })
+})
+
+describe('slotError', () => {
+  test('the same rules as a lunch pick, ignoring the moved item itself', () => {
+    const c = { ...fixed(800, 60), title: 'Client call' }
+    const own = item({ title: 'Mine' })
+    const blocks: Block[] = [
+      { itemId: c.id, kind: 'fixed', start: 800, end: 860, chunk: null, reason: 'Fixed' },
+      { itemId: own.id, kind: 'task', start: 600, end: 630, chunk: null, reason: 'Locked' }
+    ]
+    const err = (start: number): string | null =>
+      slotError(start, 30, blocks, [c, own], noWalks, 600, own.id)
+    expect(err(610)).toBeNull()
+    expect(err(790)).toBe('Clashes with Client call')
+    expect(err(590)).toBe('That time has passed')
+    expect(err(1060)).toBe('Outside working hours')
   })
 })

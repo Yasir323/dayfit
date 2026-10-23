@@ -1,4 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { slotError } from '../../../core/scheduler'
+import { PX_PER_MIN, dragMinutes } from '../lib/drag'
+import { api } from '../api'
 import { formatClock } from '../../../core/time'
 import type { Block, Minutes } from '../../../core/types'
 import { CallSlots } from './CallSlots'
@@ -10,8 +13,6 @@ interface Props {
   onView: (v: ViewState) => void
 }
 
-/** Timeline scale. */
-const PX_PER_MIN = 1.5
 /** Keeps very short blocks tall enough for their action buttons. */
 const MIN_BLOCK_PX = 18
 
@@ -37,6 +38,8 @@ function span(view: ViewState): { start: Minutes; end: Minutes } {
 
 export function TimelineView({ view, onView }: Props): React.JSX.Element {
   const [failure, setFailure] = useState<string | null>(null)
+  // The block being dragged, where the drag started, and how far it has moved (minutes).
+  const [drag, setDrag] = useState<{ block: Block; y0: number; delta: number } | null>(null)
 
   const run = async (p: () => Promise<ViewState>): Promise<void> => {
     setFailure(null)
@@ -46,6 +49,44 @@ export function TimelineView({ view, onView }: Props): React.JSX.Element {
       setFailure(e instanceof Error ? e.message : 'Something went wrong')
     }
   }
+
+  // Window listeners so the drag keeps tracking outside the block; dropping ends it.
+  useEffect(() => {
+    if (!drag) return
+    const move = (e: MouseEvent): void =>
+      setDrag((d) => (d ? { ...d, delta: dragMinutes(e.clientY - d.y0) } : d))
+    const up = (e: MouseEvent): void => {
+      const { block: b, y0 } = drag
+      setDrag(null)
+      const delta = dragMinutes(e.clientY - y0)
+      if (delta === 0) return
+      const start = b.start + delta
+      const len = b.end - b.start
+      const lunch = b.kind === 'lunch'
+      const error = slotError(
+        start,
+        len,
+        view.plan.blocks,
+        view.items,
+        view.settings,
+        view.now,
+        lunch ? 'lunch' : b.itemId
+      )
+      if (error) return setFailure(error)
+      void run(() =>
+        lunch
+          ? api.answerDecisions([], { kind: 'at', start, len })
+          : api.setLock(b.itemId as string, true, start)
+      )
+    }
+    window.addEventListener('mousemove', move)
+    window.addEventListener('mouseup', up)
+    return () => {
+      window.removeEventListener('mousemove', move)
+      window.removeEventListener('mouseup', up)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [drag?.block, drag?.y0])
 
   const byId = new Map(view.items.map((i) => [i.id, i]))
   const blocks = [...view.plan.blocks].sort((a, b) => a.start - b.start)
@@ -86,17 +127,36 @@ export function TimelineView({ view, onView }: Props): React.JSX.Element {
             const item = b.itemId === null ? undefined : byId.get(b.itemId)
             const title = b.kind === 'lunch' ? 'Lunch' : (item?.title ?? 'Busy')
             const done = item !== undefined && item.status !== 'open'
+            // Single-block tasks and lunch can be dragged; fixed items and deep chunks can't.
+            const draggable =
+              b.kind === 'lunch' ||
+              (b.kind === 'task' &&
+                item !== undefined &&
+                !done &&
+                item.fixedStart === null &&
+                firstBlock.has(b) &&
+                !chunked.has(item.id))
+            const dragging = drag?.block === b
+            const shown = dragging ? b.start + drag.delta : b.start
             return (
               <li
                 key={`${b.itemId ?? 'busy'}-${b.start}-${k}`}
-                className={`block block-${b.kind}${done ? ' is-done' : ''}`}
+                className={`block block-${b.kind}${done ? ' is-done' : ''}${draggable ? ' is-draggable' : ''}${dragging ? ' is-dragging' : ''}`}
                 style={{
-                  top: top(b.start),
+                  top: top(shown),
                   height: Math.max((b.end - b.start) * PX_PER_MIN, MIN_BLOCK_PX)
                 }}
                 title={b.reason}
+                onMouseDown={(e) => {
+                  // Buttons inside the block keep working; only the block body starts a drag.
+                  if (!draggable || e.button !== 0 || (e.target as HTMLElement).closest('button'))
+                    return
+                  e.preventDefault()
+                  setFailure(null)
+                  setDrag({ block: b, y0: e.clientY, delta: 0 })
+                }}
               >
-                <span className="block-time">{formatClock(b.start)}</span>
+                <span className="block-time">{formatClock(shown)}</span>
                 <span className="block-title">{title}</span>
                 {b.chunk && (
                   <span className="chunk">

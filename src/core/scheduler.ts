@@ -518,16 +518,17 @@ function placeLunch(plan: Plan, input: PlanInput): { clash: LunchClash | null; r
 }
 
 /**
- * Why lunch can't start at `start` for `len` minutes, or null when it can. Immovable means a fixed
- * block, a locked block, or one that has already started.
+ * Why a block can't be placed at `start` for `len` minutes, or null when it can. Immovable means
+ * fixed, lunch, locked, or already started. `ignore` is the moved item's id ('lunch' for lunch).
  */
-export function lunchPickError(
+export function slotError(
   start: Minutes,
   len: number,
   blocks: Block[],
   items: Item[],
   s: Settings,
-  now: Minutes
+  now: Minutes,
+  ignore: string | null
 ): string | null {
   if (start < s.workStart || start + len > s.workEnd) return 'Outside working hours'
   if (start < now) return 'That time has passed'
@@ -536,12 +537,25 @@ export function lunchPickError(
     .sort((a, b) => a.start - b.start)
     .find(
       (b) =>
-        (b.kind === 'fixed' || b.reason === 'Locked' || b.start <= now) &&
-        b.kind !== 'lunch' &&
+        !(ignore === 'lunch' ? b.kind === 'lunch' : b.itemId !== null && b.itemId === ignore) &&
+        (b.kind === 'fixed' || b.kind === 'lunch' || b.reason === 'Locked' || b.start <= now) &&
         b.start < start + len + pad &&
         b.end > start - pad
     )
-  return hit ? `Clashes with ${titleOf(hit, items)}` : null
+  if (!hit) return null
+  return `Clashes with ${hit.kind === 'lunch' ? 'Lunch' : titleOf(hit, items)}`
+}
+
+/** Why lunch can't start at `start` for `len` minutes, or null when it can. */
+export function lunchPickError(
+  start: Minutes,
+  len: number,
+  blocks: Block[],
+  items: Item[],
+  s: Settings,
+  now: Minutes
+): string | null {
+  return slotError(start, len, blocks, items, s, now, 'lunch')
 }
 
 export function planDay(raw: PlanInput): PlanResult {

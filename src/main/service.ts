@@ -14,7 +14,7 @@ import {
   EMPTY_END_OF_DAY_STATE,
   type AttendanceKind
 } from '../core/endOfDay'
-import { lunchPickError, planDay } from '../core/scheduler'
+import { lunchPickError, planDay, slotError } from '../core/scheduler'
 import { addDays, minutesOf, toDateStr, weekOf } from '../core/time'
 import {
   isFixed,
@@ -238,10 +238,25 @@ export class DayfitService {
     return this.replanAndSave()
   }
 
-  setLock(id: string, locked: boolean): ViewState {
+  /** Lock in place, or (drag and drop) lock at `start`; an invalid start throws its reason. */
+  setLock(id: string, locked: boolean, start?: Minutes): ViewState {
     this.begin()
     const item = this.find(id)
     if (!item) return this.buildView()
+    if (locked && typeof start === 'number') {
+      const error = slotError(
+        start,
+        item.durationMin,
+        this.todayPlan().blocks,
+        itemsForDate(this.state.items, this.today()),
+        this.state.settings,
+        this.nowMin(),
+        id
+      )
+      if (error) throw new Error(error)
+      item.lockedStart = start
+      return this.replanAndSave()
+    }
     if (locked) {
       // Only a single, unchunked block can be locked: a lock stores one start for the whole item.
       const own = this.todayPlan().blocks.filter((b) => b.itemId === id)

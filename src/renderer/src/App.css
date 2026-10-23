@@ -709,3 +709,12 @@ body {
   gap: var(--s2);
   margin-top: var(--s2);
 }
+.block.is-draggable {
+  cursor: grab;
+}
+.block.is-dragging {
+  cursor: grabbing;
+  z-index: 2;
+  box-shadow: var(--shadow-card);
+  opacity: 0.9;
+}

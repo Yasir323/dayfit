@@ -44,6 +44,49 @@ beforeEach(() => {
 })
 afterEach(cleanup)
 
+describe('Timeline drag and drop', () => {
+  const withTask = (): ViewState => {
+    const base = makeView()
+    return makeView({
+      items: [...base.items, item('t', 'Write report', { durationMin: 20 })],
+      plan: { ...base.plan, blocks: [...base.plan.blocks, block('t', 'task', 755, 775)] }
+    })
+  }
+  const blockOf = (name: string): HTMLElement =>
+    within(screen.getByRole('list', { name: 'Timeline' }))
+      .getAllByRole('listitem')
+      .find((li) => li.textContent?.includes(name)) as HTMLElement
+
+  it('dragging a task 30px down locks it 20 minutes later', () => {
+    api.setLock.mockResolvedValue(withTask())
+    render(<TimelineView view={withTask()} onView={vi.fn()} />)
+    const b = blockOf('Write report')
+    fireEvent.mouseDown(b, { clientY: 100, button: 0 })
+    fireEvent.mouseMove(window, { clientY: 130 })
+    fireEvent.mouseUp(window, { clientY: 130 })
+    expect(api.setLock).toHaveBeenCalledWith('t', true, 775)
+  })
+
+  it('a drop into the past is refused with a message', () => {
+    render(<TimelineView view={withTask()} onView={vi.fn()} />)
+    const b = blockOf('Write report')
+    fireEvent.mouseDown(b, { clientY: 400, button: 0 })
+    fireEvent.mouseMove(window, { clientY: 100 })
+    fireEvent.mouseUp(window, { clientY: 100 })
+    expect(api.setLock).not.toHaveBeenCalled()
+    expect(screen.getByRole('alert')).toHaveTextContent('That time has passed')
+  })
+
+  it('fixed blocks do not drag', () => {
+    render(<TimelineView view={withTask()} onView={vi.fn()} />)
+    const b = blockOf('Standup')
+    fireEvent.mouseDown(b, { clientY: 100, button: 0 })
+    fireEvent.mouseMove(window, { clientY: 160 })
+    fireEvent.mouseUp(window, { clientY: 160 })
+    expect(api.setLock).not.toHaveBeenCalled()
+  })
+})
+
 describe('Today timeline', () => {
   it('shows 3 blocks and labels the first deep chunk "1/2"', () => {
     render(<TimelineView view={makeView()} onView={vi.fn()} />)
