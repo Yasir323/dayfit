@@ -21,6 +21,7 @@ const dayfit = {
   replan: call('replan'),
   answerDecisions: call('answerDecisions'),
   answerNudge: call('answerNudge'),
+  planNow: call('planNow'),
   confirmCall: call('confirmCall'),
   setLock: call('setLock'),
   logWater: call('logWater'),

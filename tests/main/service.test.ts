@@ -291,4 +291,64 @@ describe('DayfitService', () => {
     const f = blockOf(v, 'id2')!
     expect(t.start < f.end && f.start < t.end).toBe(false)
   })
+
+  it('defers nudge notifications while busy; the banner still shows', () => {
+    svc.addItems([newItem()])
+    svc.setManualBusy(true)
+    clock.set(26, 9, 30)
+    let t = svc.tick(0)
+    expect(t.nudges).toEqual([])
+    expect(t.view.nudges).toEqual(['id1'])
+    expect(loadState(file).nudges['id1']).toBeUndefined()
+    clock.set(26, 9, 31)
+    svc.setManualBusy(null)
+    t = svc.tick(0)
+    expect(t.nudges).toEqual(['id1'])
+    expect(loadState(file).nudges['id1']).toEqual({ count: 1, lastAt: 571 })
+  })
+
+  it('the view drops call slots that are already past', () => {
+    svc.addItems([newItem({ type: 'call', durationMin: 15 })])
+    expect(svc.view().awaitingCalls[0].suggestedSlots).toContain(540)
+    clock.set(26, 9, 10)
+    const v = svc.view()
+    expect(v.awaitingCalls[0].suggestedSlots.every((x) => x >= 550)).toBe(true)
+    expect(v.items[0].suggestedSlots.every((x) => x >= 550)).toBe(true)
+  })
+
+  it('confirmCall ignores a slot that is already past', () => {
+    svc.addItems([newItem({ type: 'call', durationMin: 15 })])
+    clock.set(26, 9, 10)
+    const v = svc.confirmCall('id1', 540)
+    expect(v.items[0].fixedStart).toBeNull()
+    expect(loadState(file).items[0].fixedStart).toBeNull()
+  })
+
+  it('addItems moves a past-dated one-off item to today; repeating items keep their date', () => {
+    const v = svc.addItems([
+      newItem({ date: '2026-10-25' }),
+      newItem({ date: '2026-10-25', repeat: { kind: 'daily' } })
+    ])
+    expect(v.items.map((i) => [i.id, i.date])).toEqual([
+      ['id1', D],
+      ['id2', '2026-10-25']
+    ])
+  })
+
+  it('planNow forgets an unscheduled answer and plans the item', () => {
+    clock.set(26, 8, 0)
+    svc.addItems([newItem()])
+    let v = svc.answerDecisions([{ itemId: 'id1', choice: 'unscheduled' }])
+    expect(v.plan.unscheduled).toEqual(['id1'])
+    expect(blockOf(v, 'id1')).toBeUndefined()
+    v = svc.planNow('id1')
+    expect(v.plan.unscheduled).toEqual([])
+    expect(blockOf(v, 'id1')).toBeDefined()
+  })
+
+  it('reports the hotkey status the shell sets', () => {
+    expect(svc.view().hotkeyOk).toBe(true)
+    svc.setHotkeyOk(false)
+    expect(svc.view().hotkeyOk).toBe(false)
+  })
 })

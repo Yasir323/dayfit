@@ -13,6 +13,7 @@ export interface DayfitApi {
   replan: Async<'replan'>
   answerDecisions: Async<'answerDecisions'>
   answerNudge: Async<'answerNudge'>
+  planNow: Async<'planNow'>
   confirmCall: Async<'confirmCall'>
   setLock: Async<'setLock'>
   logWater: Async<'logWater'>

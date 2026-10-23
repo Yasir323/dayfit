@@ -9,6 +9,7 @@ export const IPC_METHODS = [
   'replan',
   'answerDecisions',
   'answerNudge',
+  'planNow',
   'confirmCall',
   'setLock',
   'logWater',

@@ -31,7 +31,8 @@ const view = (over: Partial<ViewState['settings']> = {}): ViewState =>
     nudges: [],
     busy: false,
     manualBusy: null,
-    waterMl: 0
+    waterMl: 0,
+    hotkeyOk: true
   }) as ViewState
 
 beforeEach(() => {

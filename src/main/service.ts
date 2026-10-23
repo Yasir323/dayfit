@@ -34,6 +34,8 @@ export interface ViewState {
   busy: boolean
   manualBusy: boolean | null
   waterMl: number
+  /** False when the quick-add shortcut could not be registered (set by the shell). */
+  hotkeyOk: boolean
 }
 
 const MAX_ELAPSED_MIN = 5
@@ -54,6 +56,7 @@ export class DayfitService {
    *  tomorrow/drop on non-repeating items, which are applied to the item instead. */
   private answers: DecisionAnswer[] = []
   private lastTickAt: number | null = null
+  private hotkeyOk = true
   /** Clock snapshot taken once per public call, so date and minutes always agree. */
   private at: Date
 
@@ -74,9 +77,12 @@ export class DayfitService {
   addItems(items: NewItem[]): ViewState {
     this.begin()
     const createdAt = this.at.getTime()
+    const today = this.today()
     for (const n of items)
       this.state.items.push({
         ...n,
+        // A one-off dated in the past (e.g. a form opened before midnight) belongs to today.
+        date: n.repeat.kind === 'none' && n.date < today ? today : n.date,
         id: this.idGen(),
         status: 'open',
         lockedStart: null,
@@ -162,9 +168,16 @@ export class DayfitService {
   confirmCall(id: string, start: Minutes): ViewState {
     this.begin()
     const item = this.find(id)
-    if (!item) return this.buildView()
+    if (!item || start < this.nowMin()) return this.buildView()
     item.fixedStart = start
     item.suggestedSlots = []
+    return this.replanAndSave()
+  }
+
+  /** Forgets today's "keep unscheduled" answer for the item and plans it again. */
+  planNow(id: string): ViewState {
+    this.begin()
+    this.answers = this.answers.filter((a) => a.itemId !== id)
     return this.replanAndSave()
   }
 
@@ -197,6 +210,11 @@ export class DayfitService {
     this.state.manualBusy = v
     this.save()
     return this.buildView()
+  }
+
+  /** Called by the shell after (re)registering the quick-add shortcut; not persisted. */
+  setHotkeyOk(ok: boolean): void {
+    this.hotkeyOk = ok
   }
 
   updateSettings(p: Partial<Settings>): ViewState {
@@ -234,13 +252,21 @@ export class DayfitService {
     })
     s.reminder = r.state
 
-    const nudges = dueNudges(blocks, items, now, s.nudges)
-    for (const id of nudges) {
-      s.nudges[id] = { count: (s.nudges[id]?.count ?? 0) + 1, lastAt: now }
-      if (!s.overdue.includes(id)) s.overdue.push(id)
-    }
+    // While busy, nudge notifications wait (uncounted) for the first non-busy tick;
+    // the item still shows as overdue in the app.
+    const due = dueNudges(blocks, items, now, s.nudges)
+    const busy = isBusy(blocks, now, s.manualBusy)
+    const overdueBefore = s.overdue.length
+    for (const id of due) if (!s.overdue.includes(id)) s.overdue.push(id)
+    const nudges = busy ? [] : due
+    for (const id of nudges) s.nudges[id] = { count: (s.nudges[id]?.count ?? 0) + 1, lastAt: now }
 
-    if (nudges.length > 0 || JSON.stringify(s.reminder) !== before) this.save()
+    if (
+      nudges.length > 0 ||
+      s.overdue.length !== overdueBefore ||
+      JSON.stringify(s.reminder) !== before
+    )
+      this.save()
     return { events: r.events, nudges, view: this.buildView() }
   }
 
@@ -370,7 +396,12 @@ export class DayfitService {
     const today = this.today()
     const now = this.nowMin()
     const plan = this.todayPlan()
-    const items = itemsForDate(s.items, today)
+    // Call slots already in the past are stale until the next replan; never offer them.
+    const items = itemsForDate(s.items, today).map((i) =>
+      i.suggestedSlots.some((x) => x < now)
+        ? { ...i, suggestedSlots: i.suggestedSlots.filter((x) => x >= now) }
+        : i
+    )
     return structuredClone({
       today,
       now,
@@ -384,7 +415,8 @@ export class DayfitService {
       nudges: [...s.overdue],
       busy: isBusy(plan.blocks, now, s.manualBusy),
       manualBusy: s.manualBusy,
-      waterMl: s.waterMl[today] ?? 0
+      waterMl: s.waterMl[today] ?? 0,
+      hotkeyOk: this.hotkeyOk
     })
   }
 }

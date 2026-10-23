@@ -15,6 +15,8 @@ const api = vi.hoisted(() => ({
   answerNudge: vi.fn(),
   answerDecisions: vi.fn(),
   addItems: vi.fn(),
+  planNow: vi.fn(),
+  hide: vi.fn(),
   onState: vi.fn(),
   onFocus: vi.fn()
 }))
@@ -98,6 +100,7 @@ function makeView(over: Partial<ViewState> = {}): ViewState {
     busy: false,
     manualBusy: null,
     waterMl: 500,
+    hotkeyOk: true,
     ...over
   }
 }
@@ -135,7 +138,40 @@ describe('Today timeline', () => {
     expect(within(blocks[0]).queryByRole('button', { name: 'Done' })).toBeNull()
     expect(within(blocks[1]).getByRole('button', { name: 'Done' })).toBeInTheDocument()
     await userEvent.click(within(blocks[0]).getByRole('button', { name: 'Delete' }))
+    await userEvent.click(within(blocks[0]).getByRole('button', { name: 'Yes' }))
     expect(api.updateItem).toHaveBeenCalledWith('standup', { status: 'dropped' })
+  })
+
+  it('delete drops a one-off flexible item at once', async () => {
+    api.updateItem.mockResolvedValue(makeView())
+    render(<Today view={makeView()} onView={vi.fn()} />)
+    const blocks = within(screen.getByRole('list', { name: 'Timeline' })).getAllByRole('listitem')
+    await userEvent.click(within(blocks[1]).getByRole('button', { name: 'Delete' }))
+    expect(api.updateItem).toHaveBeenCalledWith('deep', { status: 'dropped' })
+  })
+
+  it('deleting a repeating item asks to delete the whole series; No keeps it', async () => {
+    render(<Today view={makeView()} onView={vi.fn()} />)
+    const blocks = within(screen.getByRole('list', { name: 'Timeline' })).getAllByRole('listitem')
+    await userEvent.click(within(blocks[0]).getByRole('button', { name: 'Delete' }))
+    expect(within(blocks[0]).getByText('Delete the whole series?')).toBeInTheDocument()
+    await userEvent.click(within(blocks[0]).getByRole('button', { name: 'No' }))
+    expect(within(blocks[0]).queryByText('Delete the whole series?')).toBeNull()
+    expect(api.updateItem).not.toHaveBeenCalled()
+  })
+
+  it('lists unscheduled items with Plan now', async () => {
+    api.planNow.mockResolvedValue(makeView())
+    const base = makeView()
+    const v = makeView({
+      plan: { ...base.plan, unscheduled: ['u1'] },
+      items: [...base.items, item('u1', 'Do taxes')]
+    })
+    render(<Today view={v} onView={vi.fn()} />)
+    const list = screen.getByRole('region', { name: 'Unscheduled' })
+    expect(within(list).getByText('Do taxes')).toBeInTheDocument()
+    await userEvent.click(within(list).getByRole('button', { name: 'Plan now' }))
+    expect(api.planNow).toHaveBeenCalledWith('u1')
   })
 
   it('maps the busy toggle to setManualBusy', async () => {
@@ -173,6 +209,14 @@ describe('Awaiting calls', () => {
     expect(api.confirmCall).not.toHaveBeenCalled()
     await userEvent.click(screen.getByRole('button', { name: 'Yes' }))
     expect(api.confirmCall).toHaveBeenCalledWith('c1', 620)
+  })
+
+  it('delete drops an awaiting call', async () => {
+    api.updateItem.mockResolvedValue(view)
+    render(<Today view={view} onView={vi.fn()} />)
+    const section = screen.getByRole('region', { name: 'Awaiting time' })
+    await userEvent.click(within(section).getByRole('button', { name: 'Delete' }))
+    expect(api.updateItem).toHaveBeenCalledWith('c1', { status: 'dropped' })
   })
 })
 

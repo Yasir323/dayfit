@@ -92,6 +92,7 @@ body {
 .water button,
 .busy-toggle button,
 .awaiting button,
+.unscheduled button,
 .upcoming-toggle {
   padding: 3px 7px;
   border: 1px solid #c9ccd1;
@@ -224,16 +225,19 @@ body {
   background: #dc2626;
 }
 .awaiting,
+.unscheduled,
 .upcoming {
   margin-top: 12px;
 }
-.awaiting h3 {
+.awaiting h3,
+.unscheduled h3 {
   margin: 0 0 6px;
   font-size: 12px;
   color: #6b7280;
   text-transform: uppercase;
 }
-.awaiting-row {
+.awaiting-row,
+.unscheduled-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;

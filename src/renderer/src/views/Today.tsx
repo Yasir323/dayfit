@@ -51,6 +51,8 @@ export function Today({ view, onView }: Props): React.JSX.Element {
   const [failure, setFailure] = useState<string | null>(null)
   const [booking, setBooking] = useState<{ id: string; slot: Minutes; slots: string } | null>(null)
   const [showUpcoming, setShowUpcoming] = useState(false)
+  /** Repeating item whose delete awaits "Delete the whole series?". */
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
 
   // A pending "Book?" is void once the call is booked elsewhere or its slots change.
   const slotsKey = (c: Item): string => JSON.stringify(c.suggestedSlots)
@@ -99,6 +101,34 @@ export function Today({ view, onView }: Props): React.JSX.Element {
     }
   }
 
+  const drop = (id: string): void => {
+    setConfirmDelete(null)
+    void run(() => api.updateItem(id, { status: 'dropped' }))
+  }
+
+  // One-offs drop at once; a repeating item's status covers the whole series, so ask first.
+  const deleteButton = (item: Item): React.JSX.Element =>
+    confirmDelete === item.id ? (
+      <span className="confirm">
+        <span>Delete the whole series?</span>
+        <button type="button" onClick={() => drop(item.id)}>
+          Yes
+        </button>
+        <button type="button" onClick={() => setConfirmDelete(null)}>
+          No
+        </button>
+      </span>
+    ) : (
+      <button
+        type="button"
+        aria-label="Delete"
+        title="Delete"
+        onClick={() => (item.repeat.kind === 'none' ? drop(item.id) : setConfirmDelete(item.id))}
+      >
+        ✕
+      </button>
+    )
+
   const actions = (item: Item): React.JSX.Element => {
     const locked = item.lockedStart !== null
     return (
@@ -124,21 +154,13 @@ export function Today({ view, onView }: Props): React.JSX.Element {
             {locked ? '🔒' : '🔓'}
           </button>
         )}
-        {item.fixedStart !== null && (
-          <button
-            type="button"
-            aria-label="Delete"
-            title="Delete"
-            onClick={() => void run(() => api.updateItem(item.id, { status: 'dropped' }))}
-          >
-            ✕
-          </button>
-        )}
+        {deleteButton(item)}
       </span>
     )
   }
 
   const water = view.settings.water
+  const unscheduled = view.plan.unscheduled.flatMap((id) => byId.get(id) ?? [])
 
   return (
     <div className="today">
@@ -258,6 +280,21 @@ export function Today({ view, onView }: Props): React.JSX.Element {
                   )}
                 </span>
               )}
+              {deleteButton(c)}
+            </div>
+          ))}
+        </section>
+      )}
+
+      {unscheduled.length > 0 && (
+        <section className="unscheduled" aria-label="Unscheduled">
+          <h3>Unscheduled</h3>
+          {unscheduled.map((i) => (
+            <div key={i.id} className="unscheduled-row">
+              <span>{i.title}</span>
+              <button type="button" onClick={() => void run(() => api.planNow(i.id))}>
+                Plan now
+              </button>
             </div>
           ))}
         </section>
