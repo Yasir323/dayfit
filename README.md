@@ -44,7 +44,18 @@ All data is stored locally, in one JSON file:
 - macOS: `~/Library/Application Support/Dayfit/dayfit.json`
 - Windows: `%APPDATA%\Dayfit\dayfit.json`
 
-Dayfit makes no network calls and has no telemetry or update pings. v1 has no calendar sync; Google Calendar and other integrations are planned for later versions (see [TODO.md](TODO.md)).
+Dayfit has no telemetry or update pings. It makes no network calls unless you connect Google Calendar (below); then it talks only to Google.
+
+## Google Calendar (optional)
+
+Dayfit can bring today's meetings in as fixed items and, if you turn it on, show your planned task and deep-work blocks on your calendar as busy time. You use your own Google OAuth client:
+
+1. In [Google Cloud Console](https://console.cloud.google.com/), pick or create a project.
+2. Enable the **Google Calendar API**.
+3. Create an **OAuth client ID** of type **Desktop app** (set up the consent screen first if asked; add yourself as a test user).
+4. In Dayfit, open **Settings → Google Calendar**, paste the client ID and client secret, and click **Connect**.
+
+Sign-in happens in your browser. Dayfit first asks for read-only access; it asks again for write access only when you turn on "Show my planned blocks on Google Calendar". The sign-in token is encrypted with the system keychain and kept out of backups. Dayfit only edits or deletes events it created itself. Sync runs every 15 minutes, when the Mac wakes, and on **Sync now**.
 
 ## Develop
 

@@ -163,7 +163,8 @@ try {
   for (const [group, name] of [
     ['Features', '17-settings-features'],
     ['My reminders', '18-settings-reminders'],
-    ['Home setup', '19-settings-home-setup']
+    ['Home setup', '19-settings-home-setup'],
+    ['Google Calendar', '20-settings-google-calendar']
   ]) {
     await page.getByRole('group', { name: group }).scrollIntoViewIfNeeded()
     await shot(name)

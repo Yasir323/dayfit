@@ -114,7 +114,7 @@ Calendar sync, Slack/Teams, AI and mood detection stay in "Later versions".
 
 ## Later versions
 
-- [ ] Google Calendar sync (read meetings, write planned blocks back)
+- [x] Google Calendar sync (read meetings, write planned blocks back)
 - [ ] Slack / Teams / Meet integration
 - [ ] Paid AI brain-dump (free-form sentences)
 - [ ] Camera mood / fatigue detection + coffee suggestion
@@ -130,9 +130,9 @@ Calendar sync, Slack/Teams, AI and mood detection stay in "Later versions".
 - [x] Water reminder based on daily target intake
 - [x] Stretching reminder
 - [x] Walk reminder
-- [ ] Meeting reminder (calendar connection)
+- [x] Meeting reminder (calendar connection)
 - [ ] Meeting organiser and scheduler
-- [ ] Google Calendar sync
+- [x] Google Calendar sync
 - [x] Busy mode (turns off notifications)
 
 ## Mood and energy detection
