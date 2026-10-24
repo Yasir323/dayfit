@@ -72,6 +72,30 @@ export interface PlanResult {
   /** The saved lunch answer no longer fits (a new clash); the caller should forget it. */
   lunchAnswerRejected: boolean
 }
+/** A user-made reminder: at set times (fires even when busy) or every N minutes of work. */
+export interface CustomReminder {
+  id: string
+  title: string
+  kind: 'at' | 'every'
+  times: Minutes[]
+  everyMin: number
+  enabled: boolean
+}
+
+/** Optional wellbeing features, each with its own switch. */
+export interface Features {
+  mood: { enabled: boolean; times: Minutes[] }
+  standing: { enabled: boolean; intervalMin: number }
+  breathe: { enabled: boolean }
+  windDown: { enabled: boolean; afterMin: number }
+  daylight: { enabled: boolean; at: Minutes }
+  callFatigue: { enabled: boolean; thresholdMin: number }
+  commute: { enabled: boolean }
+  autoBusyFullscreen: { enabled: boolean }
+  fatigue: { enabled: boolean }
+  reminders: CustomReminder[]
+}
+
 export interface Settings {
   workStart: Minutes
   workEnd: Minutes
@@ -95,6 +119,7 @@ export interface Settings {
     headsUp: boolean
     overtime: boolean
   }
+  features: Features
   hotkey: string
   launchAtLogin: boolean
   firstRunDone: boolean
@@ -115,6 +140,18 @@ export const DEFAULT_SETTINGS: Settings = {
   breaks: { snoozeMin: 10 },
   coffee: { capCups: 3, cutoff: 900 },
   endOfDay: { attendance: true, portalUrl: '', lunchMin: 45, headsUp: true, overtime: true },
+  features: {
+    mood: { enabled: true, times: [630, 810, 990] },
+    standing: { enabled: false, intervalMin: 30 },
+    breathe: { enabled: true },
+    windDown: { enabled: true, afterMin: 60 },
+    daylight: { enabled: true, at: 690 },
+    callFatigue: { enabled: true, thresholdMin: 180 },
+    commute: { enabled: true },
+    autoBusyFullscreen: { enabled: true },
+    fatigue: { enabled: false },
+    reminders: []
+  },
   hotkey: 'CommandOrControl+Shift+Space',
   launchAtLogin: true,
   firstRunDone: false

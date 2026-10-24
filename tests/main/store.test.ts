@@ -7,6 +7,7 @@ import { defaultState, loadState, saveState } from '../../src/main/store'
 import { openDb } from '../../src/main/db'
 import { EMPTY_BREAK_STATE } from '../../src/core/breaks'
 import { EMPTY_END_OF_DAY_STATE } from '../../src/core/endOfDay'
+import { EMPTY_WELLBEING_STATE } from '../../src/core/wellbeing'
 
 let dir: string
 let file: string
@@ -93,6 +94,20 @@ describe('store', () => {
     delete older.endOfDay
     writeRaw(older)
     expect(loadState(file).endOfDay).toEqual(EMPTY_END_OF_DAY_STATE)
+  })
+
+  it('older state gets the backlog round 2 defaults', () => {
+    const older: Record<string, unknown> = { ...defaultState() }
+    for (const k of ['moods', 'wellbeing', 'ergonomics', 'fatigueBaseline']) delete older[k]
+    const settings: Record<string, unknown> = { ...defaultState().settings }
+    delete settings.features
+    writeRaw({ ...older, settings })
+    const s = loadState(file)
+    expect(s.settings.features).toEqual(DEFAULT_SETTINGS.features)
+    expect(s.moods).toEqual({})
+    expect(s.wellbeing).toEqual(EMPTY_WELLBEING_STATE)
+    expect(s.ergonomics).toEqual([])
+    expect(s.fatigueBaseline).toBeNull()
   })
 
   it('older state without lunchAnswer loads with null', () => {

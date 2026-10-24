@@ -346,3 +346,43 @@ describe('Settings backup', () => {
     expect(within(backup).queryByRole('alert')).toBeNull()
   })
 })
+
+describe('Settings features', () => {
+  const F = DEFAULT_SETTINGS.features
+  it('lists every feature with a switch that saves the whole features group', async () => {
+    api.updateSettings.mockResolvedValue(view())
+    render(<Settings view={view()} />)
+    const group = screen.getByRole('group', { name: 'Features' })
+    for (const name of [
+      'Mood check-ins',
+      'Sit/stand reminders',
+      'Breathing offers',
+      'Wind-down',
+      'Daylight nudge',
+      'Call fatigue',
+      'Start-of-day ritual',
+      'Busy when full screen',
+      'Fatigue signals'
+    ])
+      expect(within(group).getByRole('switch', { name })).toBeInTheDocument()
+    await userEvent.click(within(group).getByRole('switch', { name: 'Sit/stand reminders' }))
+    expect(api.updateSettings).toHaveBeenCalledWith({
+      features: { ...F, standing: { ...F.standing, enabled: true } }
+    })
+  })
+
+  it('numbers sit with their feature and save', async () => {
+    api.updateSettings.mockResolvedValue(view())
+    render(<Settings view={view()} />)
+    const group = screen.getByRole('group', { name: 'Features' })
+    const field = within(group).getByLabelText('Wind down after work end (min)')
+    fireEvent.change(field, { target: { value: '45' } })
+    fireEvent.blur(field)
+    expect(api.updateSettings).toHaveBeenCalledWith({
+      features: { ...F, windDown: { ...F.windDown, afterMin: 45 } }
+    })
+    expect(within(group).getByLabelText('Daylight nudge at')).toHaveValue('11:30')
+    expect(within(group).getByLabelText('Call fatigue after (min of meetings)')).toHaveValue(180)
+    expect(within(group).getByLabelText('Switch sit/stand every (min)')).toHaveValue(30)
+  })
+})

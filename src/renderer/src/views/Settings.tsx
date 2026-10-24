@@ -1,6 +1,10 @@
 import { useId, useState } from 'react'
 import { formatClock } from '../../../core/time'
-import type { ItemType, Settings as SettingsShape } from '../../../core/types'
+import type {
+  Features as FeaturesShape,
+  ItemType,
+  Settings as SettingsShape
+} from '../../../core/types'
 import { api } from '../api'
 import type { ViewState } from '../api'
 import {
@@ -129,6 +133,63 @@ function Toggle({
 }
 
 const DURATION_TYPES: ItemType[] = ['task', 'call', 'deep', 'household', 'fixed']
+
+type Switchable = Exclude<keyof FeaturesShape, 'reminders'>
+const FEATURE_LABELS: [Switchable, string][] = [
+  ['mood', 'Mood check-ins'],
+  ['standing', 'Sit/stand reminders'],
+  ['breathe', 'Breathing offers'],
+  ['windDown', 'Wind-down'],
+  ['daylight', 'Daylight nudge'],
+  ['callFatigue', 'Call fatigue'],
+  ['commute', 'Start-of-day ritual'],
+  ['autoBusyFullscreen', 'Busy when full screen'],
+  ['fatigue', 'Fatigue signals']
+]
+
+/** Every optional wellbeing feature: a switch each, with its numbers underneath. */
+function FeaturesGroup({ s, send }: { s: SettingsShape; send: Send }): React.JSX.Element {
+  const f = s.features
+  const set = <K extends Switchable>(k: K, patch: Partial<FeaturesShape[K]>): Promise<boolean> =>
+    send({ features: { ...f, [k]: { ...f[k], ...patch } } })
+  return (
+    <fieldset>
+      <legend>Features</legend>
+      <div className="group-card">
+        {FEATURE_LABELS.map(([k, label]) => (
+          <div key={k}>
+            <Toggle
+              label={label}
+              checked={f[k].enabled}
+              onChange={(b) => void set(k, { enabled: b })}
+            />
+            {k === 'standing' &&
+              num('Switch sit/stand every (min)', f.standing.intervalMin, (n) =>
+                set('standing', { intervalMin: n })
+              )}
+            {k === 'windDown' &&
+              num('Wind down after work end (min)', f.windDown.afterMin, (n) =>
+                set('windDown', { afterMin: n })
+              )}
+            {k === 'daylight' && (
+              <Field
+                label="Daylight nudge at"
+                type="time"
+                value={formatClock(f.daylight.at)}
+                parse={parseTime}
+                onValid={(v) => set('daylight', { at: v })}
+              />
+            )}
+            {k === 'callFatigue' &&
+              num('Call fatigue after (min of meetings)', f.callFatigue.thresholdMin, (n) =>
+                set('callFatigue', { thresholdMin: n })
+              )}
+          </div>
+        ))}
+      </div>
+    </fieldset>
+  )
+}
 
 /** Export and import of everything, through the main process's file dialogs. */
 function Backup({ onView }: { onView?: (v: ViewState) => void }): React.JSX.Element {
@@ -433,6 +494,8 @@ export function Settings({ view, onView }: Props): React.JSX.Element {
           />
         </div>
       </fieldset>
+
+      <FeaturesGroup s={s} send={send} />
 
       <Backup onView={onView} />
     </section>
