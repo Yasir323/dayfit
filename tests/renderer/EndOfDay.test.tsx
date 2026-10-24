@@ -128,6 +128,12 @@ describe('check-out', () => {
     expect(screen.queryByRole('dialog', { name: 'Wrap up today' })).toBeNull()
   })
 
+  it('the wrap-up screen opens with focus on Done for today', async () => {
+    await show(withEod({ now: 1030, items: tasks }))
+    await userEvent.click(screen.getByRole('button', { name: 'Check out' }))
+    expect(screen.getByRole('button', { name: 'Done for today' })).toHaveFocus()
+  })
+
   it('Not yet closes without changes', async () => {
     await show(withEod({ now: 1030, items: tasks }))
     await userEvent.click(screen.getByRole('button', { name: 'Check out' }))

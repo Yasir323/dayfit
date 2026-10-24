@@ -6,6 +6,8 @@ const SHOWN = 3
 export function BannerStack({ banners }: { banners: React.JSX.Element[] }): React.JSX.Element {
   const [open, setOpen] = useState(false)
   const hidden = banners.length - SHOWN
+  // Folded again once the stack is short: a later pile-up starts folded.
+  if (open && hidden <= 0) setOpen(false)
   return (
     <>
       {open || hidden <= 0 ? banners : banners.slice(0, SHOWN)}

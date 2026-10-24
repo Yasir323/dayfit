@@ -1275,3 +1275,19 @@ describe('DayfitService partial feature patches', () => {
     expect(saved.mood).toEqual(f.mood)
   })
 })
+
+describe('DayfitService days off: review fixes', () => {
+  it('no punch banners on a day off', () => {
+    clock.set(31, 11, 0) // Saturday
+    expect(svc.view().attendance).toEqual({ in: false, out: false })
+    clock.set(31, 19, 0)
+    expect(svc.view().attendance).toEqual({ in: false, out: false })
+  })
+
+  it("a day off's summary is marked, and trends skip it", () => {
+    clock.set(31, 10, 0)
+    const v = svc.checkOut([])
+    expect(v.daySummary?.offDay).toBe(true)
+    expect(svc.week().risk.days).toBe(0)
+  })
+})

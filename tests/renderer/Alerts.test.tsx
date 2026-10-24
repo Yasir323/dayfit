@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom/vitest'
-import { cleanup, render, screen, within } from '@testing-library/react'
+import { act, cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Alert } from '../../src/core/alerts'
@@ -193,6 +193,21 @@ describe('alert banners', () => {
     expect(within(stack()).getAllByRole('region')).toHaveLength(5)
     await userEvent.click(screen.getByRole('button', { name: 'Show fewer' }))
     expect(within(stack()).getAllByRole('region')).toHaveLength(3)
+  })
+
+  it('Show more folds back once the stack is short again', async () => {
+    let push: ((v: ViewState) => void) | undefined
+    api.onState.mockImplementation((cb?: (v: ViewState) => void) => {
+      push = cb
+      return () => {}
+    })
+    const mk = (n: number): Alert =>
+      alert({ id: `slump:${n}`, kind: 'slump', title: `Banner ${n}`, parts: [], at: n })
+    await show([1, 2, 3, 4].map(mk))
+    await userEvent.click(screen.getByRole('button', { name: 'Show 1 more' }))
+    act(() => push?.(makeView({ alerts: [1, 2].map(mk) })))
+    act(() => push?.(makeView({ alerts: [1, 2, 3, 4, 5].map(mk) })))
+    expect(screen.getByRole('button', { name: 'Show 2 more' })).toBeInTheDocument()
   })
 
   it('lunch banner only dismisses', async () => {

@@ -52,7 +52,7 @@ export interface BurnoutRisk {
 
 /** A rough warning from the last 10 saved days: a day with any signal counts once. */
 export function burnoutRisk(days: DaySummary[]): BurnoutRisk {
-  const recent = days.slice(-RISK_DAYS)
+  const recent = days.filter((d) => d.offDay !== true).slice(-RISK_DAYS)
   const late = recent.filter((d) => d.overtime === true)
   const fewBreaks = recent.filter((d) => d.breaksTaken < FEW_BREAKS)
   const lowMood = recent.filter((d) => d.moodAvg != null && d.moodAvg <= LOW_MOOD)
@@ -83,7 +83,9 @@ const STREAK_MIN_SCREEN = 60
 export function streaks(days: (DaySummary | null)[]): Streaks {
   const list = days.filter(
     (d): d is DaySummary =>
-      d !== null && (d.screenMin === undefined || d.screenMin >= STREAK_MIN_SCREEN)
+      d !== null &&
+      d.offDay !== true &&
+      (d.screenMin === undefined || d.screenMin >= STREAK_MIN_SCREEN)
   )
   const run = (ok: (d: DaySummary) => boolean): number => {
     let n = 0

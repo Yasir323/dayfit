@@ -841,6 +841,7 @@ export class DayfitService {
       waterTargetMl: s.settings.water.targetMl,
       coffeeCups: s.coffee[date] ?? 0,
       moods: s.moods[date] ?? [],
+      offDay: !s.settings.workDays.includes(weekday(date)),
       // Today's end-of-day state is only known for the day it belongs to.
       overtime: date === s.lastDate && s.endOfDay.overtimeFired
     })
@@ -1032,7 +1033,10 @@ export class DayfitService {
       autoBusy: this.autoBusy,
       waterMl: s.waterMl[today] ?? 0,
       coffee: s.coffee[today] ?? 0,
-      attendance: attendanceDue(s.endOfDay, now, s.settings),
+      // No punching in on a day off.
+      attendance: s.settings.workDays.includes(weekday(today))
+        ? attendanceDue(s.endOfDay, now, s.settings)
+        : { in: false, out: false },
       checkedOut: s.endOfDay.checkedOut,
       alerts: s.alerts,
       ergonomics: s.ergonomics,

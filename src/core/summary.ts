@@ -34,6 +34,8 @@ export interface DaySummary {
   overtime?: boolean
   /** Minutes at the computer. Absent in older rows. */
   screenMin?: number
+  /** Not a work day: kept for the week view, left out of streaks and burnout risk. */
+  offDay?: boolean
 }
 
 export interface SummaryInput {
@@ -48,6 +50,7 @@ export interface SummaryInput {
   coffeeCups: number
   moods?: { at?: number; score: number }[]
   overtime?: boolean
+  offDay?: boolean
 }
 
 export function summarizeDay(input: SummaryInput): DaySummary {
@@ -72,7 +75,8 @@ export function summarizeDay(input: SummaryInput): DaySummary {
     meetings: day.filter(isFixed).length,
     moodAvg: moodAverage(input.moods ?? []),
     overtime: input.overtime ?? false,
-    screenMin: Math.round(stats.activeMin ?? 0)
+    screenMin: Math.round(stats.activeMin ?? 0),
+    ...(input.offDay ? { offDay: true } : {})
   }
 }
 

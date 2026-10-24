@@ -109,3 +109,14 @@ describe('streaks', () => {
     expect(streaks([older as DaySummary]).onTime).toBe(1)
   })
 })
+
+describe('days off in trends', () => {
+  it('burnout and streaks ignore days off', () => {
+    const off = (d: string): DaySummary => day(d, { offDay: true, breaksTaken: 0, overtime: true })
+    expect(burnoutRisk([day('1'), off('2'), off('3'), off('4')])).toMatchObject({
+      days: 1,
+      level: 'Low'
+    })
+    expect(streaks([day('1'), off('2'), day('3')])).toEqual({ water: 2, breaks: 2, onTime: 2 })
+  })
+})

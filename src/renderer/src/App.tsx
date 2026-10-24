@@ -200,7 +200,7 @@ export function App(): React.JSX.Element {
           </Overlay>
         )}
         {wrapUp && (
-          <Overlay label="Wrap up today">
+          <Overlay label="Wrap up today" initialFocus=".review-actions .btn-primary">
             <CheckOut
               view={view}
               onDone={(v) => {
