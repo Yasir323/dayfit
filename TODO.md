@@ -77,6 +77,10 @@ Everything below "Full backlog" is unprioritised beyond the v1 / later split.
 - [x] Cursor jitter (`turns`) is measured but not used in the fatigue signal
 - [x] Work days setting: check-ins, start-of-day and wind-down also fire on weekends
 - [x] Mood check-in times can't be changed in Settings
+- [ ] Work days: two quick taps can drop the first (list built from the last saved view)
+- [ ] List rows: one Tab stop per row (use roving focus); Enter on a row does nothing
+- [ ] Focus isn't returned to the opener when an overlay closes
+- [ ] Esc in Edit item discards unsaved edits without asking
 
 ## Pick next — finish the app end to end (tick what to build)
 Calendar sync, Slack/Teams, AI and mood detection stay in "Later versions".
