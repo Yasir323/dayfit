@@ -36,6 +36,10 @@ async function start(): Promise<void> {
     audio: false
   })
   window.addEventListener('pagehide', () => stream.getTracks().forEach((t) => t.stop()))
+  // An unplugged camera ends the run; a stalled one starves its minutes (scored as away).
+  for (const track of stream.getVideoTracks()) {
+    track.addEventListener('ended', () => api.sendError('Camera stopped'))
+  }
   const video = document.createElement('video')
   video.muted = true
   video.playsInline = true
@@ -49,8 +53,12 @@ async function start(): Promise<void> {
   })
   api.onCalibrate(() => collector.startCalibration())
   let last = -1
+  let lastVideoTime = -1
   setInterval(() => {
     if (video.readyState < 2) return
+    // Only new frames count: a frozen feed then starves the minute, which is scored as away.
+    if (video.currentTime === lastVideoTime) return
+    lastVideoTime = video.currentTime
     const t = performance.now()
     if (t <= last) return
     last = t

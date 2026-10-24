@@ -199,7 +199,8 @@ const isPresent = (m: MinuteScore): boolean => m.present >= PRESENT_MIN
  * calibration: another desk or camera, so posture and distance would be guesses.
  */
 export function calibrationFits(minutes: MinuteScore[], cal: Calibration): boolean {
-  const first = minutes.filter(isPresent).slice(0, DRY_WINDOW)
+  // Only minutes since the calibration: recalibrating after a move clears the warning.
+  const first = minutes.filter((m) => isPresent(m) && m.at > cal.at).slice(0, DRY_WINDOW)
   if (first.length < DRY_WINDOW || cal.iris <= 0) return true
   const ratio = median(first.map((m) => m.iris)) / cal.iris
   return ratio >= STALE_LOW && ratio <= STALE_HIGH
@@ -294,6 +295,10 @@ export function summarizeCamera(
   }
 }
 
+/** More than this in a minute isn't a real reading. */
+const MAX_BLINKS = 600
+const MAX_YAWNS = 60
+
 const SCORE_FIELDS = [
   'at',
   'present',
@@ -317,7 +322,9 @@ export function isMinuteScore(v: unknown): v is MinuteScore {
     m.perclos >= 0 &&
     m.perclos <= 1 &&
     m.blinks >= 0 &&
+    m.blinks <= MAX_BLINKS &&
     m.yawns >= 0 &&
+    m.yawns <= MAX_YAWNS &&
     m.iris >= 0 &&
     m.at > 0
   )

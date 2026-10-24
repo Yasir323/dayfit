@@ -56,3 +56,14 @@ describe('camera collector', () => {
     expect(c.buffered()).toBeLessThanOrEqual(BUFFER_CAP)
   })
 })
+
+describe('camera collector: starved minutes', () => {
+  it('scores a minute with too few frames as away', () => {
+    const { c, onMinute } = make()
+    // A frozen feed: only every 4th frame is new (2.5 fps).
+    for (let i = 0; i < 600; i += 4) c.push(frame(i * 100))
+    c.push(frame(60_000))
+    expect(onMinute).toHaveBeenCalledTimes(1)
+    expect(onMinute.mock.calls[0][0]).toMatchObject({ present: 0, blinks: 0, perclos: 0 })
+  })
+})

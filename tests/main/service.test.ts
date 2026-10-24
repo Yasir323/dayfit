@@ -1447,6 +1447,21 @@ describe('DayfitService camera cues', () => {
     const v = svc.checkOut([])
     expect(v.daySummary?.camera).toMatchObject({ minutes: 10, yawns: 10 })
   })
+  it('keeps only the score fields of a minute', () => {
+    clock.set(26, 10)
+    const extra = { ...score(1), landmarks: [{ x: 1, y: 2 }], note: 'x'.repeat(1000) }
+    svc.addCameraMinute(extra as MinuteScore)
+    expect(Object.keys(svc.view().camera.lastMinute ?? {}).sort()).toEqual([
+      'at',
+      'blinks',
+      'faceY',
+      'iris',
+      'perclos',
+      'pitch',
+      'present',
+      'yawns'
+    ])
+  })
   it('shows the status set by the shell', () => {
     svc.setCameraStatus({ running: true, permission: 'granted', calibrating: false })
     expect(svc.view().camera).toMatchObject({ running: true, permission: 'granted' })

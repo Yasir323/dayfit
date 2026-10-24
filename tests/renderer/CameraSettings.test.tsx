@@ -30,7 +30,7 @@ const on = (cam: Partial<ViewState['camera']> = {}, set: Partial<Cam> = {}): Vie
   view({ permission: 'granted', ...cam }, { enabled: true, ...set })
 const group = (): ReturnType<typeof within> =>
   within(screen.getByRole('group', { name: 'Camera cues' }))
-const MAIN = 'Use the camera for tiredness and posture cues'
+const MAIN = 'Use the camera'
 const cal = { pitch: 0, faceY: 0.5, iris: 0.04, at: new Date(2026, 9, 24, 9).getTime() }
 
 beforeEach(() => {

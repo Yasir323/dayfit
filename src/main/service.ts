@@ -701,7 +701,20 @@ export class DayfitService {
     this.state.camera = {
       ...cam,
       date: today,
-      minutes: [...minutes, { ...m }].slice(-CAMERA_MINUTES_KEPT)
+      // Only the score fields are kept: nothing else the page sends reaches the disk.
+      minutes: [
+        ...minutes,
+        {
+          at: m.at,
+          present: m.present,
+          blinks: m.blinks,
+          perclos: m.perclos,
+          yawns: m.yawns,
+          pitch: m.pitch,
+          faceY: m.faceY,
+          iris: m.iris
+        }
+      ].slice(-CAMERA_MINUTES_KEPT)
     }
     this.save()
   }

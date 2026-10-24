@@ -210,6 +210,13 @@ describe('calibrationFits', () => {
       )
     ).toBe(false)
   })
+  it('judges only minutes after the calibration', () => {
+    const morning = run(10, () => ({ iris: 0.1 })) // another setup, before recalibrating
+    const recal = { ...cal, at: morning[9].at + 1 }
+    const afternoon = run(10, (i) => ({ at: recal.at + (i + 1) * MIN, iris: 0.041 }))
+    expect(calibrationFits([...morning, ...afternoon], recal)).toBe(true)
+    expect(calibrationFits(morning, recal)).toBe(true) // nothing after it yet
+  })
   it('is not judged before 10 present minutes', () => {
     expect(
       calibrationFits(
@@ -327,6 +334,8 @@ describe('isMinuteScore', () => {
     ['Infinity', { ...minute(0), pitch: Infinity }],
     ['present above 1', { ...minute(0), present: 2 }],
     ['negative count', { ...minute(0), yawns: -1 }],
+    ['impossible blink count', { ...minute(0), blinks: 601 }],
+    ['impossible yawn count', { ...minute(0), yawns: 61 }],
     ['not an object', 'hello'],
     ['null', null],
     ['array', [minute(0)]]

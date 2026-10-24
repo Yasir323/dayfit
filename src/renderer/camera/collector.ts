@@ -12,6 +12,8 @@ const MINUTE_MS = 60_000
 const CALIBRATION_MS = 5_000
 /** A little over a minute of frames; older ones are dropped if minutes stop closing. */
 export const BUFFER_CAP = FPS * 70
+/** A minute with fewer frames than this (a frozen or starved feed) is scored as away. */
+export const MIN_FRAMES = (FPS * 60) / 2
 
 /** Groups frames into minute scores (and a calibration on request). Frames never leave. */
 export function createCollector(o: {
@@ -29,7 +31,7 @@ export function createCollector(o: {
       minute.push(f)
       if (minute.length > BUFFER_CAP) minute = minute.slice(-BUFFER_CAP)
       if (spans(minute, MINUTE_MS)) {
-        o.onMinute(foldMinute(minute, o.now()))
+        o.onMinute(foldMinute(minute.length >= MIN_FRAMES ? minute : [], o.now()))
         minute = []
       }
       if (calib) {
