@@ -11,6 +11,9 @@ const REVOKE_URL = 'https://oauth2.googleapis.com/revoke'
 
 export type Fetch = typeof fetch
 
+/** The loopback was closed on purpose (Cancel, or a newer Connect): not an error to show. */
+export const SIGN_IN_CANCELLED = 'Sign-in cancelled'
+
 /** A failed Google call: `code` is Google's error code (or ours), `status` the HTTP status. */
 export class GoogleError extends Error {
   constructor(
@@ -110,7 +113,7 @@ export function listenForCode(state: string, timeoutMs: number): Promise<Loopbac
       res({
         redirectUri: `http://127.0.0.1:${port}`,
         code,
-        close: () => finish(new Error('Sign-in cancelled'))
+        close: () => finish(new Error(SIGN_IN_CANCELLED))
       })
     })
   })
@@ -142,7 +145,14 @@ const expiry = (body: Record<string, unknown>, nowMs: number): number =>
 
 export async function exchangeCode(
   f: Fetch,
-  o: { clientId: string; clientSecret: string; code: string; verifier: string; redirectUri: string }
+  o: {
+    clientId: string
+    clientSecret: string
+    code: string
+    verifier: string
+    redirectUri: string
+  },
+  nowMs: number
 ): Promise<{ refreshToken: string; accessToken: string; expiresAt: number; scope: string }> {
   const body = await postForm(f, TOKEN_URL, {
     grant_type: 'authorization_code',
@@ -157,7 +167,7 @@ export async function exchangeCode(
   return {
     refreshToken: body.refresh_token,
     accessToken: String(body.access_token ?? ''),
-    expiresAt: expiry(body, Date.now()),
+    expiresAt: expiry(body, nowMs),
     scope: typeof body.scope === 'string' ? body.scope : ''
   }
 }

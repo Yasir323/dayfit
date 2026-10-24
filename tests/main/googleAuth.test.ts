@@ -122,9 +122,7 @@ describe('exchangeCode', () => {
     const { f, calls } = fakeFetch(() =>
       json(200, { refresh_token: 'r', access_token: 'a', expires_in: 3600, scope: READ_SCOPE })
     )
-    vi.spyOn(Date, 'now').mockReturnValue(1000)
-    const t = await exchangeCode(f, opts)
-    vi.restoreAllMocks()
+    const t = await exchangeCode(f, opts, 1000)
     expect(t).toEqual({
       refreshToken: 'r',
       accessToken: 'a',
@@ -144,13 +142,13 @@ describe('exchangeCode', () => {
   })
   it('fails without a refresh token', async () => {
     const { f } = fakeFetch(() => json(200, { access_token: 'a', expires_in: 3600 }))
-    await expect(exchangeCode(f, opts)).rejects.toMatchObject({ code: 'no_refresh_token' })
+    await expect(exchangeCode(f, opts, 0)).rejects.toMatchObject({ code: 'no_refresh_token' })
   })
   it('turns an error answer into a GoogleError', async () => {
     const { f } = fakeFetch(() =>
       json(401, { error: 'invalid_client', error_description: 'The OAuth client was not found.' })
     )
-    const e = await exchangeCode(f, opts).catch((x: unknown) => x)
+    const e = await exchangeCode(f, opts, 0).catch((x: unknown) => x)
     expect(e).toBeInstanceOf(GoogleError)
     expect(e).toMatchObject({
       code: 'invalid_client',
