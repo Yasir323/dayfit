@@ -1165,3 +1165,28 @@ describe('DayfitService home setup', () => {
     expect(loadState(file).ergonomics).toEqual(['chair', 'wrists'])
   })
 })
+
+describe('DayfitService auto busy', () => {
+  it('full screen holds breaks while busy mode is Auto; Available still wins', () => {
+    svc.setAutoBusy(true)
+    expect(svc.view().busy).toBe(true)
+    expect(svc.view().autoBusy).toBe(true)
+    svc.setManualBusy(false)
+    expect(svc.view().busy).toBe(false)
+    svc.setManualBusy(null)
+    svc.setAutoBusy(false)
+    expect(svc.view().busy).toBe(false)
+  })
+
+  it('a break waits while another app is full screen', () => {
+    svc.markPunched('in')
+    svc.setAutoBusy(true)
+    svc.tick(0)
+    const kinds: string[] = []
+    for (let m = 1; m <= 25; m++) {
+      clock.set(26, 9, m)
+      kinds.push(...svc.tick(0).events.map((e) => e.kind))
+    }
+    expect(kinds).not.toContain('break')
+  })
+})

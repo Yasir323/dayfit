@@ -184,6 +184,11 @@ export function TodayTab({
               </button>
             ))}
           </div>
+          {view.autoBusy && view.manualBusy === null && (
+            <span className="auto-busy" title="Another app is full screen">
+              Full screen
+            </span>
+          )}
           <span className="next-up">{nextUp(view)}</span>
           {view.now >= view.settings.workEnd - CHECKOUT_BUTTON_LEAD_MIN && (
             <button

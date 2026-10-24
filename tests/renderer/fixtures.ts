@@ -85,6 +85,7 @@ export function makeView(over: Partial<ViewState> = {}): ViewState {
     focus: null,
     daySummary: null,
     ergonomics: [],
+    autoBusy: false,
     coffee: 0,
     ...over
   }

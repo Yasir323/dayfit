@@ -728,6 +728,11 @@ body {
   text-align: left;
   font-size: 12px;
 }
+.auto-busy {
+  flex: none;
+  color: var(--warn);
+  font-size: 11px;
+}
 .next-up {
   flex: 1;
   min-width: 0;

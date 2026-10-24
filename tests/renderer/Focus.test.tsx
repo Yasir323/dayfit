@@ -64,3 +64,13 @@ describe('focus timer', () => {
     expect(api.stopFocus).toHaveBeenCalled()
   })
 })
+
+describe('auto busy hint', () => {
+  it('the footer says when another app is full screen, only while busy mode is Auto', () => {
+    render(<TodayTab view={makeView({ autoBusy: true })} onView={vi.fn()} />)
+    expect(screen.getByText('Full screen')).toBeInTheDocument()
+    cleanup()
+    render(<TodayTab view={makeView({ autoBusy: true, manualBusy: false })} onView={vi.fn()} />)
+    expect(screen.queryByText('Full screen')).toBeNull()
+  })
+})

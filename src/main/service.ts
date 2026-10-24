@@ -14,7 +14,7 @@ import {
   EMPTY_END_OF_DAY_STATE,
   type AttendanceKind
 } from '../core/endOfDay'
-import { EMPTY_WELLBEING_STATE, stepWellbeing } from '../core/wellbeing'
+import { EMPTY_WELLBEING_STATE, effectiveBusy, stepWellbeing } from '../core/wellbeing'
 import { ERGONOMICS } from '../core/ergonomics'
 import { burnoutRisk, energyLow, streaks, type BurnoutRisk, type Streaks } from '../core/trends'
 import { EMPTY_DAY_STATS, summarizeDay, type DayStats, type DaySummary } from '../core/summary'
@@ -72,6 +72,8 @@ export interface ViewState {
   trayLabel: string | null
   /** Home setup checklist items ticked. */
   ergonomics: string[]
+  /** Another app is full screen right now (auto busy). */
+  autoBusy: boolean
   /** Today's summary once checked out, else null. */
   daySummary: DaySummary | null
   /** The running focus session, if any. */
@@ -560,6 +562,11 @@ export class DayfitService {
     return this.buildView()
   }
 
+  /** Set by the shell's full-screen probe each tick; not persisted. */
+  setAutoBusy(on: boolean): void {
+    this.autoBusy = on
+  }
+
   /** Called by the shell after (re)registering the quick-add shortcut; not persisted. */
   setHotkeyOk(ok: boolean): void {
     this.hotkeyOk = ok
@@ -616,6 +623,8 @@ export class DayfitService {
       s.wellbeing
     ])
 
+    // Manual Busy/Available wins; otherwise another app in full screen counts as busy.
+    const busyNow = effectiveBusy(s.manualBusy, this.autoBusy)
     const r = dueReminders({
       now,
       elapsedMin,
@@ -624,7 +633,7 @@ export class DayfitService {
       items,
       settings: s.settings,
       waterMlToday: s.waterMl[today] ?? 0,
-      manualBusy: s.manualBusy,
+      manualBusy: busyNow,
       state: s.reminder
     })
     s.reminder = r.state
@@ -634,7 +643,7 @@ export class DayfitService {
       blocks,
       items,
       settings: s.settings,
-      manualBusy: s.manualBusy,
+      manualBusy: busyNow,
       coffeeToday: s.coffee[today] ?? 0,
       slumpAt: energyLow(s.moods, today),
       state: s.endOfDay
@@ -663,7 +672,7 @@ export class DayfitService {
     const due = dueNudges(blocks, items, now, s.nudges)
     // Nudges wait only inside a running DND / high-priority block (no gap rule): the moment
     // between two focus tasks is exactly when "time's up" is useful.
-    const busy = isHeld(blocks, items, now, s.manualBusy, 0)
+    const busy = isHeld(blocks, items, now, busyNow, 0)
     const overdueBefore = s.overdue.length
     for (const id of due) if (!s.overdue.includes(id)) s.overdue.push(id)
     const nudges = busy ? [] : due
@@ -972,10 +981,11 @@ export class DayfitService {
         plan.blocks,
         itemsForDate(s.items, today),
         now,
-        s.manualBusy,
+        effectiveBusy(s.manualBusy, this.autoBusy),
         s.settings.bufferMin
       ),
       manualBusy: s.manualBusy,
+      autoBusy: this.autoBusy,
       waterMl: s.waterMl[today] ?? 0,
       coffee: s.coffee[today] ?? 0,
       attendance: attendanceDue(s.endOfDay, now, s.settings),

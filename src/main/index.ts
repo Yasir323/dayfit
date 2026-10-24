@@ -1,4 +1,4 @@
-import { app, dialog, globalShortcut, powerMonitor, shell } from 'electron'
+import { app, dialog, globalShortcut, powerMonitor, screen, shell } from 'electron'
 import { readFile, writeFile } from 'node:fs/promises'
 import { join } from 'path'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
@@ -7,6 +7,8 @@ import { guarded } from './guard'
 import { createHotkeyBinder } from './hotkey'
 import { registerIpc, type ExportResult, type ImportResult } from './ipc'
 import { parseBackup } from './backup'
+import { probeWindows } from './probes'
+import { isFullscreen } from '../core/fullscreen'
 import { planUpdatedNotice, showNotification } from './notify'
 import { DayfitService, type ViewState } from './service'
 import { createPopover } from './tray'
@@ -160,9 +162,29 @@ if (!app.requestSingleInstanceLock()) {
       }
       publish(view)
     })
-    setInterval(tick, TICK_MS)
-    powerMonitor.on('resume', tick)
-    powerMonitor.on('unlock-screen', tick)
+    // Before each tick: is another app full screen? A failed probe counts as no.
+    const fullScreenNow = async (): Promise<boolean> => {
+      if (!service.view().settings.features.autoBusyFullscreen.enabled) return false
+      const windows = await probeWindows()
+      const displays = screen
+        .getAllDisplays()
+        .map((d) => ({ x: d.bounds.x, y: d.bounds.y, w: d.bounds.width, h: d.bounds.height }))
+      return windows !== null && isFullscreen(windows, displays, process.pid)
+    }
+    const probeThenTick = (): void => {
+      fullScreenNow()
+        .catch((e: unknown) => {
+          console.error('full-screen probe failed', e)
+          return false
+        })
+        .then((full) => {
+          service.setAutoBusy(full)
+          tick()
+        })
+    }
+    setInterval(probeThenTick, TICK_MS)
+    powerMonitor.on('resume', probeThenTick)
+    powerMonitor.on('unlock-screen', probeThenTick)
   })
 
   app.on('will-quit', () => globalShortcut.unregisterAll())
