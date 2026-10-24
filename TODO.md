@@ -71,6 +71,12 @@ Everything below "Full backlog" is unprioritised beyond the v1 / later split.
 - [x] `doneDates` on daily items grows without limit (prune at rollover)
 - [x] Snoozing a pre-midnight break notification lowers today's break count
 - [x] During a lunch clash, call-slot suggestions can offer the slot lunch would move to
+- [ ] Features toggles: two quick toggles before the view refreshes can undo the first
+- [ ] Banners can still pile up in the popover over a busy day (one new nudge per tick)
+- [ ] Waking the Mac runs the probe and tick twice (resume + unlock)
+- [ ] Cursor jitter (`turns`) is measured but not used in the fatigue signal
+- [ ] Work days setting: check-ins, start-of-day and wind-down also fire on weekends
+- [ ] Mood check-in times can't be changed in Settings
 
 ## Pick next — finish the app end to end (tick what to build)
 Calendar sync, Slack/Teams, AI and mood detection stay in "Later versions".
