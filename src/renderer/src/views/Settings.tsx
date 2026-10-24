@@ -516,7 +516,6 @@ function CalendarGroup({
               value={creds.clientId}
               parse={asText}
               onValid={(clientId) => send({ calendar: { clientId } })}
-              onBlurOnly
             />
             <Field
               label="Client secret"
@@ -524,7 +523,6 @@ function CalendarGroup({
               value={creds.clientSecret}
               parse={asText}
               onValid={(clientSecret) => send({ calendar: { clientSecret } })}
-              onBlurOnly
             />
             <details className="muted">
               <summary>How to get these</summary>

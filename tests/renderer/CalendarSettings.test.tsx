@@ -1,6 +1,7 @@
 import '@testing-library/jest-dom/vitest'
 import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { useState } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ViewState } from '../../src/main/service'
 
@@ -43,7 +44,7 @@ describe('Google Calendar settings: not connected', () => {
     expect(g.getByText('Add your Google OAuth client ID')).toBeInTheDocument()
     expect(g.getByRole('button', { name: 'Connect' })).toBeDisabled()
   })
-  it('saves the client ID and secret on blur', async () => {
+  it('saves the client ID and secret as typed', async () => {
     render(<Settings view={view()} />)
     const g = within(group())
     await userEvent.type(g.getByLabelText('Client ID'), 'abc.apps.googleusercontent.com')
@@ -69,6 +70,28 @@ describe('Google Calendar settings: not connected', () => {
     const g = within(group())
     expect(g.getByText('How to get these')).toBeInTheDocument()
     expect(g.getAllByRole('listitem')).toHaveLength(4)
+  })
+})
+
+describe('Google Calendar settings: first connect', () => {
+  it('connects on the first click right after typing the secret', async () => {
+    let current = view()
+    api.updateSettings.mockImplementation(
+      async (p: { calendar?: Partial<ViewState['settings']['calendar']> }) => {
+        current = view({}, { ...current.settings.calendar, ...p.calendar })
+        return current
+      }
+    )
+    function Live(): React.JSX.Element {
+      const [v, setV] = useState(current)
+      return <Settings view={v} onView={setV} />
+    }
+    render(<Live />)
+    const g = within(group())
+    await userEvent.type(g.getByLabelText('Client ID'), 'abc')
+    await userEvent.type(g.getByLabelText('Client secret'), 'sec')
+    await userEvent.click(g.getByRole('button', { name: 'Connect' }))
+    expect(api.calendar).toHaveBeenCalledWith('connect')
   })
 })
 
