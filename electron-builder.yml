@@ -27,6 +27,7 @@ mac:
   entitlementsInherit: build/entitlements.mac.plist
   extendInfo:
     LSUIElement: true
+    NSCameraUsageDescription: Dayfit uses the camera on your Mac to notice tiredness and posture. Nothing is recorded or sent.
   # Unsigned local build. To sign and notarize, remove `identity: null`, set
   # `notarize: true`, and provide a Developer ID certificate and Apple
   # credentials (see README, "Signing").

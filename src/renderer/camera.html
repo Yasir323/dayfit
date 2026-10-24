@@ -1,0 +1,15 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Dayfit camera</title>
+    <!-- Hidden page: frames stay here; only per-minute scores leave, over IPC. -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; connect-src 'self'; img-src 'self' blob:; media-src 'self' blob: mediastream:"
+    />
+  </head>
+  <body>
+    <script type="module" src="/camera/main.ts"></script>
+  </body>
+</html>
