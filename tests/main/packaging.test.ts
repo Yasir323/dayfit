@@ -48,3 +48,21 @@ describe('camera cues packaging', () => {
     )
   })
 })
+
+describe('app icon and installers', () => {
+  const yml = read('electron-builder.yml')
+  it('mac and Windows builds use the generated icons', () => {
+    expect(yml).toContain('icon: build/icon.icns')
+    expect(yml).toContain('icon: build/icon.ico')
+    for (const f of ['build/icon.svg', 'build/icon.png', 'build/icon.icns', 'build/icon.ico'])
+      expect(fs.existsSync(path.join(root, f)), f).toBe(true)
+  })
+  it('mac builds are unsigned until signing is set up', () => {
+    expect(yml).toMatch(/^ {2}identity: null$/m)
+  })
+  it('dist scripts never publish', () => {
+    const pkg = JSON.parse(read('package.json')) as { scripts: Record<string, string> }
+    expect(pkg.scripts['dist:mac']).toContain('--mac --publish never')
+    expect(pkg.scripts['dist:win']).toContain('--win --publish never')
+  })
+})

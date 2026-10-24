@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- Dayfit app icon: a clock face whose hands form a check mark. Source for build/icon.{png,icns,ico};
+       regenerate with `npm run icons`. The 100px margin follows the macOS icon grid. -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f27a4f"/>
+      <stop offset="1" stop-color="#c9431c"/>
+    </linearGradient>
+  </defs>
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#bg)"/>
+  <circle cx="512" cy="512" r="262" fill="none" stroke="#ffffff" stroke-width="60"/>
+  <path d="M 512 300 V 336 M 724 512 H 688 M 512 724 V 688 M 300 512 H 336" stroke="#ffffff"
+        stroke-width="36" stroke-linecap="round"/>
+  <path d="M 404 522 L 482 600 L 634 420" fill="none" stroke="#ffffff" stroke-width="60"
+        stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

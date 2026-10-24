@@ -14,8 +14,9 @@
     "build": "npm run typecheck && electron-vite build",
     "postinstall": "install-electron && electron-builder install-app-deps",
     "test": "vitest run",
-    "dist:mac": "electron-vite build && electron-builder --mac",
-    "dist:win": "electron-vite build && electron-builder --win"
+    "dist:mac": "electron-vite build && electron-builder --mac --publish never",
+    "dist:win": "electron-vite build && electron-builder --win --publish never",
+    "icons": "electron scripts/make-icons.mjs"
   },
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.2",

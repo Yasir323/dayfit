@@ -12,17 +12,29 @@ asarUnpack:
   - resources/**
 win:
   executableName: Dayfit
+  icon: build/icon.ico
   target:
-    - nsis
+    - target: nsis
+      arch:
+        - x64
 nsis:
   artifactName: ${productName}-${version}-setup.${ext}
   shortcutName: ${productName}
   uninstallDisplayName: ${productName}
   createDesktopShortcut: always
 mac:
+  icon: build/icon.icns
+  # Used by the zip; the dmg sets its own name below.
+  artifactName: ${productName}-${version}-${arch}-mac.${ext}
   target:
-    - dmg
-    - zip
+    - target: dmg
+      arch:
+        - arm64
+        - x64
+    - target: zip
+      arch:
+        - arm64
+        - x64
   category: public.app-category.productivity
   entitlementsInherit: build/entitlements.mac.plist
   extendInfo:
@@ -34,7 +46,7 @@ mac:
   identity: null
   notarize: false
 dmg:
-  artifactName: ${productName}-${version}.${ext}
+  artifactName: ${productName}-${version}-${arch}.${ext}
 linux:
   target:
     - AppImage
