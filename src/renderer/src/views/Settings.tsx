@@ -6,6 +6,7 @@ import type {
   ItemType,
   Settings as SettingsShape
 } from '../../../core/types'
+import { ERGONOMICS } from '../../../core/ergonomics'
 import { api } from '../api'
 import type { ViewState } from '../api'
 import {
@@ -301,6 +302,40 @@ function RemindersGroup({ s, send }: { s: SettingsShape; send: Send }): React.JS
             Add reminder
           </button>
         </div>
+      </div>
+    </fieldset>
+  )
+}
+
+/** A one-time home setup checklist; ticks are saved. */
+function HomeSetup({
+  ticked,
+  onView
+}: {
+  ticked: string[]
+  onView?: (v: ViewState) => void
+}): React.JSX.Element {
+  const toggle = async (id: string): Promise<void> => {
+    const next = ticked.includes(id) ? ticked.filter((x) => x !== id) : [...ticked, id]
+    // Saved first: `onView?.(await …)` would skip the save when there is no onView.
+    const v = await api.setErgonomics(next)
+    onView?.(v)
+  }
+  return (
+    <fieldset>
+      <legend>Home setup</legend>
+      <div className="group-card">
+        <p className="muted home-progress">{`${ticked.length} / ${ERGONOMICS.length}`}</p>
+        {ERGONOMICS.map((e) => (
+          <label key={e.id} className="field check-row">
+            <input
+              type="checkbox"
+              checked={ticked.includes(e.id)}
+              onChange={() => void toggle(e.id)}
+            />
+            <span>{e.label}</span>
+          </label>
+        ))}
       </div>
     </fieldset>
   )
@@ -613,6 +648,8 @@ export function Settings({ view, onView }: Props): React.JSX.Element {
       <FeaturesGroup s={s} send={send} />
 
       <RemindersGroup s={s} send={send} />
+
+      <HomeSetup ticked={view.ergonomics ?? []} onView={onView} />
 
       <Backup onView={onView} />
     </section>

@@ -10,6 +10,7 @@ const api = vi.hoisted(() => ({
   updateSettings: vi.fn(),
   addItems: vi.fn(),
   exportData: vi.fn(),
+  setErgonomics: vi.fn(),
   importData: vi.fn(),
   onState: vi.fn(),
   onFocus: vi.fn()
@@ -43,6 +44,7 @@ const view = (over: Partial<ViewState['settings']> = {}): ViewState =>
     trayLabel: null,
     focus: null,
     daySummary: null,
+    ergonomics: [],
     coffee: 0
   }) as ViewState
 
@@ -146,7 +148,9 @@ describe('Settings', () => {
       water: { ...DEFAULT_SETTINGS.water, enabled: false }
     })
     expect(screen.getByRole('switch', { name: 'Launch at login' })).toBeInTheDocument()
-    expect(screen.queryAllByRole('checkbox')).toHaveLength(0)
+    // Only the home setup checklist uses checkboxes; every setting is a switch.
+    const checklist = screen.getByRole('group', { name: 'Home setup' })
+    for (const c of screen.queryAllByRole('checkbox')) expect(checklist).toContainElement(c)
   })
 
   it('shows water interval, walk length and snooze length; no busy-mode group', async () => {
@@ -457,5 +461,19 @@ describe('Settings custom reminders', () => {
     })
     await userEvent.click(within(group).getByRole('button', { name: 'Delete Take vitamin D' }))
     expect(api.updateSettings).toHaveBeenLastCalledWith({ features: { ...F, reminders: [] } })
+  })
+})
+
+describe('Settings home setup', () => {
+  it('shows progress and saves a ticked item', async () => {
+    api.setErgonomics.mockResolvedValue(view())
+    render(<Settings view={{ ...view(), ergonomics: ['chair'] }} />)
+    const group = screen.getByRole('group', { name: 'Home setup' })
+    expect(within(group).getByText('1 / 7')).toBeInTheDocument()
+    expect(
+      within(group).getByRole('checkbox', { name: 'Chair supports your lower back' })
+    ).toBeChecked()
+    await userEvent.click(within(group).getByRole('checkbox', { name: 'Feet flat on the floor' }))
+    expect(api.setErgonomics).toHaveBeenCalledWith(['chair', 'feet'])
   })
 })

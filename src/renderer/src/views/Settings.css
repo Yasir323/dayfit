@@ -158,3 +158,14 @@
   font-size: 12px;
   white-space: nowrap;
 }
+
+.home-progress {
+  margin: var(--s2) 0 0;
+  font-size: 12px;
+}
+.check-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  font-size: 13px;
+}

@@ -1157,3 +1157,11 @@ describe('DayfitService screen time', () => {
     expect(svc.checkOut([]).daySummary?.screenMin).toBe(6)
   })
 })
+
+describe('DayfitService home setup', () => {
+  it('saves ticked items, ignoring unknown ids and duplicates', () => {
+    const v = svc.setErgonomics(['chair', 'nonsense', 'chair', 'wrists'])
+    expect(v.ergonomics).toEqual(['chair', 'wrists'])
+    expect(loadState(file).ergonomics).toEqual(['chair', 'wrists'])
+  })
+})

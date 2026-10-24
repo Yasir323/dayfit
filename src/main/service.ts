@@ -15,6 +15,7 @@ import {
   type AttendanceKind
 } from '../core/endOfDay'
 import { EMPTY_WELLBEING_STATE, stepWellbeing } from '../core/wellbeing'
+import { ERGONOMICS } from '../core/ergonomics'
 import { burnoutRisk, energyLow, streaks, type BurnoutRisk, type Streaks } from '../core/trends'
 import { EMPTY_DAY_STATS, summarizeDay, type DayStats, type DaySummary } from '../core/summary'
 import { lunchPickError, planDay, slotError } from '../core/scheduler'
@@ -69,6 +70,8 @@ export interface ViewState {
   alerts: Alert[]
   /** Short label for the menu bar, or null once seen. */
   trayLabel: string | null
+  /** Home setup checklist items ticked. */
+  ergonomics: string[]
   /** Today's summary once checked out, else null. */
   daySummary: DaySummary | null
   /** The running focus session, if any. */
@@ -508,6 +511,15 @@ export class DayfitService {
     )
     this.db.putDay(this.today(), this.summarize(this.today()))
     return view
+  }
+
+  /** The ticked home setup items; unknown ids are dropped. */
+  setErgonomics(ids: string[]): ViewState {
+    this.begin()
+    const given = new Set(Array.isArray(ids) ? ids : [])
+    this.state.ergonomics = ERGONOMICS.map((e) => e.id).filter((id) => given.has(id))
+    this.save()
+    return this.buildView()
   }
 
   /** A check-in answer, 1 (exhausted) to 5 (great); anything else is ignored. */
@@ -969,6 +981,7 @@ export class DayfitService {
       attendance: attendanceDue(s.endOfDay, now, s.settings),
       checkedOut: s.endOfDay.checkedOut,
       alerts: s.alerts,
+      ergonomics: s.ergonomics,
       daySummary: s.endOfDay.checkedOut ? this.summarize(today) : null,
       trayLabel: s.unseen ?? (focus ? `Focus ${focus.minutesLeft}m` : null),
       focus,
