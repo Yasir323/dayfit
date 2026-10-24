@@ -81,6 +81,14 @@ Everything below "Full backlog" is unprioritised beyond the v1 / later split.
 - [ ] List rows: one Tab stop per row (use roving focus); Enter on a row does nothing
 - [ ] Focus isn't returned to the opener when an overlay closes
 - [ ] Esc in Edit item discards unsaved edits without asking
+- [ ] Calendar: a sync running across midnight can import yesterday's meetings until the next sync
+- [ ] Calendar: check secure storage before opening the browser (today it fails after consent; Linux only)
+- [ ] Calendar: a stray request with the wrong state ends the sign-in instead of being ignored
+- [ ] Calendar: PATCH 404/410 (event deleted in Google) shows an error and stops that write pass
+- [ ] Calendar: Google calls have no timeout (a hung request blocks Sync now for ~5 min)
+- [ ] Calendar: disable the write-back toggle while an action runs
+- [ ] Calendar: cache the connection state instead of decrypting the token file on each check
+- [ ] README Privacy still says data is in dayfit.json; it's dayfit.db now
 
 ## Pick next — finish the app end to end (tick what to build)
 Calendar sync, Slack/Teams, AI and mood detection stay in "Later versions".
