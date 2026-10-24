@@ -78,6 +78,7 @@ describe('summarizeDay', () => {
       })
     ).toEqual({
       moodAvg: 3.3,
+      overtime: false,
       date: D,
       focusMin: 90 + 25,
       breaksTaken: 6,

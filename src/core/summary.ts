@@ -26,6 +26,8 @@ export interface DaySummary {
   meetings: number
   /** Average check-in score (1–5, one decimal); null with no check-ins. Absent in older rows. */
   moodAvg?: number | null
+  /** Worked past hours (the overtime reminder fired). Absent in older rows. */
+  overtime?: boolean
 }
 
 export interface SummaryInput {
@@ -39,6 +41,7 @@ export interface SummaryInput {
   waterTargetMl: number
   coffeeCups: number
   moods?: { at?: number; score: number }[]
+  overtime?: boolean
 }
 
 export function summarizeDay(input: SummaryInput): DaySummary {
@@ -61,7 +64,8 @@ export function summarizeDay(input: SummaryInput): DaySummary {
       (i) => i.status === 'dropped' && i.repeat.kind === 'none' && i.date === date
     ).length,
     meetings: day.filter(isFixed).length,
-    moodAvg: moodAverage(input.moods ?? [])
+    moodAvg: moodAverage(input.moods ?? []),
+    overtime: input.overtime ?? false
   }
 }
 

@@ -786,6 +786,22 @@ body {
   gap: var(--s3);
   padding: var(--s2) var(--s4);
 }
+.week-risk {
+  padding: var(--s2) var(--s3);
+  border-radius: var(--r-sm);
+  background: var(--hairline);
+  font-size: 12px;
+}
+.week-risk.is-watch {
+  background: var(--warn-soft);
+}
+.week-risk.is-high {
+  background: var(--danger-soft);
+}
+.week-note {
+  margin: 0;
+  font-size: 12px;
+}
 .week-row-title {
   margin: 0 0 var(--s1);
   font-size: 12px;

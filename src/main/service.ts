@@ -15,6 +15,7 @@ import {
   type AttendanceKind
 } from '../core/endOfDay'
 import { EMPTY_WELLBEING_STATE, stepWellbeing } from '../core/wellbeing'
+import { burnoutRisk, energyLow, streaks, type BurnoutRisk, type Streaks } from '../core/trends'
 import { EMPTY_DAY_STATS, summarizeDay, type DayStats, type DaySummary } from '../core/summary'
 import { lunchPickError, planDay, slotError } from '../core/scheduler'
 import { addDays, minutesOf, toDateStr, weekOf } from '../core/time'
@@ -36,6 +37,13 @@ import { loadState, saveState, type AppState, type DayPlan, type StateSource } f
 
 export interface Clock {
   now(): Date
+}
+
+export interface WeekTrend {
+  days: { date: DateStr; summary: DaySummary | null }[]
+  energyLow: Minutes | null
+  risk: BurnoutRisk
+  streaks: Streaks
 }
 
 export interface ViewState {
@@ -70,6 +78,8 @@ export interface ViewState {
 }
 
 const MAX_ELAPSED_MIN = 5
+/** Saved days read for the week view's trends (risk, streaks). */
+const TREND_DAYS = 30
 /** A focus session this far past its end finishes without "Focus done" or a break. */
 const STALE_FOCUS_MS = 30 * 60_000
 /** Repeating items keep done dates this many days back (the summary only needs yesterday). */
@@ -347,16 +357,25 @@ export class DayfitService {
     }
   }
 
-  /** The last 7 days' saved summaries, oldest first; null for a day with none. */
-  week(): { date: DateStr; summary: DaySummary | null }[] {
+  /**
+   * The last 7 days' saved summaries (oldest first, null for a day with none), plus the trends
+   * read from saved history: burnout risk, streaks and the energy low point.
+   */
+  week(): WeekTrend {
     this.begin()
     const today = this.today()
-    const from = addDays(today, -6)
+    const from = addDays(today, -(TREND_DAYS - 1))
     const saved = new Map(this.db.days(from, today).map((d) => [d.date, d.summary as DaySummary]))
-    return Array.from({ length: 7 }, (_, n) => {
+    const all = Array.from({ length: TREND_DAYS }, (_, n) => {
       const date = addDays(from, n)
       return { date, summary: saved.get(date) ?? null }
     })
+    return {
+      days: all.slice(-7),
+      energyLow: energyLow(this.state.moods, today),
+      risk: burnoutRisk([...saved.values()]),
+      streaks: streaks(all.map((d) => d.summary))
+    }
   }
 
   /** Tomorrow's plan from the start of work, for the evening preview; nothing is saved. */
@@ -570,6 +589,7 @@ export class DayfitService {
       settings: s.settings,
       manualBusy: s.manualBusy,
       coffeeToday: s.coffee[today] ?? 0,
+      slumpAt: energyLow(s.moods, today),
       state: s.endOfDay
     })
     s.endOfDay = eod.state
@@ -719,7 +739,9 @@ export class DayfitService {
       waterMl: s.waterMl[date] ?? 0,
       waterTargetMl: s.settings.water.targetMl,
       coffeeCups: s.coffee[date] ?? 0,
-      moods: s.moods[date] ?? []
+      moods: s.moods[date] ?? [],
+      // Today's end-of-day state is only known for the day it belongs to.
+      overtime: date === s.lastDate && s.endOfDay.overtimeFired
     })
   }
 

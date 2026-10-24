@@ -79,6 +79,8 @@ export function stepEndOfDay(input: {
   manualBusy: boolean | null
   /** Cups logged today (the slump suggestion skips coffee at the cap). */
   coffeeToday?: number
+  /** The personal low point (energy curve); the slump window moves to it. */
+  slumpAt?: Minutes | null
   state: EndOfDayState
 }): { events: EndOfDayEvent[]; state: EndOfDayState } {
   const { now, settings: s } = input
@@ -124,7 +126,10 @@ export function stepEndOfDay(input: {
     state.lunchFired = true
     kinds.push('lunch')
   }
-  const slump = !state.slumpFired && active && !held && now >= SLUMP_START && now < SLUMP_END
+  const slumpAt = input.slumpAt ?? null
+  const [slumpFrom, slumpTo] =
+    slumpAt === null ? [SLUMP_START, SLUMP_END] : [slumpAt - 30, slumpAt + 90]
+  const slump = !state.slumpFired && active && !held && now >= slumpFrom && now < slumpTo
   if (slump) {
     state.slumpFired = true
     kinds.push('slump')

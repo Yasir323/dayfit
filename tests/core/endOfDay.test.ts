@@ -223,3 +223,29 @@ describe('heads-up, overtime, lunch', () => {
     ])
   })
 })
+
+describe('slump at the personal low point', () => {
+  const slumpAt = (now: number, at: number | null): string[] =>
+    stepEndOfDay({
+      now,
+      idleSec: 0,
+      blocks: [],
+      items: [],
+      settings: S,
+      manualBusy: null,
+      slumpAt: at,
+      state: EMPTY_END_OF_DAY_STATE
+    })
+      .events.map((e) => e.kind)
+      .filter((k) => k === 'slump')
+
+  it('moves the window to 30 min before the low point', () => {
+    expect(slumpAt(660, 690)).toEqual(['slump'])
+    expect(slumpAt(659, 690)).toEqual([])
+    expect(slumpAt(840, 690)).toEqual([])
+  })
+
+  it('without a low point the window stays 14:00–16:00', () => {
+    expect(slumpAt(840, null)).toEqual(['slump'])
+  })
+})

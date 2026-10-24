@@ -893,7 +893,7 @@ describe('DayfitService week', () => {
     svc.checkOut([]) // 26th
     clock.set(28, 9, 0)
     svc.view() // the 27th never ran, so it has no summary
-    const w = svc.week()
+    const w = svc.week().days
     expect(w.map((d) => d.date)).toEqual([
       '2026-10-22',
       '2026-10-23',
@@ -927,7 +927,7 @@ describe('DayfitService backup', () => {
     expect(() => svc.importData(b)).toThrow('The backup could not be loaded')
     expect(svc.view().items.map((i) => i.title)).toEqual(['Keep me'])
     expect(loadState(file).items.map((i) => i.title)).toEqual(['Keep me'])
-    expect(svc.week()[6].summary).toMatchObject({ date: D })
+    expect(svc.week().days[6].summary).toMatchObject({ date: D })
   })
 
   it('import replaces the state and days, then replans', () => {
@@ -942,7 +942,7 @@ describe('DayfitService backup', () => {
     expect(v.plan.blocks.some((x) => x.itemId === 'n1')).toBe(true)
     expect(v.checkedOut).toBe(false)
     expect(loadState(file).items.map((i) => i.title)).toEqual(['New'])
-    expect(svc.week().every((d) => d.summary === null)).toBe(true)
+    expect(svc.week().days.every((d) => d.summary === null)).toBe(true)
   })
 })
 
@@ -1049,5 +1049,25 @@ describe('DayfitService mood', () => {
     svc.logMood(9)
     svc.logMood(Number.NaN)
     expect(loadState(file).moods[D] ?? []).toEqual([])
+  })
+})
+
+describe('DayfitService week trends', () => {
+  it('week() carries risk, streaks and the energy low point', () => {
+    svc.checkOut([])
+    const w = svc.week()
+    expect(w.days).toHaveLength(7)
+    expect(w.risk.level).toBe('Low')
+    expect(w.streaks).toEqual({ water: 0, breaks: 0, onTime: 1 })
+    expect(w.energyLow).toBeNull()
+  })
+
+  it('the summary records overtime', () => {
+    svc.markPunched('in')
+    clock.set(26, 18, 20)
+    svc.tick(0) // punch-out first; overtime waits a tick
+    clock.set(26, 18, 21)
+    expect(svc.tick(0).events.map((e) => e.kind)).toContain('overtime')
+    expect(svc.checkOut([]).daySummary?.overtime).toBe(true)
   })
 })

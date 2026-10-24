@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import type { DaySummary } from '../../../core/summary'
-import type { DateStr } from '../../../core/types'
+import { formatClock } from '../../../core/time'
+import type { WeekTrend } from '../../../main/service'
 import { api } from '../api'
 import type { ViewState } from '../api'
 import { weekdayShort } from '../lib/dates'
 
-type Week = { date: DateStr; summary: DaySummary | null }[]
+type Week = WeekTrend['days']
 
 interface Row {
   name: string
@@ -47,7 +48,7 @@ const ROWS: Row[] = [
 
 /** The last seven days from saved summaries: focus, water and breaks as bars. */
 export function WeekView({ view }: { view: ViewState }): React.JSX.Element {
-  const [week, setWeek] = useState<Week | null>(null)
+  const [trend, setTrend] = useState<WeekTrend | null>(null)
   const [failure, setFailure] = useState<string | null>(null)
   // A check-out or a new day adds a summary.
   const key = `${view.today}:${view.checkedOut}`
@@ -55,7 +56,7 @@ export function WeekView({ view }: { view: ViewState }): React.JSX.Element {
     let live = true
     api
       .week()
-      .then((w) => live && setWeek(w))
+      .then((w) => live && setTrend(w))
       .catch((e: unknown) => live && setFailure(e instanceof Error ? e.message : 'Could not load'))
     return () => {
       live = false
@@ -68,11 +69,32 @@ export function WeekView({ view }: { view: ViewState }): React.JSX.Element {
         {failure}
       </p>
     )
-  if (!week) return <p className="empty muted">Loading the week…</p>
+  if (!trend) return <p className="empty muted">Loading the week…</p>
+  const week: Week = trend.days
   if (week.every((d) => d.summary === null)) return <p className="empty muted">No history yet</p>
+  const { risk, streaks: st } = trend
+  const reasons = [
+    risk.late > 0 && `${risk.late} late day${risk.late === 1 ? '' : 's'}`,
+    risk.fewBreaks > 0 && `${risk.fewBreaks} low-break day${risk.fewBreaks === 1 ? '' : 's'}`,
+    risk.lowMood > 0 && `${risk.lowMood} low-mood day${risk.lowMood === 1 ? '' : 's'}`
+  ].filter(Boolean)
+  const days = (n: number): string => `${n} day${n === 1 ? '' : 's'}`
 
   return (
     <div className="week-view">
+      <div
+        role="status"
+        aria-label="Burnout risk"
+        className={`week-risk is-${risk.level.toLowerCase()}`}
+      >
+        {`Burnout risk: ${risk.level}${reasons.length > 0 ? ` — ${reasons.join(', ')}` : ''}`}
+      </div>
+      <p className="week-note muted">
+        {`Streaks: water ${days(st.water)} · breaks ${days(st.breaks)} · on-time ${days(st.onTime)}`}
+      </p>
+      {trend.energyLow !== null && (
+        <p className="week-note muted">{`Your low point: around ${formatClock(trend.energyLow)}`}</p>
+      )}
       {ROWS.map((row) => {
         const values = week.map((d) => (d.summary ? row.value(d.summary) : 0))
         const max = row.max(values)
