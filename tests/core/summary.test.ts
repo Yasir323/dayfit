@@ -108,6 +108,35 @@ describe('summarizeDay', () => {
   })
 })
 
+describe('formatSummary with camera', () => {
+  const day = {
+    date: D,
+    focusMin: 130,
+    breaksTaken: 6,
+    waterMl: 1500,
+    waterTargetMl: 2000,
+    coffeeCups: 1,
+    done: 4,
+    moved: 0,
+    dropped: 0,
+    meetings: 2,
+    screenMin: 365
+  }
+  it('adds yawns and slouching when the camera ran', () => {
+    expect(
+      formatSummary({
+        ...day,
+        camera: { minutes: 240, blinkMedian: 12, yawns: 3, slouchMin: 25, closeMin: 4 }
+      })
+    ).toBe(
+      'Focus 2h 10m · Water 1500 / 2000 ml · Breaks 6 · Done 4 · Screen 6h 5m · Camera: 3 yawns · 25m slouching'
+    )
+  })
+  it('leaves the camera out when it did not run', () => {
+    expect(formatSummary(day)).not.toContain('Camera')
+  })
+})
+
 describe('formatSummary', () => {
   it('reads as one line', () => {
     expect(

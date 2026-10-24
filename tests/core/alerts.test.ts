@@ -13,6 +13,22 @@ const ev = (kind: ReminderKind, body = ''): ReminderEvent => ({
   parts: kind === 'break' ? ['eye'] : []
 })
 
+describe('camera labels', () => {
+  it('labels the camera cues', () => {
+    const kinds: [ReminderKind, string][] = [
+      ['dry-eyes', 'Blink'],
+      ['drowsy', 'Tired'],
+      ['slouch', 'Posture'],
+      ['screen-distance', 'Too close']
+    ]
+    for (const [k, label] of kinds) expect(labelFor(ev(k), S)).toBe(label)
+  })
+  it('gives camera cues a banner', () => {
+    const r = recordAlerts([], null, [ev('dry-eyes', 'blink')], 0, 600, S)
+    expect(r.alerts.map((a) => a.kind)).toEqual(['dry-eyes'])
+  })
+})
+
 describe('labelFor', () => {
   it('maps every kind', () => {
     const kinds: [ReminderKind, string][] = [

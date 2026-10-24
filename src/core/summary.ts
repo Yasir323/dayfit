@@ -36,6 +36,16 @@ export interface DaySummary {
   screenMin?: number
   /** Not a work day: kept for the week view, left out of streaks and burnout risk. */
   offDay?: boolean
+  /** Camera cue totals; only on days the camera ran. */
+  camera?: CameraSummary
+}
+
+export interface CameraSummary {
+  minutes: number
+  blinkMedian: number
+  yawns: number
+  slouchMin: number
+  closeMin: number
 }
 
 export interface SummaryInput {
@@ -51,6 +61,7 @@ export interface SummaryInput {
   moods?: { at?: number; score: number }[]
   overtime?: boolean
   offDay?: boolean
+  camera?: CameraSummary
 }
 
 export function summarizeDay(input: SummaryInput): DaySummary {
@@ -76,7 +87,8 @@ export function summarizeDay(input: SummaryInput): DaySummary {
     moodAvg: moodAverage(input.moods ?? []),
     overtime: input.overtime ?? false,
     screenMin: Math.round(stats.activeMin ?? 0),
-    ...(input.offDay ? { offDay: true } : {})
+    ...(input.offDay ? { offDay: true } : {}),
+    ...(input.camera && input.camera.minutes > 0 ? { camera: input.camera } : {})
   }
 }
 
@@ -98,6 +110,9 @@ export function formatSummary(s: DaySummary): string {
     `Water ${s.waterMl} / ${s.waterTargetMl} ml`,
     `Breaks ${s.breaksTaken}`,
     `Done ${s.done}`,
-    `Screen ${hoursMinutes(s.screenMin ?? 0)}`
+    `Screen ${hoursMinutes(s.screenMin ?? 0)}`,
+    ...(s.camera && s.camera.minutes > 0
+      ? [`Camera: ${s.camera.yawns} yawns · ${hoursMinutes(s.camera.slouchMin)} slouching`]
+      : [])
   ].join(' · ')
 }

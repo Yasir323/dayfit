@@ -2,7 +2,8 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import type { Block, NewItem } from '../../src/core/types'
+import { DEFAULT_SETTINGS, type Block, type NewItem } from '../../src/core/types'
+import type { MinuteScore } from '../../src/core/faceCues'
 import { DayfitService, type Clock, type ViewState } from '../../src/main/service'
 import { loadState } from '../../src/main/store'
 import { openDb } from '../../src/main/db'
@@ -1354,5 +1355,100 @@ describe('DayfitService calendar sync', () => {
     const later = svc.writeBlocks()
     expect(later.map((b) => b.key)).not.toContain(first.key)
     expect(later.map((b) => b.key)).toContain(second.key)
+  })
+})
+
+describe('DayfitService camera cues', () => {
+  const MIN = 60_000
+  const score = (minAgo: number, p: Partial<MinuteScore> = {}): MinuteScore => ({
+    at: clock.now().getTime() - minAgo * MIN,
+    present: 1,
+    blinks: 15,
+    perclos: 0.03,
+    yawns: 0,
+    pitch: 0,
+    faceY: 0.5,
+    iris: 0.04,
+    ...p
+  })
+  const quiet = (moodTimes: number[] = []): void => {
+    svc.updateSettings({
+      features: {
+        commute: { enabled: false },
+        mood: { enabled: moodTimes.length > 0, times: moodTimes },
+        daylight: { enabled: false, at: 690 },
+        breathe: { enabled: false },
+        camera: { ...DEFAULT_SETTINGS.features.camera, enabled: true }
+      }
+    })
+  }
+  const staring = (p: Partial<MinuteScore> = { blinks: 5 }): void => {
+    for (let i = 10; i >= 1; i--) svc.addCameraMinute(score(i, p))
+  }
+  const kinds = (r: { events: { kind: string }[] }): string[] => r.events.map((e) => e.kind)
+
+  it('turns ten low-blink minutes into a dry-eyes banner', () => {
+    clock.set(26, 10)
+    quiet()
+    staring()
+    const r = svc.tick(0)
+    expect(kinds(r)).toContain('dry-eyes')
+    expect(r.view.alerts.some((a) => a.kind === 'dry-eyes')).toBe(true)
+    expect(r.view.camera.lastMinute?.blinks).toBe(5)
+  })
+  it('ignores a minute from another day', () => {
+    clock.set(26, 10)
+    svc.addCameraMinute(score(24 * 60))
+    expect(svc.view().camera.lastMinute).toBeNull()
+  })
+  it('starts each day with no minutes', () => {
+    clock.set(26, 10)
+    staring()
+    clock.set(27, 10)
+    expect(svc.view().camera.lastMinute).toBeNull()
+  })
+  it('waits for the next tick when a check-in takes the slot', () => {
+    clock.set(26, 10)
+    quiet([600])
+    staring()
+    const first = svc.tick(0)
+    expect(kinds(first)).toContain('checkin')
+    expect(kinds(first)).not.toContain('dry-eyes')
+    expect(kinds(svc.tick(0))).toContain('dry-eyes')
+  })
+  it('stays quiet on a day off and while busy', () => {
+    clock.set(31, 10) // Saturday
+    quiet()
+    staring()
+    expect(kinds(svc.tick(0))).not.toContain('dry-eyes')
+    clock.set(26, 10)
+    quiet()
+    staring()
+    svc.setManualBusy(true)
+    expect(kinds(svc.tick(0))).not.toContain('dry-eyes')
+  })
+  it('keeps the calibration and notices a changed setup', () => {
+    clock.set(26, 10)
+    svc.setCalibration({ pitch: 0, faceY: 0.5, iris: 0.04, at: 1 })
+    const again = new DayfitService(file, clock)
+    expect(again.view().settings.features.camera.calibration).toEqual({
+      pitch: 0,
+      faceY: 0.5,
+      iris: 0.04,
+      at: 1
+    })
+    expect(again.view().camera.setupChanged).toBe(false)
+    for (let i = 10; i >= 1; i--) again.addCameraMinute(score(i, { iris: 0.068 }))
+    expect(again.view().camera.setupChanged).toBe(true)
+  })
+  it('adds camera totals to the day summary', () => {
+    clock.set(26, 10)
+    staring({ yawns: 1 })
+    const v = svc.checkOut([])
+    expect(v.daySummary?.camera).toMatchObject({ minutes: 10, yawns: 10 })
+  })
+  it('shows the status set by the shell', () => {
+    svc.setCameraStatus({ running: true, permission: 'granted', calibrating: false })
+    expect(svc.view().camera).toMatchObject({ running: true, permission: 'granted' })
   })
 })

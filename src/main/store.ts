@@ -19,6 +19,7 @@ import type { Alert } from '../core/alerts'
 import type { DayStats } from '../core/summary'
 import { EMPTY_WELLBEING_STATE, type WellbeingState } from '../core/wellbeing'
 import { EMPTY_BREAK_STATE } from '../core/breaks'
+import { EMPTY_CAMERA_STATE, type CameraState, type MinuteScore } from '../core/faceCues'
 import { openDb, type Db } from './db'
 import { EMPTY_END_OF_DAY_STATE, type EndOfDayState } from '../core/endOfDay'
 
@@ -63,6 +64,8 @@ export interface AppState {
   unseen: string | null
   nudges: NudgeState
   overdue: string[]
+  /** Today's camera minute scores (never frames) and the cue cooldowns. */
+  camera: { date: DateStr | null; minutes: MinuteScore[]; state: CameraState }
   /** Google Calendar sync status; whether it's connected comes from the token file. */
   calendar: { lastSyncAt: number | null; lastError: string | null }
   manualBusy: boolean | null
@@ -93,6 +96,7 @@ export const defaultState = (): AppState => ({
   nudges: {},
   overdue: [],
   calendar: { lastSyncAt: null, lastError: null },
+  camera: { date: null, minutes: [], state: clone(EMPTY_CAMERA_STATE) },
   manualBusy: null,
   lastDate: null
 })
@@ -152,6 +156,7 @@ export function normalizeState(parsed: unknown): AppState | null {
         }
   state.wellbeing = deepMerge(defaults.wellbeing, parsed.wellbeing)
   state.calendar = deepMerge(defaults.calendar, parsed.calendar)
+  state.camera = deepMerge(defaults.camera, parsed.camera)
   state.endOfDay = isPlainObject(parsed.endOfDay)
     ? deepMerge(defaults.endOfDay, parsed.endOfDay)
     : clone(EMPTY_END_OF_DAY_STATE)

@@ -219,3 +219,25 @@ describe('feature defaults', () => {
     expect(DEFAULT_SETTINGS.features.autoBusyFullscreen.enabled).toBe(false)
   })
 })
+
+describe('store camera defaults', () => {
+  it('older state gets camera defaults', () => {
+    const dir2 = fs.mkdtempSync(path.join(os.tmpdir(), 'dayfit-cam-store-'))
+    const f = path.join(dir2, 'dayfit.json')
+    const older: Record<string, unknown> = { ...defaultState() }
+    delete older.camera
+    const settings = structuredClone(defaultState().settings) as unknown as Record<string, unknown>
+    delete (settings.features as Record<string, unknown>).camera
+    const db = openDb(f)
+    db.writeState({ ...older, settings } as never)
+    db.close()
+    const s = loadState(f)
+    expect(s.settings.features.camera).toEqual({
+      enabled: false,
+      cues: { dryEyes: true, drowsy: true, posture: true, distance: true },
+      calibration: null
+    })
+    expect(s.camera).toEqual({ date: null, minutes: [], state: { lastAt: {} } })
+    fs.rmSync(dir2, { recursive: true, force: true })
+  })
+})

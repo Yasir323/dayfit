@@ -1,10 +1,17 @@
 import { EMPTY_BREAK_STATE, stepBreaks, type BreakPart, type BreakState } from './breaks'
+import type { CameraKind } from './faceCues'
 import type { WellbeingKind } from './wellbeing'
 import type { EndOfDayKind } from './endOfDay'
 import type { Block, Item, Minutes, Settings } from './types'
 
 export type ReminderKind =
-  'meeting-soon' | 'meeting-now' | 'break' | 'focus-done' | EndOfDayKind | WellbeingKind
+  | 'meeting-soon'
+  | 'meeting-now'
+  | 'break'
+  | 'focus-done'
+  | EndOfDayKind
+  | WellbeingKind
+  | CameraKind
 export interface ReminderEvent {
   kind: ReminderKind
   itemId: string | null

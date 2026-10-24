@@ -19,6 +19,13 @@ import { ERGONOMICS } from '../core/ergonomics'
 import { slowing, updateBaseline, type MinuteStat } from '../core/fatigue'
 import { burnoutRisk, energyLow, streaks, type BurnoutRisk, type Streaks } from '../core/trends'
 import { mergeCalendar, type Meeting, type WriteBlock } from '../core/calendar'
+import {
+  calibrationFits,
+  stepCamera,
+  summarizeCamera,
+  type Calibration,
+  type MinuteScore
+} from '../core/faceCues'
 import { EMPTY_DAY_STATS, summarizeDay, type DayStats, type DaySummary } from '../core/summary'
 import { lunchPickError, planDay, slotError } from '../core/scheduler'
 import { addDays, minutesOf, toDateStr, weekday, weekOf } from '../core/time'
@@ -85,6 +92,23 @@ export interface ViewState {
   hotkeyOk: boolean
   /** Google Calendar sync: the link (from the shell) and the last sync result. */
   calendar: CalendarView
+  /** Camera cues: window status and the latest minute. */
+  camera: CameraView
+}
+
+export type CameraPermission = 'granted' | 'denied' | 'not-determined' | 'unknown'
+
+/** Camera window status, set by the shell; not saved. */
+export interface CameraStatus {
+  running: boolean
+  permission: CameraPermission
+  calibrating: boolean
+}
+
+export interface CameraView extends CameraStatus {
+  lastMinute: MinuteScore | null
+  /** A calibration exists but today's face size says the setup moved. */
+  setupChanged: boolean
 }
 
 export interface CalendarLink {
@@ -100,6 +124,10 @@ export interface CalendarView extends CalendarLink {
 }
 
 const MAX_ELAPSED_MIN = 5
+/** Today's camera minutes kept at most (10 h). */
+const CAMERA_MINUTES_KEPT = 600
+/** Idle this long and the camera cues wait, like the wellbeing nudges. */
+const CAMERA_AWAY_SEC = 300
 /** On a day off only these still fire: meetings, focus sessions and the user's own reminders. */
 const OFF_DAY_KINDS: ReminderEvent['kind'][] = [
   'meeting-soon',
@@ -153,6 +181,8 @@ export class DayfitService {
   private hotkeyOk = true
   /** Google Calendar link, from the token file and sign-in flow (set by the shell); not saved. */
   private calendarLink: CalendarLink = { connected: false, connecting: false, canWrite: false }
+  /** Camera window status (set by the shell); not saved. */
+  private cameraStatus: CameraStatus = { running: false, permission: 'unknown', calibrating: false }
   /** Clock snapshot taken once per public call, so date and minutes always agree. */
   private at: Date
 
@@ -661,6 +691,43 @@ export class DayfitService {
     return out
   }
 
+  /** A minute of camera scores from the camera page; a minute from another day is dropped. */
+  addCameraMinute(m: MinuteScore): void {
+    this.begin()
+    const today = this.today()
+    if (toDateStr(new Date(m.at)) !== today) return
+    const cam = this.state.camera
+    const minutes = cam.date === today ? cam.minutes : []
+    this.state.camera = {
+      ...cam,
+      date: today,
+      minutes: [...minutes, { ...m }].slice(-CAMERA_MINUTES_KEPT)
+    }
+    this.save()
+  }
+
+  /** Set by the shell as the camera window starts, stops or calibrates; not persisted. */
+  setCameraStatus(st: CameraStatus): void {
+    this.cameraStatus = { ...st }
+  }
+
+  setCalibration(c: Calibration | null): ViewState {
+    this.begin()
+    const f = this.state.settings.features
+    this.state.settings = {
+      ...this.state.settings,
+      features: { ...f, camera: { ...f.camera, calibration: c } }
+    }
+    this.save()
+    return this.buildView()
+  }
+
+  /** Today's camera minutes (none once the date has moved on). */
+  private cameraMinutes(): MinuteScore[] {
+    const cam = this.state.camera
+    return cam.date === this.today() ? cam.minutes : []
+  }
+
   /** Called by the shell after (re)registering the quick-add shortcut; not persisted. */
   setHotkeyOk(ok: boolean): void {
     this.hotkeyOk = ok
@@ -768,6 +835,34 @@ export class DayfitService {
     })
     s.wellbeing = wb.state
     events.push(...wb.events.map((e) => ({ ...e, itemId: null, silent: false, parts: [] })))
+
+    // Camera cues take the nudge slot only when no wellbeing nudge did (custom reminders
+    // don't count); a cue that has to wait keeps its cooldown for the next tick.
+    const cam = s.settings.features.camera
+    const workDay = s.settings.workDays.includes(weekday(today))
+    if (
+      cam.enabled &&
+      workDay &&
+      now >= s.settings.workStart &&
+      now < s.settings.workEnd &&
+      idleSec < CAMERA_AWAY_SEC &&
+      !wb.events.some((e) => e.kind !== 'custom') &&
+      !isHeld(blocks, items, now, busyNow, s.settings.bufferMin)
+    ) {
+      const step = stepCamera({
+        minutes: this.cameraMinutes(),
+        cal: cam.calibration,
+        cues: cam.cues,
+        nowMs: at,
+        state: s.camera.state,
+        coffeeOk:
+          (s.coffee[today] ?? 0) < s.settings.coffee.capCups && now < s.settings.coffee.cutoff
+      })
+      if (step.event) {
+        s.camera = { ...s.camera, state: step.state }
+        events.push({ ...step.event, itemId: null, silent: false, parts: [] })
+      }
+    }
 
     // While busy, nudge notifications wait (uncounted) for the first non-busy tick;
     // the item still shows as overdue in the app.
@@ -912,7 +1007,11 @@ export class DayfitService {
       moods: s.moods[date] ?? [],
       offDay: !s.settings.workDays.includes(weekday(date)),
       // Today's end-of-day state is only known for the day it belongs to.
-      overtime: date === s.lastDate && s.endOfDay.overtimeFired
+      overtime: date === s.lastDate && s.endOfDay.overtimeFired,
+      camera:
+        s.camera.date === date
+          ? summarizeCamera(s.camera.minutes, s.settings.features.camera.calibration)
+          : undefined
     })
   }
 
@@ -944,6 +1043,8 @@ export class DayfitService {
     s.reminder = structuredClone(EMPTY_REMINDER_STATE)
     s.endOfDay = structuredClone(EMPTY_END_OF_DAY_STATE)
     s.wellbeing = structuredClone(EMPTY_WELLBEING_STATE)
+    // Cue cooldowns are times, so they carry over; the minutes are yesterday's.
+    s.camera = { ...s.camera, date: today, minutes: [] }
     s.lunchAnswer = null
     s.alerts = []
     s.unseen = null
@@ -1051,6 +1152,16 @@ export class DayfitService {
     return [...kept, ...extra].sort((a, b) => a - b)
   }
 
+  private cameraView(): CameraView {
+    const minutes = this.cameraMinutes()
+    const cal = this.state.settings.features.camera.calibration
+    return {
+      ...this.cameraStatus,
+      lastMinute: minutes.at(-1) ?? null,
+      setupChanged: cal !== null && !calibrationFits(minutes, cal)
+    }
+  }
+
   private buildView(): ViewState {
     const focus = this.state.focus
       ? {
@@ -1113,7 +1224,8 @@ export class DayfitService {
       trayLabel: s.unseen ?? (focus ? `Focus ${focus.minutesLeft}m` : null),
       focus,
       hotkeyOk: this.hotkeyOk,
-      calendar: { ...this.calendarLink, ...s.calendar }
+      calendar: { ...this.calendarLink, ...s.calendar },
+      camera: this.cameraView()
     })
   }
 }

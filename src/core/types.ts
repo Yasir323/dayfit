@@ -85,6 +85,8 @@ export interface CustomReminder {
 }
 
 /** Optional wellbeing features, each with its own switch. */
+import type { Calibration, CameraCues } from './faceCues'
+
 export interface Features {
   mood: { enabled: boolean; times: Minutes[] }
   standing: { enabled: boolean; intervalMin: number }
@@ -96,6 +98,8 @@ export interface Features {
   autoBusyFullscreen: { enabled: boolean }
   fatigue: { enabled: boolean }
   reminders: CustomReminder[]
+  /** On-device camera cues; off until the user turns them on. */
+  camera: { enabled: boolean; cues: CameraCues; calibration: Calibration | null }
 }
 
 export interface Settings {
@@ -163,7 +167,12 @@ export const DEFAULT_SETTINGS: Settings = {
     commute: { enabled: true },
     autoBusyFullscreen: { enabled: false },
     fatigue: { enabled: false },
-    reminders: []
+    reminders: [],
+    camera: {
+      enabled: false,
+      cues: { dryEyes: true, drowsy: true, posture: true, distance: true },
+      calibration: null
+    }
   },
   calendar: { clientId: '', clientSecret: '', writeBack: false },
   hotkey: 'CommandOrControl+Shift+Space',

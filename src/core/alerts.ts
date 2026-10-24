@@ -1,6 +1,7 @@
 import type { BreakPart } from './breaks'
 import type { ReminderEvent, ReminderKind } from './reminders'
 import type { Minutes, Settings } from './types'
+import type { CameraKind } from './faceCues'
 import type { WellbeingKind } from './wellbeing'
 
 /** Reminders that get a banner in the popover; punch and time's-up have banners already. */
@@ -14,6 +15,7 @@ export type AlertKind =
   | 'focus-done'
   | 'slump'
   | WellbeingKind
+  | CameraKind
 export interface Alert {
   id: string
   kind: AlertKind
@@ -43,7 +45,11 @@ const BANNER_KINDS: ReminderKind[] = [
   'call-fatigue',
   'breathe',
   'commute',
-  'fatigue'
+  'fatigue',
+  'dry-eyes',
+  'drowsy',
+  'slouch',
+  'screen-distance'
 ]
 const NUDGE_LABEL = "Time's up"
 /** Banners never pushed out by newer ones. */
@@ -94,6 +100,14 @@ export function labelForKind(kind: ReminderKind, s: Settings): string {
       return 'Start your day'
     case 'fatigue':
       return 'Slowing down'
+    case 'dry-eyes':
+      return 'Blink'
+    case 'drowsy':
+      return 'Tired'
+    case 'slouch':
+      return 'Posture'
+    case 'screen-distance':
+      return 'Too close'
   }
 }
 

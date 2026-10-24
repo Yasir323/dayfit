@@ -85,6 +85,13 @@ export function makeView(over: Partial<ViewState> = {}): ViewState {
       lastSyncAt: null,
       lastError: null
     },
+    camera: {
+      running: false,
+      permission: 'unknown',
+      calibrating: false,
+      lastMinute: null,
+      setupChanged: false
+    },
     attendance: { in: false, out: false },
     checkedOut: false,
     alerts: [],

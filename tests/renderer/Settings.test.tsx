@@ -53,6 +53,13 @@ const view = (over: Partial<ViewState['settings']> = {}): ViewState =>
       canWrite: false,
       lastSyncAt: null,
       lastError: null
+    },
+    camera: {
+      running: false,
+      permission: 'unknown',
+      calibrating: false,
+      lastMinute: null,
+      setupChanged: false
     }
   }) as ViewState
 
