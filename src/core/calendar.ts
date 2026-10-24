@@ -1,3 +1,4 @@
+import { itemsForDate } from './recurrence'
 import { addDays, minutesOf, toDateStr } from './time'
 import type { DateStr, Item, Minutes } from './types'
 
@@ -158,13 +159,19 @@ export function mergeCalendar(
     changed = true
     out.push({ ...i, title: m.title, fixedStart: m.start, durationMin: m.durationMin })
   }
+  // A repeating item that recurs today already stands for its meeting: never linked, never
+  // adopted (a cancelled instance would remove the whole series), and the event isn't imported.
+  const repeating = itemsForDate(items, date).filter((i) => i.repeat.kind !== 'none')
+  const covered = (m: Meeting): boolean =>
+    repeating.some((i) => i.fixedStart === m.start && sameTitle(i.title, m.title))
   for (const m of meetings) {
-    if (linked.has(m.eventId)) continue
+    if (linked.has(m.eventId) || covered(m)) continue
     changed = true
     const typed = out.findIndex(
       (i) =>
         i.date === date &&
         i.status === 'open' &&
+        i.repeat.kind === 'none' &&
         i.calendarId === undefined &&
         i.fixedStart === m.start &&
         sameTitle(i.title, m.title)

@@ -154,6 +154,30 @@ describe('mergeCalendar', () => {
   })
 })
 
+describe('mergeCalendar with repeating items', () => {
+  const newId = (): string => 'new1'
+  const daily = item({ id: 'rep', date: '2026-10-20', repeat: { kind: 'daily' } })
+
+  it('does not import a meeting a repeating item already covers today', () => {
+    const r = mergeCalendar([daily], [standup], D, newId, 5)
+    expect(r).toEqual({ items: [daily], changed: false })
+  })
+  it('never adopts a repeating item on its first day', () => {
+    const first = { ...daily, date: D }
+    const r = mergeCalendar([first], [standup], D, newId, 5)
+    expect(r.items).toEqual([first])
+    expect(r.changed).toBe(false)
+  })
+  it('never removes a repeating item when no meeting matches', () => {
+    const first = { ...daily, date: D }
+    expect(mergeCalendar([first], [], D, newId, 5)).toEqual({ items: [first], changed: false })
+  })
+  it('still imports a meeting at another time', () => {
+    const r = mergeCalendar([daily], [{ ...standup, start: 900 }], D, newId, 5)
+    expect(r.items).toHaveLength(2)
+  })
+})
+
 describe('diffWrites', () => {
   const block = { key: 'a#0', title: 'Write', start: 720, end: 780 }
 
