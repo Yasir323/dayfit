@@ -2,7 +2,18 @@ import { describe, expect, it } from 'vitest'
 import { EMPTY_WELLBEING_STATE, stepWellbeing, type WellbeingInput } from '../../src/core/wellbeing'
 import { DEFAULT_SETTINGS, type Block, type Item, type Settings } from '../../src/core/types'
 
-const S: Settings = { ...DEFAULT_SETTINGS, firstRunDone: true }
+const D = DEFAULT_SETTINGS
+/** Only the feature a test is about fires: the always-on daily nudges are off here. */
+const S: Settings = {
+  ...D,
+  firstRunDone: true,
+  features: {
+    ...D.features,
+    daylight: { ...D.features.daylight, enabled: false },
+    windDown: { ...D.features.windDown, enabled: false },
+    callFatigue: { ...D.features.callFatigue, enabled: false }
+  }
+}
 const input = (o: Partial<WellbeingInput> = {}): WellbeingInput => ({
   now: 600,
   elapsedMin: 1,
@@ -146,5 +157,70 @@ describe('custom reminders', () => {
     const r = stepWellbeing(input({ now: 495, settings, state }))
     expect(kinds(r)).toEqual(['custom'])
     expect(r.state.customSnooze.r1).toBeUndefined()
+  })
+})
+
+describe('timed nudges', () => {
+  const only = (patch: Partial<Settings['features']>): Settings => ({
+    ...S,
+    features: { ...D.features, mood: { ...D.features.mood, enabled: false }, ...patch }
+  })
+  const run = (
+    settings: Settings,
+    from: number,
+    to: number,
+    o: Partial<WellbeingInput> = {}
+  ): [number, string, string][] => {
+    let state = EMPTY_WELLBEING_STATE
+    const out: [number, string, string][] = []
+    for (let now = from; now <= to; now++) {
+      const r = stepWellbeing(input({ ...o, now, settings, state }))
+      state = r.state
+      for (const e of r.events) out.push([now, e.kind, e.title])
+    }
+    return out
+  }
+
+  it('sit/stand alternates every interval of active work', () => {
+    const settings = only({ standing: { enabled: true, intervalMin: 30 } })
+    expect(run(settings, 540, 600)).toEqual([
+      [569, 'posture', 'Time to stand up'],
+      [599, 'posture', 'Time to sit down']
+    ])
+  })
+
+  it('sit/stand is off by default', () => {
+    expect(run(only({}), 540, 700).filter(([, k]) => k === 'posture')).toEqual([])
+  })
+
+  it('daylight fires once at its time, not while held', () => {
+    const settings = only({})
+    expect(run(settings, 680, 720).filter(([, k]) => k === 'daylight')).toEqual([
+      [690, 'daylight', 'Get some daylight']
+    ])
+    expect(
+      run(settings, 680, 720, { manualBusy: true }).filter(([, k]) => k === 'daylight')
+    ).toEqual([])
+  })
+
+  it('wind-down fires once after work end plus its delay, even when busy', () => {
+    const settings = only({})
+    expect(
+      run(settings, 1130, 1160, { manualBusy: true }).filter(([, k]) => k === 'wind-down')
+    ).toEqual([[1140, 'wind-down', 'Time to wind down']])
+  })
+
+  it('call fatigue fires once when ended meetings reach the threshold', () => {
+    const meeting = (start: number, end: number): Block => ({
+      itemId: null,
+      kind: 'fixed',
+      start,
+      end,
+      chunk: null,
+      reason: ''
+    })
+    const blocks = [meeting(540, 600), meeting(600, 660), meeting(700, 760), meeting(800, 830)]
+    const fired = run(only({}), 540, 900, { blocks }).filter(([, k]) => k === 'call-fatigue')
+    expect(fired).toEqual([[760, 'call-fatigue', 'Lots of calls today']])
   })
 })

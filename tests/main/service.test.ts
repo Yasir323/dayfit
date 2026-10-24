@@ -1109,3 +1109,28 @@ describe('DayfitService custom reminders', () => {
     expect(loadState(file).wellbeing.customFired).toEqual({})
   })
 })
+
+describe('DayfitService wind-down', () => {
+  it('no breaks after work end, but an at reminder still fires', () => {
+    const f = svc.view().settings.features
+    svc.updateSettings({
+      features: {
+        ...f,
+        reminders: [
+          { id: 'r1', title: 'Meds', kind: 'at', times: [1110], everyMin: 0, enabled: true }
+        ]
+      }
+    })
+    svc.markPunched('in')
+    svc.markPunched('out')
+    clock.set(26, 18, 0)
+    svc.tick(0)
+    const kinds: string[] = []
+    for (let m = 1; m <= 40; m++) {
+      clock.set(26, 18, m)
+      kinds.push(...svc.tick(0).events.map((e) => e.kind))
+    }
+    expect(kinds).not.toContain('break')
+    expect(kinds).toContain('custom')
+  })
+})

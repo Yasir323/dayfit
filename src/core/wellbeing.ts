@@ -123,6 +123,65 @@ export function stepWellbeing(input: WellbeingInput): {
     }
   }
 
+  // Sit/stand: counts active work time, switches each interval (the switch waits out a hold).
+  if (f.standing.enabled && inHours && active) {
+    state.standActiveMin += input.elapsedMin
+    if (state.standActiveMin >= f.standing.intervalMin && !held) {
+      events.push(
+        state.standing
+          ? { kind: 'posture', title: 'Time to sit down', body: 'Switch back to sitting.' }
+          : { kind: 'posture', title: 'Time to stand up', body: 'Switch to standing for a while.' }
+      )
+      state.standing = !state.standing
+      state.standActiveMin = 0
+    }
+  }
+
+  if (
+    f.daylight.enabled &&
+    !state.daylightFired &&
+    now >= f.daylight.at &&
+    inHours &&
+    active &&
+    !held
+  ) {
+    state.daylightFired = true
+    events.push({
+      kind: 'daylight',
+      title: 'Get some daylight',
+      body: 'Step outside or open a window for 5 min.'
+    })
+  }
+
+  // Wind-down is about the evening: no hold, no working hours.
+  if (
+    f.windDown.enabled &&
+    !state.windDownFired &&
+    now >= s.workEnd + f.windDown.afterMin &&
+    active
+  ) {
+    state.windDownFired = true
+    events.push({
+      kind: 'wind-down',
+      title: 'Time to wind down',
+      body: 'Close the laptop for today.'
+    })
+  }
+
+  if (f.callFatigue.enabled && !state.callFatigueFired && active && !held) {
+    const callMin = input.blocks
+      .filter((b) => b.kind === 'fixed' && b.end <= now)
+      .reduce((sum, b) => sum + (b.end - b.start), 0)
+    if (callMin >= f.callFatigue.thresholdMin) {
+      state.callFatigueFired = true
+      events.push({
+        kind: 'call-fatigue',
+        title: 'Lots of calls today',
+        body: 'Try camera off, audio only or a walking call next.'
+      })
+    }
+  }
+
   // Custom reminders. `at` ones are about the clock (medication): they ignore busy and working
   // hours, and only wait for the user to be back. `every` ones are work-time habits.
   for (const r of f.reminders) {
