@@ -11,7 +11,8 @@ const S: Settings = {
     ...D.features,
     daylight: { ...D.features.daylight, enabled: false },
     windDown: { ...D.features.windDown, enabled: false },
-    callFatigue: { ...D.features.callFatigue, enabled: false }
+    callFatigue: { ...D.features.callFatigue, enabled: false },
+    commute: { enabled: false }
   }
 }
 const input = (o: Partial<WellbeingInput> = {}): WellbeingInput => ({
@@ -163,7 +164,12 @@ describe('custom reminders', () => {
 describe('timed nudges', () => {
   const only = (patch: Partial<Settings['features']>): Settings => ({
     ...S,
-    features: { ...D.features, mood: { ...D.features.mood, enabled: false }, ...patch }
+    features: {
+      ...D.features,
+      mood: { ...D.features.mood, enabled: false },
+      commute: { enabled: false },
+      ...patch
+    }
   })
   const run = (
     settings: Settings,
@@ -257,5 +263,25 @@ describe('breathing offer', () => {
     expect(kinds(stepWellbeing(input({ now: 641, settings, blocks: gapped })))).toEqual([])
     const blocks = [meeting(540, 640)]
     expect(kinds(stepWellbeing(input({ now: 651, settings, blocks })))).toEqual([])
+  })
+})
+
+describe('virtual commute', () => {
+  const settings: Settings = {
+    ...S,
+    features: {
+      ...S.features,
+      mood: { ...S.features.mood, enabled: false },
+      commute: { enabled: true }
+    }
+  }
+  it('starts the day once, on the first active tick in working hours', () => {
+    expect(kinds(stepWellbeing(input({ now: 530, settings })))).toEqual([])
+    expect(kinds(stepWellbeing(input({ now: 545, settings, idleSec: 900 })))).toEqual([])
+    const r = stepWellbeing(input({ now: 546, settings }))
+    expect(r.events).toEqual([
+      { kind: 'commute', title: 'Start your day', body: 'Look over the plan, then a 5 min walk.' }
+    ])
+    expect(kinds(stepWellbeing(input({ now: 547, settings, state: r.state })))).toEqual([])
   })
 })

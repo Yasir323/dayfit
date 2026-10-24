@@ -107,6 +107,7 @@ export function App(): React.JSX.Element {
           onCheckOut={openCheckout}
           canCheckOut={!review}
           onBreathe={() => setBreathing(true)}
+          onOpenPlan={() => setTab('today')}
         />
       )),
     ...view.nudges.map((id, k) => (

@@ -225,6 +225,15 @@ export function stepWellbeing(input: WellbeingInput): {
     }
   }
 
+  if (f.commute.enabled && !state.commuteFired && inHours && active && !held) {
+    state.commuteFired = true
+    events.push({
+      kind: 'commute',
+      title: 'Start your day',
+      body: 'Look over the plan, then a 5 min walk.'
+    })
+  }
+
   // Custom reminders. `at` ones are about the clock (medication): they ignore busy and working
   // hours, and only wait for the user to be back. `every` ones are work-time habits.
   for (const r of f.reminders) {

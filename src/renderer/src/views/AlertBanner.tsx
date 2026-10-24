@@ -22,6 +22,8 @@ interface Props {
   canCheckOut?: boolean
   /** Opens the box-breathing screen. */
   onBreathe?: () => void
+  /** Shows the Today tab. */
+  onOpenPlan?: () => void
 }
 
 /** A reminder the user may have missed (notifications can be dropped): act on it or dismiss it. */
@@ -31,7 +33,8 @@ export function AlertBanner({
   onView,
   onCheckOut,
   canCheckOut = true,
-  onBreathe = () => {}
+  onBreathe = () => {},
+  onOpenPlan = () => {}
 }: Props): React.JSX.Element {
   const hintId = useId()
   const [failure, setFailure] = useState<string | null>(null)
@@ -92,6 +95,18 @@ export function AlertBanner({
             Check out
           </button>
         )}
+        {alert.kind === 'commute' && (
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={() => {
+              onOpenPlan()
+              void run(dismiss)
+            }}
+          >
+            Open plan
+          </button>
+        )}
         {alert.kind === 'breathe' && (
           <button
             type="button"
@@ -114,7 +129,7 @@ export function AlertBanner({
           </button>
         )}
         <button type="button" className="btn" onClick={() => void run(dismiss)}>
-          {alert.kind === 'custom' ? 'Done' : 'Dismiss'}
+          {alert.kind === 'custom' || alert.kind === 'commute' ? 'Done' : 'Dismiss'}
         </button>
       </div>
       {alert.kind === 'heads-up' && !canCheckOut && (

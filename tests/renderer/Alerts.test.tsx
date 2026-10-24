@@ -169,6 +169,17 @@ describe('alert banners', () => {
     expect(screen.queryByRole('dialog', { name: 'Breathe' })).toBeNull()
   })
 
+  it('commute banner: Open plan goes to Today', async () => {
+    await show([
+      alert({ id: 'commute:540:0', kind: 'commute', title: 'Start your day', parts: [] })
+    ])
+    await userEvent.click(screen.getByRole('button', { name: 'Settings' }))
+    const banner = screen.getByRole('region', { name: 'Start your day' })
+    await userEvent.click(within(banner).getByRole('button', { name: 'Open plan' }))
+    expect(api.dismissAlert).toHaveBeenCalledWith('commute:540:0')
+    expect(await screen.findByRole('heading', { name: 'Today' })).toBeInTheDocument()
+  })
+
   it('lunch banner only dismisses', async () => {
     await show([alert({ id: 'lunch:780:0', kind: 'lunch', title: 'Lunch time', parts: [] })])
     const banner = screen.getByRole('region', { name: 'Lunch time' })

@@ -49,6 +49,9 @@ export function CheckOut({ view, onDone, onCancel, onPreview }: Props): React.JS
       <div className="review card">
         <h2>Your day</h2>
         <p className="day-summary">{formatSummary(finished.daySummary)}</p>
+        {finished.settings.features.commute.enabled && (
+          <p className="muted review-intro">Close the day with a 5 min walk.</p>
+        )}
         <div className="review-actions">
           <button type="button" className="btn-primary" onClick={() => onDone(finished)}>
             Close

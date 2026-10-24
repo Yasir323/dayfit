@@ -3,6 +3,8 @@ import { isFixed, type Block, type DateStr, type Item } from './types'
 
 /** Counters kept through the day for things the item list can't tell afterwards. */
 export interface DayStats {
+  /** Minutes at the computer (not idle). Absent in older state. */
+  activeMin?: number
   /** Breaks fired and not snoozed. */
   breaksTaken: number
   /** Focus sessions that ran to the end. */
@@ -11,7 +13,7 @@ export interface DayStats {
   moved: number
 }
 
-export const EMPTY_DAY_STATS: DayStats = { breaksTaken: 0, focusMin: 0, moved: 0 }
+export const EMPTY_DAY_STATS: DayStats = { activeMin: 0, breaksTaken: 0, focusMin: 0, moved: 0 }
 
 export interface DaySummary {
   date: DateStr
@@ -28,6 +30,8 @@ export interface DaySummary {
   moodAvg?: number | null
   /** Worked past hours (the overtime reminder fired). Absent in older rows. */
   overtime?: boolean
+  /** Minutes at the computer. Absent in older rows. */
+  screenMin?: number
 }
 
 export interface SummaryInput {
@@ -65,7 +69,8 @@ export function summarizeDay(input: SummaryInput): DaySummary {
     ).length,
     meetings: day.filter(isFixed).length,
     moodAvg: moodAverage(input.moods ?? []),
-    overtime: input.overtime ?? false
+    overtime: input.overtime ?? false,
+    screenMin: Math.round(stats.activeMin ?? 0)
   }
 }
 
@@ -86,6 +91,7 @@ export function formatSummary(s: DaySummary): string {
     `Focus ${hoursMinutes(s.focusMin)}`,
     `Water ${s.waterMl} / ${s.waterTargetMl} ml`,
     `Breaks ${s.breaksTaken}`,
-    `Done ${s.done}`
+    `Done ${s.done}`,
+    `Screen ${hoursMinutes(s.screenMin ?? 0)}`
   ].join(' · ')
 }

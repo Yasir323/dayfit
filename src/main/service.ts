@@ -78,6 +78,8 @@ export interface ViewState {
 }
 
 const MAX_ELAPSED_MIN = 5
+/** Idle under this long counts as screen time. */
+const SCREEN_IDLE_SEC = 60
 /** Saved days read for the week view's trends (risk, streaks). */
 const TREND_DAYS = 30
 /** A focus session this far past its end finishes without "Focus done" or a break. */
@@ -676,6 +678,11 @@ export class DayfitService {
         silent: false,
         parts: []
       })
+    }
+
+    if (idleSec < SCREEN_IDLE_SEC) {
+      const stats = this.stats()
+      stats.activeMin = (stats.activeMin ?? 0) + elapsedMin
     }
 
     const fired = events.filter((e) => e.kind === 'break').length

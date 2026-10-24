@@ -33,6 +33,7 @@ const blk = (itemId: string, kind: Block['kind'], start: number, end: number): B
   reason: ''
 })
 const stats = (o: Partial<DayStats> = {}): DayStats => ({
+  activeMin: 0,
   breaksTaken: 0,
   focusMin: 0,
   moved: 0,
@@ -79,6 +80,7 @@ describe('summarizeDay', () => {
     ).toEqual({
       moodAvg: 3.3,
       overtime: false,
+      screenMin: 0,
       date: D,
       focusMin: 90 + 25,
       breaksTaken: 6,
@@ -119,9 +121,10 @@ describe('formatSummary', () => {
         done: 4,
         moved: 0,
         dropped: 0,
-        meetings: 2
+        meetings: 2,
+        screenMin: 365
       })
-    ).toBe('Focus 2h 10m · Water 1500 / 2000 ml · Breaks 6 · Done 4')
+    ).toBe('Focus 2h 10m · Water 1500 / 2000 ml · Breaks 6 · Done 4 · Screen 6h 5m')
   })
 
   it('short focus shows minutes only', () => {
@@ -134,6 +137,8 @@ describe('formatSummary', () => {
       waterTargetMl: 2000,
       coffeeCups: 0
     })
-    expect(formatSummary(base)).toBe('Focus 45m · Water 0 / 2000 ml · Breaks 0 · Done 0')
+    expect(formatSummary(base)).toBe(
+      'Focus 45m · Water 0 / 2000 ml · Breaks 0 · Done 0 · Screen 0m'
+    )
   })
 })

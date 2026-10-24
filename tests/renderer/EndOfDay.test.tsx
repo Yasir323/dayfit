@@ -109,7 +109,8 @@ describe('check-out', () => {
           done: 4,
           moved: 0,
           dropped: 0,
-          meetings: 2
+          meetings: 2,
+          screenMin: 365
         }
       })
     )
@@ -118,8 +119,11 @@ describe('check-out', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Done for today' }))
     const dialog = screen.getByRole('dialog', { name: 'Wrap up today' })
     expect(
-      within(dialog).getByText('Focus 2h 10m · Water 1500 / 2000 ml · Breaks 6 · Done 4')
+      within(dialog).getByText(
+        'Focus 2h 10m · Water 1500 / 2000 ml · Breaks 6 · Done 4 · Screen 6h 5m'
+      )
     ).toBeInTheDocument()
+    expect(within(dialog).getByText('Close the day with a 5 min walk.')).toBeInTheDocument()
     await userEvent.click(within(dialog).getByRole('button', { name: 'Close' }))
     expect(screen.queryByRole('dialog', { name: 'Wrap up today' })).toBeNull()
   })

@@ -458,6 +458,18 @@ describe('DayfitService', () => {
 })
 
 describe('DayfitService in-app alerts', () => {
+  // Only break alerts are under test here: the daily wellbeing nudges stay quiet.
+  beforeEach(() => {
+    const f = svc.view().settings.features
+    svc.updateSettings({
+      features: {
+        ...f,
+        mood: { ...f.mood, enabled: false },
+        commute: { enabled: false },
+        daylight: { ...f.daylight, enabled: false }
+      }
+    })
+  })
   const firstBreak = (): void => {
     svc.markPunched('in')
     svc.tick(0)
@@ -1132,5 +1144,16 @@ describe('DayfitService wind-down', () => {
     }
     expect(kinds).not.toContain('break')
     expect(kinds).toContain('custom')
+  })
+})
+
+describe('DayfitService screen time', () => {
+  it('counts active minutes only', () => {
+    svc.tick(0)
+    for (let m = 1; m <= 10; m++) {
+      clock.set(26, 9, m)
+      svc.tick(m <= 6 ? 5 : 300)
+    }
+    expect(svc.checkOut([]).daySummary?.screenMin).toBe(6)
   })
 })
