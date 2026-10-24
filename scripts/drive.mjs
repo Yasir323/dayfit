@@ -163,6 +163,7 @@ try {
   for (const [group, name] of [
     ['Features', '17-settings-features'],
     ['My reminders', '18-settings-reminders'],
+    ['Camera cues', '21-settings-camera'],
     ['Home setup', '19-settings-home-setup'],
     ['Google Calendar', '20-settings-google-calendar']
   ]) {

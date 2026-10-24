@@ -487,9 +487,9 @@ function CameraGroup({
   return (
     <fieldset>
       <legend>Camera cues</legend>
-      <div className="group-card calendar-card">
+      <div className="group-card camera-card">
         <Toggle
-          label="Use the camera for tiredness and posture cues"
+          label="Use the camera"
           checked={camera.enabled}
           onChange={(on) => void act(on ? 'enable' : 'disable')}
         />

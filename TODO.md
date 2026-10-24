@@ -91,9 +91,11 @@ Everything below "Full backlog" is unprioritised beyond the v1 / later split.
 - [ ] README Privacy still says data is in dayfit.json; it's dayfit.db now
 
 ## Pick next — finish the app end to end (tick what to build)
+
 Calendar sync, Slack/Teams, AI and mood detection stay in "Later versions".
 
 ### Planning and tasks
+
 - [x] Drag and drop on the timeline (drop = lock there; fixed items stay put)
 - [x] Edit an existing item in place (title, duration, time, labels) from List/Timeline
 - [x] Repeating tasks and chores (daily/weekly), not only fixed items
@@ -101,23 +103,27 @@ Calendar sync, Slack/Teams, AI and mood detection stay in "Later versions".
 - [x] Meeting buffers: auto gap after back-to-back fixed items + "prep in 5 min" note
 
 ### Focus and wellbeing
+
 - [x] Focus timer (25/50 min) on any task: DND on, breaks held, short break after
 - [x] Coffee and energy: caffeine cap + cut-off hour, afternoon-slump coffee/walk suggestion
 - [x] Daily summary at check-out: focus time, breaks taken, water vs target, done/moved
 - [x] Weekly trend view (last 7 days of the daily summary)
 
 ### App quality
+
 - [x] Keyboard navigation in the popover (tabs, list rows, actions)
 - [x] Backup: export/import data as JSON from Settings
 - [x] Leftover minors (5 items under "Known issues and polish")
 - [x] Visual check in the running app (`npm run dev`)
 
 ### Release (end)
+
 - [ ] App icon and packaging for Mac + Windows
 - [ ] Sign dev and release builds (Apple Development / Developer ID)
 - [ ] Open-source release: README, screenshots, contributing guide, CI
 
 ## Next up
+
 - [x] Drag and drop on the timeline: drag tasks and lunch to a new time (drop = lock there); fixed items stay put
 
 ## Later versions
@@ -125,7 +131,7 @@ Calendar sync, Slack/Teams, AI and mood detection stay in "Later versions".
 - [x] Google Calendar sync (read meetings, write planned blocks back)
 - [ ] Slack / Teams / Meet integration
 - [ ] Paid AI brain-dump (free-form sentences)
-- [ ] Camera mood / fatigue detection + coffee suggestion
+- [x] Camera mood / fatigue detection + coffee suggestion
 - [ ] Wearables, reports, streaks, team features
 - [ ] Everything else in the full backlog below
 
@@ -145,7 +151,7 @@ Calendar sync, Slack/Teams, AI and mood detection stay in "Later versions".
 
 ## Mood and energy detection
 
-- [ ] On-device webcam cues: yawns, eye-closure duration, slouching
+- [x] On-device webcam cues: yawns, eye-closure duration, slouching
 - [x] Mouse pace and activity as fatigue signals (no camera needed)
 - [ ] Typing rhythm and typo rate as fatigue signals (needs a native key hook + Accessibility permission)
 - [x] Quick emoji check-in ("How you feeling?") to train the detector
@@ -224,6 +230,6 @@ Calendar sync, Slack/Teams, AI and mood detection stay in "Later versions".
 
 ## Privacy (cross-cutting requirement)
 
-- [ ] All camera processing on-device; no video stored
+- [x] All camera processing on-device; no video stored
 - [x] Per-feature on/off toggle
 - [x] Camera-free mode

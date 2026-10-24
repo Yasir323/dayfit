@@ -141,7 +141,9 @@
 }
 .calendar-card > p,
 .calendar-card > details,
-.calendar-card > .backup-actions {
+.calendar-card > .backup-actions,
+.camera-card > p,
+.camera-card > .backup-actions {
   margin: 0;
   padding: var(--s2) var(--s3);
   font-size: 13px;
