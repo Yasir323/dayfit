@@ -38,8 +38,21 @@ const minute = (p: Partial<MinuteScore> = {}): MinuteScore => ({
 })
 
 /** Fake window factory, service and permission API. */
-function setup(status: CameraPermission = 'granted', ask = true) {
-  const windows: (CameraWindowHandle & { sent: string[]; destroyed: boolean })[] = []
+type FakeWindow = CameraWindowHandle & { sent: string[]; destroyed: boolean }
+interface Setup {
+  c: ReturnType<typeof createCameraController>
+  deps: CameraDeps
+  windows: FakeWindow[]
+  service: {
+    addCameraMinute: ReturnType<typeof vi.fn>
+    setCalibration: ReturnType<typeof vi.fn>
+  }
+  statuses: CameraStatus[]
+  camera: () => typeof DEFAULT_SETTINGS.features.camera
+}
+
+function setup(status: CameraPermission = 'granted', ask = true): Setup {
+  const windows: FakeWindow[] = []
   let camera = { ...DEFAULT_SETTINGS.features.camera }
   const statuses: CameraStatus[] = []
   const service = {

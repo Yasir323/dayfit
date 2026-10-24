@@ -441,6 +441,105 @@ function Backup({ onView }: { onView?: (v: ViewState) => void }): React.JSX.Elem
 
 const asText = (d: string): Parsed<string> => ({ ok: true, value: d.trim() })
 
+const CUE_NAMES: [keyof FeaturesShape['camera']['cues'], string][] = [
+  ['dryEyes', 'Dry eyes'],
+  ['drowsy', 'Tiredness'],
+  ['posture', 'Posture'],
+  ['distance', 'Screen distance']
+]
+
+/** Camera cues: on/off (asks for access), which cues, calibration, and what it saw last. */
+function CameraGroup({
+  view,
+  send,
+  onView
+}: {
+  view: ViewState
+  send: Send
+  onView?: (v: ViewState) => void
+}): React.JSX.Element {
+  const camera = view.settings.features.camera
+  const st = view.camera
+  const [busy, setBusy] = useState(false)
+  const act = async (a: Parameters<typeof api.camera>[0]): Promise<void> => {
+    setBusy(true)
+    try {
+      const v = await api.camera(a)
+      onView?.(v)
+    } finally {
+      setBusy(false)
+    }
+  }
+  const status =
+    st.permission === 'denied'
+      ? 'Camera access is off — allow Dayfit in System Settings → Privacy & Security → Camera'
+      : !camera.enabled
+        ? null
+        : st.running
+          ? 'Camera on'
+          : 'Camera paused — outside work hours, in a meeting, busy or away'
+  const calibratedOn = camera.calibration
+    ? new Date(camera.calibration.at).toLocaleDateString('en-GB', {
+        day: 'numeric',
+        month: 'short'
+      })
+    : null
+  return (
+    <fieldset>
+      <legend>Camera cues</legend>
+      <div className="group-card calendar-card">
+        <Toggle
+          label="Use the camera for tiredness and posture cues"
+          checked={camera.enabled}
+          onChange={(on) => void act(on ? 'enable' : 'disable')}
+        />
+        {status && (
+          <p className="muted" role="status">
+            {status}
+          </p>
+        )}
+        {camera.enabled && (
+          <>
+            {CUE_NAMES.map(([key, label]) => (
+              <Toggle
+                key={key}
+                label={label}
+                checked={camera.cues[key]}
+                onChange={(b) =>
+                  void send({
+                    features: { camera: { ...camera, cues: { ...camera.cues, [key]: b } } }
+                  })
+                }
+              />
+            ))}
+            <p className="muted">
+              {st.calibrating
+                ? 'Sit the way you want to sit… (5 s)'
+                : st.setupChanged
+                  ? 'Your setup looks different — recalibrate'
+                  : calibratedOn
+                    ? `Calibrated ${calibratedOn}`
+                    : 'Calibrate to turn on posture and distance'}
+            </p>
+            <div className="backup-actions">
+              <button
+                type="button"
+                className="btn"
+                disabled={busy || st.calibrating || !st.running}
+                onClick={() => void act('calibrate')}
+              >
+                Calibrate
+              </button>
+            </div>
+            {st.lastMinute && <p className="muted">Last minute: {st.lastMinute.blinks} blinks</p>}
+          </>
+        )}
+        <p className="muted">Video stays on this Mac; Dayfit keeps only per-minute scores.</p>
+      </div>
+    </fieldset>
+  )
+}
+
 /** Google Calendar: the user's own OAuth client, sign-in, sync and write-back. */
 function CalendarGroup({
   view,
@@ -804,6 +903,7 @@ export function Settings({ view, onView }: Props): React.JSX.Element {
       </fieldset>
 
       <FeaturesGroup s={s} send={send} />
+      <CameraGroup view={view} send={send} onView={onView} />
 
       <RemindersGroup s={s} send={send} />
       <CalendarGroup view={view} send={send} onView={onView} />
