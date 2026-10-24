@@ -140,7 +140,7 @@ Calendar sync, Slack/Teams, AI and mood detection stay in "Later versions".
 - [ ] Posture warning
 - [ ] Screen-distance warning
 - [x] Caffeine tracker: daily cap + cutoff hour; after cutoff suggest walk/water instead of coffee
-- [ ] Meal / skipped-lunch reminder
+- [x] Meal / skipped-lunch reminder
 - [ ] Snack reminder
 - [ ] Medication reminder
 - [ ] Sit/stand alternation for standing desks
@@ -154,7 +154,7 @@ Calendar sync, Slack/Teams, AI and mood detection stay in "Later versions".
 - [x] Back-to-back meeting detection; auto-add buffer time
 - [ ] Meeting prep pop-up 5 min before: agenda, join link, attendees
 - [ ] Auto-book focus blocks into empty calendar slots
-- [ ] Pomodoro timer tied to break cycle
+- [x] Pomodoro timer tied to break cycle
 - [x] End-of-day shutdown ritual
 - [x] Overtime warning
 
@@ -192,7 +192,7 @@ Calendar sync, Slack/Teams, AI and mood detection stay in "Later versions".
 - [x] Back-to-back meeting buffers
 - [x] Walk reminder
 - [x] Stretching reminder
-- [ ] Meal / skipped-lunch reminder
+- [x] Meal / skipped-lunch reminder
 - [x] Water reminder
 - [x] Overtime warning
 - [x] End-of-day shutdown ritual
