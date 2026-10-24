@@ -33,6 +33,16 @@ const shot = async (name) => {
   console.log('shot', f)
 }
 const click = (role, name) => page.getByRole(role, { name, exact: true }).first().click()
+/** Late in the day some items won't fit: send them to tomorrow so the screens can be reached. */
+const answerReview = async () => {
+  const review = page.getByRole('dialog', { name: 'Review your plan' })
+  if (!(await review.isVisible())) return
+  for (const t of await review.getByText('Tomorrow', { exact: true }).all()) await t.click()
+  const skip = review.getByText('Skip today', { exact: true })
+  if (await skip.isVisible()) await skip.click()
+  await review.getByRole('button', { name: 'Apply' }).click()
+  await review.waitFor({ state: 'detached' })
+}
 const api = (fn, ...args) => page.evaluate(([f, a]) => window.dayfit[f](...a), [fn, args])
 
 try {
@@ -47,6 +57,8 @@ try {
   const end = Math.min(24 * 60 - 5, now + 360)
   const v = await api('updateSettings', {
     firstRunDone: true,
+    // Every day is a work day here, so the screenshots don't depend on the weekday.
+    workDays: [0, 1, 2, 3, 4, 5, 6],
     workStart: start,
     workEnd: end,
     lunch: now + 90
@@ -83,6 +95,8 @@ try {
   await api('logCoffee')
   await page.reload()
   await page.getByRole('navigation', { name: 'Main' }).waitFor()
+  await pause(500)
+  await answerReview()
 
   for (const [view, name] of [
     ['List', '02-today-list'],
@@ -103,11 +117,15 @@ try {
 
   // Focus timer on the first task.
   await click('tab', 'List')
-  await api('startFocus', (await api('view')).items.find((i) => i.type === 'task').id, 25)
-  await page.reload()
-  await page.getByRole('navigation', { name: 'Main' }).waitFor()
-  await shot('08-focus')
-  await api('stopFocus')
+  // Late in the day the tasks may have gone to tomorrow; focus on any open item still here.
+  const focusOn = (await api('view')).items.find((i) => i.status === 'open' && i.type !== 'fixed')
+  if (focusOn) {
+    await api('startFocus', focusOn.id, 25)
+    await page.reload()
+    await page.getByRole('navigation', { name: 'Main' }).waitFor()
+    await shot('08-focus')
+    await api('stopFocus')
+  }
 
   // Wellbeing banners: a check-in, daylight and a custom reminder due now (next tick fires them).
   const f = (await api('view')).settings.features
@@ -121,9 +139,18 @@ try {
       ]
     }
   })
-  await page.getByRole('region', { name: 'How are you feeling?' }).waitFor({ timeout: 45_000 })
-  await shot('15-wellbeing-banners')
-  await click('button', 'Good')
+  // Nudges wait for the user to be active (system idle < 5 min): best effort when nobody is at it.
+  const checkin = page.getByRole('region', { name: 'How are you feeling?' })
+  const more = page.getByRole('button', { name: /^Show \d+ more$/ })
+  await page.waitForTimeout(40_000)
+  if (await more.isVisible()) await more.click()
+  if (await checkin.isVisible()) {
+    await shot('15-wellbeing-banners')
+    await click('button', 'Good')
+  } else {
+    await shot('15-wellbeing-banners')
+    console.log('note: no check-in yet (the Mac is idle, so nudges are waiting)')
+  }
 
   // Breathing screen from the Today header.
   await click('button', 'Breathe')
@@ -150,9 +177,7 @@ try {
   await page.reload()
   await page.getByRole('dialog', { name: 'Review your plan' }).waitFor({ timeout: 5_000 })
   await shot('09-lunch-clash')
-  await page.getByText('Skip today', { exact: true }).click()
-  await click('button', 'Apply')
-  await page.getByRole('dialog', { name: 'Review your plan' }).waitFor({ state: 'detached' })
+  await answerReview()
 
   // Check-out, then the day summary.
   await api('updateSettings', { workEnd: round(now + 30) })
