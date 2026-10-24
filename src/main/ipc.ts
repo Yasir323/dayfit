@@ -1,4 +1,5 @@
 import { ipcMain } from 'electron'
+import type { CalendarAction } from './calendarSync'
 import type { DayfitService, ViewState } from './service'
 
 /** Every public service method except `tick`; each becomes a `dayfit:<method>` channel. */
@@ -43,6 +44,8 @@ export interface ShellActions {
   hide(): void
   /** `dayfit:openPortal` (attendance banner): opens the HRMS link in the browser. */
   openPortal(): void
+  /** `dayfit:calendar`: Google Calendar connect, sync and write-back; never rejects. */
+  calendar(a: CalendarAction): Promise<ViewState>
 }
 
 /**
@@ -65,6 +68,9 @@ export function registerIpc(
   ipcMain.handle('dayfit:week', () => service.week())
   ipcMain.handle('dayfit:exportData', () => shell.exportData())
   ipcMain.handle('dayfit:importData', () => shell.importData())
+  ipcMain.handle('dayfit:calendar', async (_e, a: CalendarAction) =>
+    onState(await shell.calendar(a))
+  )
   ipcMain.on('dayfit:hide', () => shell.hide())
   ipcMain.on('dayfit:openPortal', () => shell.openPortal())
 }

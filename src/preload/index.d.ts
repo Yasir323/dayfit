@@ -1,3 +1,4 @@
+import type { CalendarAction } from '../main/calendarSync'
 import type { ExportResult, ImportResult } from '../main/ipc'
 import type { DayfitService, ViewState } from '../main/service'
 
@@ -35,6 +36,8 @@ export interface DayfitApi {
   week(): Promise<ReturnType<DayfitService['week']>>
   exportData(): Promise<ExportResult>
   importData(): Promise<ImportResult>
+  /** Google Calendar: connect, cancel, disconnect, sync, write-back on or off. */
+  calendar(a: CalendarAction): Promise<ViewState>
   hide(): void
   openPortal(): void
   onState(cb: (v: ViewState) => void): () => void

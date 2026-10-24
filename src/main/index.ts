@@ -1,4 +1,4 @@
-import { app, dialog, globalShortcut, powerMonitor, screen, shell } from 'electron'
+import { app, dialog, globalShortcut, powerMonitor, safeStorage, screen, shell } from 'electron'
 import { readFile, writeFile } from 'node:fs/promises'
 import { join } from 'path'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
@@ -9,9 +9,16 @@ import { registerIpc, type ExportResult, type ImportResult } from './ipc'
 import { parseBackup } from './backup'
 import { probeWindows } from './probes'
 import { isFullscreen } from '../core/fullscreen'
-import { toDateStr } from '../core/time'
+import { minutesOf, toDateStr } from '../core/time'
 import { createFatigueSampler } from './fatigueSampler'
 import { createSingleFlight } from './singleFlight'
+import {
+  createCalendarController,
+  runCalendarAction,
+  type CalendarAction,
+  type CalendarController
+} from './calendarSync'
+import { createTokenStore } from './tokenStore'
 import { planUpdatedNotice, showNotification } from './notify'
 import { DayfitService, type ViewState } from './service'
 import { createPopover } from './tray'
@@ -22,6 +29,7 @@ import { isPortalUrl } from '../core/portalUrl'
 
 const TICK_MS = 30_000
 const FATIGUE_SAMPLE_MS = 2_000
+const CALENDAR_SYNC_MS = 15 * 60_000
 
 // The screenshot driver (scripts/drive.mjs) runs against a throwaway profile.
 if (process.env.DAYFIT_USER_DATA) app.setPath('userData', process.env.DAYFIT_USER_DATA)
@@ -48,6 +56,9 @@ if (!app.requestSingleInstanceLock()) {
 
     const bindHotkey = createHotkeyBinder(globalShortcut, () => popover.focus('quick-add'))
     let launchAtLogin: boolean | null = null
+    // Created below; publish tells it when the blocks to write back change.
+    let calendar: CalendarController | null = null
+    let lastWriteBlocks = ''
     /**
      * Applies settings-driven side effects, then pushes the view (with the hotkey status) to the
      * renderer and returns it. Never throws because of the hotkey.
@@ -63,6 +74,13 @@ if (!app.requestSingleInstanceLock()) {
       }
       popover.setLabel(view.trayLabel)
       popover.send('dayfit:state', view)
+      if (calendar && s.calendar.writeBack) {
+        const blocks = JSON.stringify(service.writeBlocks())
+        if (blocks !== lastWriteBlocks) {
+          lastWriteBlocks = blocks
+          calendar.blocksChanged()
+        }
+      }
       return view
     }
     // Registered before anything can show the popover (first run, hotkey, notifications).
@@ -111,11 +129,40 @@ if (!app.requestSingleInstanceLock()) {
         popover.show()
       }
     }
+    // Google Calendar: no network until a token is stored or the user clicks Connect.
+    calendar = createCalendarController({
+      fetch,
+      tokens: createTokenStore(join(userData, 'google-token.bin'), safeStorage),
+      openExternal: (url) => void shell.openExternal(url),
+      service,
+      today: () => toDateStr(new Date()),
+      nowMin: () => minutesOf(new Date()),
+      nowMs: () => Date.now(),
+      publish: (v) => {
+        publish(v)
+      }
+    })
+    const cal = calendar
+    cal.refreshLink()
+    const syncCalendar = (): void => {
+      cal.sync().then(publish, (e: unknown) => console.error('calendar sync failed', e))
+    }
+    syncCalendar()
+    setInterval(syncCalendar, CALENDAR_SYNC_MS)
+    const calendarAction = async (a: CalendarAction): Promise<ViewState> => {
+      try {
+        return await runCalendarAction(cal, a)
+      } catch (e) {
+        console.error('calendar action failed', e)
+        return service.view()
+      }
+    }
     registerIpc(service, publish, {
       hide: () => popover.hide(),
       openPortal,
       exportData,
-      importData
+      importData,
+      calendar: calendarAction
     })
     const initial = publish(service.view())
     // A menu bar app shows nothing at launch; open the popover once so first-run setup is seen.
@@ -205,6 +252,9 @@ if (!app.requestSingleInstanceLock()) {
     setInterval(probeThenTick, TICK_MS)
     powerMonitor.on('resume', probeThenTick)
     powerMonitor.on('unlock-screen', probeThenTick)
+    // Meetings may have changed while the Mac slept; the controller runs one sync at a time.
+    powerMonitor.on('resume', syncCalendar)
+    powerMonitor.on('unlock-screen', syncCalendar)
   })
 
   app.on('will-quit', () => globalShortcut.unregisterAll())
