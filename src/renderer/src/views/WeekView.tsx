@@ -13,6 +13,8 @@ interface Row {
   text: (v: number) => string
   /** Bar length at 100%; at least the week's largest value. */
   max: (values: number[]) => number
+  /** False when the day has a summary but no value for this row (e.g. no check-ins). */
+  has?: (s: DaySummary) => boolean
 }
 
 const ROWS: Row[] = [
@@ -33,6 +35,13 @@ const ROWS: Row[] = [
     value: (s) => s.breaksTaken,
     text: (v) => `${v} breaks`,
     max: (vs) => Math.max(1, ...vs)
+  },
+  {
+    name: 'Mood',
+    value: (s) => s.moodAvg ?? 0,
+    text: (v) => `${v} / 5`,
+    max: () => 5,
+    has: (s) => s.moodAvg != null
   }
 ]
 
@@ -74,15 +83,16 @@ export function WeekView({ view }: { view: ViewState }): React.JSX.Element {
               {week.map((d, n) => {
                 const day = weekdayShort(d.date)
                 const v = values[n]
+                const known = d.summary !== null && (row.has?.(d.summary) ?? true)
                 return (
                   <div key={d.date} className="week-bar">
                     <div
                       role="meter"
-                      aria-label={`${day}: ${d.summary ? row.text(v) : 'no data'}`}
+                      aria-label={`${day}: ${known ? row.text(v) : 'no data'}`}
                       aria-valuenow={v}
                       aria-valuemin={0}
                       aria-valuemax={max}
-                      className={d.summary ? 'week-meter' : 'week-meter is-empty'}
+                      className={known ? 'week-meter' : 'week-meter is-empty'}
                     >
                       <span style={{ height: `${(v / max) * 100}%` }} />
                     </div>

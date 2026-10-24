@@ -14,6 +14,7 @@ export const IPC_METHODS = [
   'setLock',
   'logWater',
   'logCoffee',
+  'logMood',
   'markPunched',
   'snoozeBreak',
   'startFocus',

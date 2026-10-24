@@ -1,6 +1,7 @@
 import type { BreakPart } from './breaks'
 import type { ReminderEvent, ReminderKind } from './reminders'
 import type { Minutes, Settings } from './types'
+import type { WellbeingKind } from './wellbeing'
 
 /** Reminders that get a banner in the popover; punch and time's-up have banners already. */
 export type AlertKind =
@@ -12,6 +13,7 @@ export type AlertKind =
   | 'meeting-now'
   | 'focus-done'
   | 'slump'
+  | WellbeingKind
 export interface Alert {
   id: string
   kind: AlertKind
@@ -30,7 +32,16 @@ const BANNER_KINDS: ReminderKind[] = [
   'meeting-soon',
   'meeting-now',
   'focus-done',
-  'slump'
+  'slump',
+  'checkin',
+  'custom',
+  'posture',
+  'daylight',
+  'wind-down',
+  'call-fatigue',
+  'breathe',
+  'commute',
+  'fatigue'
 ]
 const NUDGE_LABEL = "Time's up"
 
@@ -61,6 +72,24 @@ export function labelForKind(kind: ReminderKind, s: Settings): string {
       return 'Focus done'
     case 'slump':
       return 'Slump'
+    case 'checkin':
+      return 'Check-in'
+    case 'custom':
+      return 'Reminder'
+    case 'posture':
+      return 'Sit/stand'
+    case 'daylight':
+      return 'Daylight'
+    case 'wind-down':
+      return 'Wind down'
+    case 'call-fatigue':
+      return 'Many calls'
+    case 'breathe':
+      return 'Breathe'
+    case 'commute':
+      return 'Start your day'
+    case 'fatigue':
+      return 'Slowing down'
   }
 }
 

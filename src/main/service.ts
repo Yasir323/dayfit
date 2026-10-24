@@ -14,6 +14,7 @@ import {
   EMPTY_END_OF_DAY_STATE,
   type AttendanceKind
 } from '../core/endOfDay'
+import { EMPTY_WELLBEING_STATE, stepWellbeing } from '../core/wellbeing'
 import { EMPTY_DAY_STATS, summarizeDay, type DayStats, type DaySummary } from '../core/summary'
 import { lunchPickError, planDay, slotError } from '../core/scheduler'
 import { addDays, minutesOf, toDateStr, weekOf } from '../core/time'
@@ -104,6 +105,8 @@ export class DayfitService {
     this.state.answers = a
   }
   private lastTickAt: number | null = null
+  /** Another app is full screen (set by the shell's probe); not saved. */
+  private autoBusy = false
   private hotkeyOk = true
   /** Clock snapshot taken once per public call, so date and minutes always agree. */
   private at: Date
@@ -467,6 +470,17 @@ export class DayfitService {
     return view
   }
 
+  /** A check-in answer, 1 (exhausted) to 5 (great); anything else is ignored. */
+  logMood(score: number): ViewState {
+    this.begin()
+    if (!Number.isInteger(score) || score < 1 || score > 5) return this.buildView()
+    const today = this.today()
+    this.state.moods[today] = [...(this.state.moods[today] ?? []), { at: this.nowMin(), score }]
+    this.clearAlerts((a) => a.kind === 'checkin')
+    this.save()
+    return this.buildView()
+  }
+
   logCoffee(): ViewState {
     this.begin()
     const today = this.today()
@@ -526,7 +540,15 @@ export class DayfitService {
     const now = this.nowMin()
     const blocks = this.todayPlan().blocks
     const items = itemsForDate(s.items, today)
-    const before = JSON.stringify([s.reminder, s.endOfDay, s.alerts, s.unseen, s.focus, s.stats])
+    const before = JSON.stringify([
+      s.reminder,
+      s.endOfDay,
+      s.alerts,
+      s.unseen,
+      s.focus,
+      s.stats,
+      s.wellbeing
+    ])
 
     const r = dueReminders({
       now,
@@ -555,6 +577,19 @@ export class DayfitService {
       ...r.events,
       ...eod.events.map((e) => ({ ...e, itemId: null, silent: false, parts: [] }))
     ]
+    const wb = stepWellbeing({
+      now,
+      elapsedMin,
+      idleSec,
+      blocks,
+      items,
+      settings: s.settings,
+      manualBusy: s.manualBusy,
+      autoBusy: this.autoBusy,
+      state: s.wellbeing
+    })
+    s.wellbeing = wb.state
+    events.push(...wb.events.map((e) => ({ ...e, itemId: null, silent: false, parts: [] })))
 
     // While busy, nudge notifications wait (uncounted) for the first non-busy tick;
     // the item still shows as overdue in the app.
@@ -600,7 +635,15 @@ export class DayfitService {
     if (
       nudges.length > 0 ||
       s.overdue.length !== overdueBefore ||
-      JSON.stringify([s.reminder, s.endOfDay, s.alerts, s.unseen, s.focus, s.stats]) !== before
+      JSON.stringify([
+        s.reminder,
+        s.endOfDay,
+        s.alerts,
+        s.unseen,
+        s.focus,
+        s.stats,
+        s.wellbeing
+      ]) !== before
     )
       this.save()
     return { events, nudges, view: this.buildView() }
@@ -675,7 +718,8 @@ export class DayfitService {
       stats: s.stats[date] ?? EMPTY_DAY_STATS,
       waterMl: s.waterMl[date] ?? 0,
       waterTargetMl: s.settings.water.targetMl,
-      coffeeCups: s.coffee[date] ?? 0
+      coffeeCups: s.coffee[date] ?? 0,
+      moods: s.moods[date] ?? []
     })
   }
 
@@ -702,6 +746,7 @@ export class DayfitService {
     s.items = rolloverItems(s.items, today)
     s.reminder = structuredClone(EMPTY_REMINDER_STATE)
     s.endOfDay = structuredClone(EMPTY_END_OF_DAY_STATE)
+    s.wellbeing = structuredClone(EMPTY_WELLBEING_STATE)
     s.lunchAnswer = null
     s.alerts = []
     s.unseen = null

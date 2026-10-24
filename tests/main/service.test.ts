@@ -1033,3 +1033,21 @@ describe('DayfitService review minors', () => {
     for (const s of call.suggestedSlots) expect(s + 15 <= move! || s >= lunchEnd).toBe(true)
   })
 })
+
+describe('DayfitService mood', () => {
+  it('logMood stores the answer and clears the check-in banner', () => {
+    svc.markPunched('in')
+    clock.set(26, 10, 30)
+    expect(svc.tick(0).view.alerts.map((a) => a.kind)).toContain('checkin')
+    const v = svc.logMood(4)
+    expect(v.alerts.map((a) => a.kind)).not.toContain('checkin')
+    expect(loadState(file).moods[D]).toEqual([{ at: 630, score: 4 }])
+    expect(svc.checkOut([]).daySummary?.moodAvg).toBe(4)
+  })
+
+  it('ignores a score outside 1–5', () => {
+    svc.logMood(9)
+    svc.logMood(Number.NaN)
+    expect(loadState(file).moods[D] ?? []).toEqual([])
+  })
+})

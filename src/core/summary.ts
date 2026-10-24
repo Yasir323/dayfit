@@ -24,6 +24,8 @@ export interface DaySummary {
   moved: number
   dropped: number
   meetings: number
+  /** Average check-in score (1–5, one decimal); null with no check-ins. Absent in older rows. */
+  moodAvg?: number | null
 }
 
 export interface SummaryInput {
@@ -36,6 +38,7 @@ export interface SummaryInput {
   waterMl: number
   waterTargetMl: number
   coffeeCups: number
+  moods?: { at?: number; score: number }[]
 }
 
 export function summarizeDay(input: SummaryInput): DaySummary {
@@ -57,9 +60,15 @@ export function summarizeDay(input: SummaryInput): DaySummary {
     dropped: items.filter(
       (i) => i.status === 'dropped' && i.repeat.kind === 'none' && i.date === date
     ).length,
-    meetings: day.filter(isFixed).length
+    meetings: day.filter(isFixed).length,
+    moodAvg: moodAverage(input.moods ?? [])
   }
 }
+
+const moodAverage = (moods: { score: number }[]): number | null =>
+  moods.length === 0
+    ? null
+    : Math.round((moods.reduce((sum, m) => sum + m.score, 0) / moods.length) * 10) / 10
 
 const hoursMinutes = (min: number): string => {
   const h = Math.floor(min / 60)

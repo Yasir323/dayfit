@@ -198,6 +198,10 @@ body {
   flex: 1;
   font-size: 11.5px;
 }
+.nudge-actions .mood-btn {
+  font-size: 18px;
+  padding: 2px 0;
+}
 
 /* Timeline view */
 .timeline-view {

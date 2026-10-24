@@ -4,6 +4,14 @@ import { clampSnooze } from '../../../core/breaks'
 import { api } from '../api'
 import type { ViewState } from '../api'
 
+const MOODS: [number, string, string][] = [
+  [1, '😫', 'Exhausted'],
+  [2, '😕', 'Low'],
+  [3, '😐', 'Okay'],
+  [4, '🙂', 'Good'],
+  [5, '😄', 'Great']
+]
+
 interface Props {
   alert: Alert
   snoozeMin: number
@@ -41,6 +49,19 @@ export function AlertBanner({
         {alert.body && <span className="muted"> {alert.body}</span>}
       </p>
       <div className="nudge-actions">
+        {alert.kind === 'checkin' &&
+          MOODS.map(([score, face, name]) => (
+            <button
+              key={score}
+              type="button"
+              className="btn mood-btn"
+              aria-label={name}
+              title={name}
+              onClick={() => void run(() => api.logMood(score))}
+            >
+              {face}
+            </button>
+          ))}
         {alert.kind === 'break' && (
           <button type="button" className="btn" onClick={() => void run(() => api.snoozeBreak())}>
             Snooze {clampSnooze(snoozeMin)} min

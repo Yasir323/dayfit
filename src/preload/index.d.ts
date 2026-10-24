@@ -19,6 +19,7 @@ export interface DayfitApi {
   setLock: Async<'setLock'>
   logWater: Async<'logWater'>
   logCoffee: Async<'logCoffee'>
+  logMood: Async<'logMood'>
   markPunched: Async<'markPunched'>
   snoozeBreak: Async<'snoozeBreak'>
   startFocus: Async<'startFocus'>

@@ -69,9 +69,15 @@ describe('summarizeDay', () => {
         stats: stats({ breaksTaken: 6, focusMin: 25, moved: 2 }),
         waterMl: 1500,
         waterTargetMl: 2000,
-        coffeeCups: 2
+        coffeeCups: 2,
+        moods: [
+          { at: 630, score: 4 },
+          { at: 810, score: 2 },
+          { at: 990, score: 4 }
+        ]
       })
     ).toEqual({
+      moodAvg: 3.3,
       date: D,
       focusMin: 90 + 25,
       breaksTaken: 6,

@@ -26,6 +26,7 @@ const dayfit = {
   setLock: call('setLock'),
   logWater: call('logWater'),
   logCoffee: call('logCoffee'),
+  logMood: call('logMood'),
   markPunched: call('markPunched'),
   snoozeBreak: call('snoozeBreak'),
   startFocus: call('startFocus'),

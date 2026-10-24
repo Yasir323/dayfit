@@ -20,6 +20,7 @@ const day = (date: string, o: Partial<DaySummary> = {}): DaySummary => ({
   moved: 0,
   dropped: 0,
   meetings: 0,
+  moodAvg: null,
   ...o
 })
 const dates = [
@@ -41,7 +42,9 @@ describe('WeekView', () => {
       dates.map((date) => ({
         date,
         summary:
-          date === '2026-10-22' ? day(date, { focusMin: 150, waterMl: 1500, breaksTaken: 6 }) : null
+          date === '2026-10-22'
+            ? day(date, { focusMin: 150, waterMl: 1500, breaksTaken: 6, moodAvg: 3.5 })
+            : null
       }))
     )
     render(<WeekView view={makeView()} />)
@@ -55,7 +58,9 @@ describe('WeekView', () => {
     expect(within(water).getByRole('meter', { name: 'Thu: 75%' })).toBeInTheDocument()
     const breaks = screen.getByRole('group', { name: 'Breaks' })
     expect(within(breaks).getByRole('meter', { name: 'Thu: 6 breaks' })).toBeInTheDocument()
-    expect(screen.getAllByRole('meter')).toHaveLength(21)
+    const mood = screen.getByRole('group', { name: 'Mood' })
+    expect(within(mood).getByRole('meter', { name: 'Thu: 3.5 / 5' })).toBeInTheDocument()
+    expect(screen.getAllByRole('meter')).toHaveLength(28)
   })
 
   it('an empty week says so', async () => {

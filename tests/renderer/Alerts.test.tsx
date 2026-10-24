@@ -10,6 +10,7 @@ const api = vi.hoisted(() => ({
   snoozeBreak: vi.fn(),
   logWater: vi.fn(),
   dismissAlert: vi.fn(),
+  logMood: vi.fn(),
   hide: vi.fn(),
   onState: vi.fn((cb?: (v: ViewState) => void) => {
     void cb
@@ -46,7 +47,7 @@ beforeEach(() => {
   for (const fn of Object.values(api)) fn.mockReset()
   api.onState.mockReturnValue(() => {})
   api.onFocus.mockReturnValue(() => {})
-  for (const fn of [api.snoozeBreak, api.logWater, api.dismissAlert])
+  for (const fn of [api.snoozeBreak, api.logWater, api.dismissAlert, api.logMood])
     fn.mockResolvedValue(makeView())
 })
 afterEach(cleanup)
@@ -118,6 +119,18 @@ describe('alert banners', () => {
   it('banners stay usable with no overlay open', async () => {
     await show([alert({})])
     expect(document.querySelector('.banners')).not.toHaveAttribute('inert')
+  })
+
+  it('check-in banner offers five labelled faces', async () => {
+    await show([
+      alert({ id: 'checkin:630:0', kind: 'checkin', title: 'How are you feeling?', parts: [] })
+    ])
+    const banner = screen.getByRole('region', { name: 'How are you feeling?' })
+    const names = ['Exhausted', 'Low', 'Okay', 'Good', 'Great']
+    for (const n of names)
+      expect(within(banner).getByRole('button', { name: n })).toBeInTheDocument()
+    await userEvent.click(within(banner).getByRole('button', { name: 'Good' }))
+    expect(api.logMood).toHaveBeenCalledWith(4)
   })
 
   it('lunch banner only dismisses', async () => {
