@@ -49,6 +49,8 @@ interface Props {
   onView: (v: ViewState) => void
   onAddTask?: () => void
   onCheckOut?: () => void
+  /** Opens the box-breathing screen. */
+  onBreathe?: () => void
   /** Bumped by the check-out screen's "Preview tomorrow" to open the Tomorrow view. */
   previewRequest?: number
 }
@@ -58,6 +60,7 @@ export function TodayTab({
   onView,
   onAddTask = () => {},
   onCheckOut = () => {},
+  onBreathe = () => {},
   previewRequest = 0
 }: Props): React.JSX.Element {
   const [kind, setKind] = useState<TodayViewKind>(readView)
@@ -94,6 +97,9 @@ export function TodayTab({
         <div className="today-title">
           <h1>Today</h1>
           <span className="muted">{dayHeader(view.today)}</span>
+          <button type="button" className="btn-ghost breathe-btn" onClick={onBreathe}>
+            Breathe
+          </button>
         </div>
         <div className="intake">
           {water.enabled && (

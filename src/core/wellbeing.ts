@@ -74,6 +74,36 @@ export interface WellbeingInput {
   state: WellbeingState
 }
 
+/** Meetings this close together count as one run. */
+const RUN_GAP_MIN = 5
+/** A run of meetings at least this long earns a breathing offer… */
+const BREATHE_RUN_MIN = 90
+/** …made within this many minutes of the run ending. */
+const BREATHE_WITHIN_MIN = 10
+
+/** End of the latest run of back-to-back fixed blocks lasting 90+ minutes that ended by `now`. */
+function meetingRunEnd(blocks: Block[], now: Minutes): Minutes | null {
+  const fixed = blocks.filter((b) => b.kind === 'fixed').sort((a, b) => a.start - b.start)
+  let best: Minutes | null = null
+  let runEnd: Minutes | null = null
+  let runMin = 0
+  const close = (): void => {
+    if (runEnd !== null && runMin >= BREATHE_RUN_MIN && runEnd <= now) best = runEnd
+  }
+  for (const b of fixed) {
+    if (runEnd !== null && b.start - runEnd <= RUN_GAP_MIN) {
+      runMin += b.end - b.start
+      runEnd = Math.max(runEnd, b.end)
+    } else {
+      close()
+      runEnd = b.end
+      runMin = b.end - b.start
+    }
+  }
+  close()
+  return best
+}
+
 /** Busy as the hold rule sees it: the manual choice, else auto busy, else the plan decides. */
 export const effectiveBusy = (manualBusy: boolean | null, autoBusy: boolean): boolean | null =>
   manualBusy ?? (autoBusy ? true : null)
@@ -178,6 +208,19 @@ export function stepWellbeing(input: WellbeingInput): {
         kind: 'call-fatigue',
         title: 'Lots of calls today',
         body: 'Try camera off, audio only or a walking call next.'
+      })
+    }
+  }
+
+  // Breathing: offered once, just after a long run of back-to-back meetings.
+  if (f.breathe.enabled && !state.breatheOffered && active && !held) {
+    const end = meetingRunEnd(input.blocks, now)
+    if (end !== null && now - end <= BREATHE_WITHIN_MIN) {
+      state.breatheOffered = true
+      events.push({
+        kind: 'breathe',
+        title: 'Take a breather',
+        body: 'One minute of box breathing?'
       })
     }
   }

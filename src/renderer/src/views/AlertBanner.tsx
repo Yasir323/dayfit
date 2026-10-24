@@ -20,6 +20,8 @@ interface Props {
   onCheckOut: () => boolean
   /** False while a review is open: Check out is disabled with a hint. */
   canCheckOut?: boolean
+  /** Opens the box-breathing screen. */
+  onBreathe?: () => void
 }
 
 /** A reminder the user may have missed (notifications can be dropped): act on it or dismiss it. */
@@ -28,7 +30,8 @@ export function AlertBanner({
   snoozeMin,
   onView,
   onCheckOut,
-  canCheckOut = true
+  canCheckOut = true,
+  onBreathe = () => {}
 }: Props): React.JSX.Element {
   const hintId = useId()
   const [failure, setFailure] = useState<string | null>(null)
@@ -87,6 +90,18 @@ export function AlertBanner({
             }}
           >
             Check out
+          </button>
+        )}
+        {alert.kind === 'breathe' && (
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={() => {
+              onBreathe()
+              void run(dismiss)
+            }}
+          >
+            Breathe
           </button>
         )}
         {alert.kind === 'custom' && (

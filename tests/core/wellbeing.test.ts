@@ -224,3 +224,38 @@ describe('timed nudges', () => {
     expect(fired).toEqual([[760, 'call-fatigue', 'Lots of calls today']])
   })
 })
+
+describe('breathing offer', () => {
+  const settings: Settings = {
+    ...S,
+    features: { ...S.features, mood: { ...S.features.mood, enabled: false } }
+  }
+  const meeting = (start: number, end: number): Block => ({
+    itemId: null,
+    kind: 'fixed',
+    start,
+    end,
+    chunk: null,
+    reason: ''
+  })
+
+  it('offers once just after a 90+ minute run of back-to-back meetings', () => {
+    const blocks = [meeting(540, 600), meeting(603, 640)]
+    expect(kinds(stepWellbeing(input({ now: 639, settings, blocks })))).toEqual([])
+    const r = stepWellbeing(input({ now: 641, settings, blocks }))
+    expect(r.events).toEqual([
+      { kind: 'breathe', title: 'Take a breather', body: 'One minute of box breathing?' }
+    ])
+    expect(kinds(stepWellbeing(input({ now: 642, settings, blocks, state: r.state })))).toEqual([])
+  })
+
+  it('not for a short run, a gap over 5 minutes, or long after', () => {
+    expect(
+      kinds(stepWellbeing(input({ now: 641, settings, blocks: [meeting(560, 640)] })))
+    ).toEqual([])
+    const gapped = [meeting(540, 590), meeting(600, 640)]
+    expect(kinds(stepWellbeing(input({ now: 641, settings, blocks: gapped })))).toEqual([])
+    const blocks = [meeting(540, 640)]
+    expect(kinds(stepWellbeing(input({ now: 651, settings, blocks })))).toEqual([])
+  })
+})

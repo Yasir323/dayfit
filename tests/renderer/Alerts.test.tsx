@@ -151,6 +151,24 @@ describe('alert banners', () => {
     expect(api.snoozeCustom).toHaveBeenCalledWith('custom:480:0')
   })
 
+  it('breathe banner opens the breathing screen', async () => {
+    await show([
+      alert({ id: 'breathe:640:0', kind: 'breathe', title: 'Take a breather', parts: [] })
+    ])
+    const banner = screen.getByRole('region', { name: 'Take a breather' })
+    await userEvent.click(within(banner).getByRole('button', { name: 'Breathe' }))
+    expect(screen.getByRole('dialog', { name: 'Breathe' })).toBeInTheDocument()
+    expect(api.dismissAlert).toHaveBeenCalledWith('breathe:640:0')
+  })
+
+  it('the Today header opens the breathing screen', async () => {
+    await show([])
+    await userEvent.click(screen.getByRole('button', { name: 'Breathe' }))
+    expect(screen.getByRole('dialog', { name: 'Breathe' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Stop' }))
+    expect(screen.queryByRole('dialog', { name: 'Breathe' })).toBeNull()
+  })
+
   it('lunch banner only dismisses', async () => {
     await show([alert({ id: 'lunch:780:0', kind: 'lunch', title: 'Lunch time', parts: [] })])
     const banner = screen.getByRole('region', { name: 'Lunch time' })

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { movesText } from '../../core/movesText'
 import { api } from './api'
 import type { ViewState } from './api'
@@ -15,6 +15,7 @@ import { EditContext } from './lib/editContext'
 import type { Item } from '../../core/types'
 import { Settings } from './views/Settings'
 import { TodayTab } from './views/TodayTab'
+import { Breathe } from './views/Breathe'
 import { TabBar, type Tab } from './ui/TabBar'
 import './App.css'
 
@@ -27,6 +28,8 @@ export function App(): React.JSX.Element {
   const [seenMoves, setSeenMoves] = useState<string | null>(null)
   const [nudgeFocus, setNudgeFocus] = useState(0)
   const [checkout, setCheckout] = useState(false)
+  const [breathing, setBreathing] = useState(false)
+  const stopBreathing = useCallback(() => setBreathing(false), [])
   const [editing, setEditing] = useState<Item | null>(null)
   const [previewRequest, setPreviewRequest] = useState(0)
   const nudgeRef = useRef<HTMLDivElement>(null)
@@ -103,6 +106,7 @@ export function App(): React.JSX.Element {
           onView={setView}
           onCheckOut={openCheckout}
           canCheckOut={!review}
+          onBreathe={() => setBreathing(true)}
         />
       )),
     ...view.nudges.map((id, k) => (
@@ -117,7 +121,8 @@ export function App(): React.JSX.Element {
   ]
   const wrapUp = checkout && firstRunDone && !review
   const editOpen = editing !== null && firstRunDone && !review && !wrapUp
-  const overlay = !firstRunDone || review || wrapUp || editOpen
+  const breatheOpen = breathing && firstRunDone && !review && !wrapUp && !editOpen
+  const overlay = !firstRunDone || review || wrapUp || editOpen || breatheOpen
 
   return (
     <EditContext.Provider value={setEditing}>
@@ -140,6 +145,7 @@ export function App(): React.JSX.Element {
               onView={setView}
               onAddTask={() => setTab('add')}
               onCheckOut={openCheckout}
+              onBreathe={() => setBreathing(true)}
               previewRequest={previewRequest}
             />
           )}
@@ -168,6 +174,11 @@ export function App(): React.JSX.Element {
 
         <TabBar value={tab} onChange={setTab} inert={overlay} />
 
+        {breatheOpen && (
+          <div className="overlay" role="dialog" aria-modal="true" aria-label="Breathe">
+            <Breathe onClose={stopBreathing} />
+          </div>
+        )}
         {wrapUp && (
           <div className="overlay" role="dialog" aria-modal="true" aria-label="Wrap up today">
             <CheckOut
