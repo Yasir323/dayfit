@@ -7,6 +7,7 @@ import { Checkbox } from '../ui/Checkbox'
 import { Icon } from '../ui/Icon'
 import { CallSlots } from './CallSlots'
 import { ItemActions } from './ItemActions'
+import { nextIndex } from '../lib/arrowNav'
 
 interface Props {
   view: ViewState
@@ -44,7 +45,12 @@ export function ListView({ view, onView, onAddTask }: Props): React.JSX.Element 
     const checkable = !readOnly && item.fixedStart === null
     const done = item.status === 'done'
     return (
-      <li key={item.id} className={`list-row${done ? ' is-done' : ''}`} aria-label={item.title}>
+      <li
+        key={item.id}
+        className={`list-row${done ? ' is-done' : ''}`}
+        aria-label={item.title}
+        tabIndex={0}
+      >
         {item.fixedStart !== null ? (
           <span className="row-lead" title="Fixed">
             <Icon name="pin" size={15} />
@@ -106,7 +112,21 @@ export function ListView({ view, onView, onAddTask }: Props): React.JSX.Element 
   }
 
   return (
-    <div className="list-view">
+    <div
+      className="list-view"
+      onKeyDown={(e) => {
+        // Up/Down move between rows (only when a row itself has focus, not its buttons).
+        const target = e.target as HTMLElement
+        if (!target.classList.contains('list-row')) return
+        const rows = [...e.currentTarget.querySelectorAll<HTMLElement>('.list-row')]
+        const at = rows.indexOf(target)
+        if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
+        const k = nextIndex(e.key, at, rows.length, 'vertical')
+        if (k === null) return
+        e.preventDefault()
+        rows[k].focus()
+      }}
+    >
       {failure && (
         <p className="error" role="alert">
           {failure}

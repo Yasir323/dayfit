@@ -911,3 +911,9 @@ body {
   color: var(--muted);
   font-size: 12px;
 }
+
+/* Keyboard focus on a list row */
+.list-row:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  outline-offset: -2px;
+}

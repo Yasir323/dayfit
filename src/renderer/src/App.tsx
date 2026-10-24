@@ -17,6 +17,7 @@ import { Settings } from './views/Settings'
 import { TodayTab } from './views/TodayTab'
 import { Breathe } from './views/Breathe'
 import { BannerStack } from './views/BannerStack'
+import { Overlay } from './ui/Overlay'
 import { TabBar, type Tab } from './ui/TabBar'
 import './App.css'
 
@@ -59,10 +60,13 @@ export function App(): React.JSX.Element {
     if (text) setToast({ text })
   }
 
-  // Esc closes the popover (it is frameless, so there is no close button).
+  // Esc closes an open overlay (breathing, wrap-up, edit) first; otherwise the popover, which is
+  // frameless and has no close button. Review and first-run need an answer, so they stay.
+  const closeOverlay = useRef<() => boolean>(() => false)
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape' && !e.isComposing) api.hide()
+      if (e.key !== 'Escape' || e.isComposing) return
+      if (!closeOverlay.current()) api.hide()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -77,6 +81,19 @@ export function App(): React.JSX.Element {
   useEffect(() => {
     if (nudgeFocus > 0) nudgeRef.current?.focus()
   }, [nudgeFocus])
+
+  // Which closable overlay is showing (same rules as the render below), for Esc.
+  useEffect(() => {
+    closeOverlay.current = () => {
+      if (!view || !view.settings.firstRunDone) return false
+      if (view.plan.decisions.length > 0 || view.plan.lunchClash) return false
+      if (checkout) setCheckout(false)
+      else if (editing !== null) setEditing(null)
+      else if (breathing) setBreathing(false)
+      else return false
+      return true
+    }
+  })
 
   if (!view) return <div className="app">Dayfit</div>
 
@@ -178,12 +195,12 @@ export function App(): React.JSX.Element {
         <TabBar value={tab} onChange={setTab} inert={overlay} />
 
         {breatheOpen && (
-          <div className="overlay" role="dialog" aria-modal="true" aria-label="Breathe">
+          <Overlay label="Breathe">
             <Breathe onClose={stopBreathing} />
-          </div>
+          </Overlay>
         )}
         {wrapUp && (
-          <div className="overlay" role="dialog" aria-modal="true" aria-label="Wrap up today">
+          <Overlay label="Wrap up today">
             <CheckOut
               view={view}
               onDone={(v) => {
@@ -197,7 +214,7 @@ export function App(): React.JSX.Element {
                 setPreviewRequest((n) => n + 1)
               }}
             />
-          </div>
+          </Overlay>
         )}
 
         {review && firstRunDone && (
@@ -220,7 +237,7 @@ export function App(): React.JSX.Element {
           </div>
         )}
         {editOpen && editing && (
-          <div className="overlay" role="dialog" aria-modal="true" aria-label="Edit item">
+          <Overlay label="Edit item">
             <EditItem
               key={editing.id}
               item={editing}
@@ -232,7 +249,7 @@ export function App(): React.JSX.Element {
               }}
               onCancel={() => setEditing(null)}
             />
-          </div>
+          </Overlay>
         )}
       </div>
     </EditContext.Provider>
