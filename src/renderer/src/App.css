@@ -177,14 +177,17 @@ body {
     var(--shadow-card);
 }
 .nudge-text {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  display: block;
   margin: 0 0 var(--s2);
   font-weight: 600;
 }
 .nudge-text .icon {
+  margin-right: 6px;
   color: var(--warn);
+  vertical-align: -2px;
+}
+.nudge-text .muted {
+  font-weight: 400;
 }
 .nudge-hint {
   margin: var(--s1) 0 0;
@@ -862,7 +865,7 @@ body {
   position: relative;
   width: 140px;
   height: 140px;
-  border: 2px solid var(--accent-soft);
+  border: 2px solid var(--border-strong);
   border-radius: var(--r-md);
 }
 .breathe-dot {

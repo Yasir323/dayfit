@@ -327,7 +327,7 @@ function HomeSetup({
       <div className="group-card">
         <p className="muted home-progress">{`${ticked.length} / ${ERGONOMICS.length}`}</p>
         {ERGONOMICS.map((e) => (
-          <label key={e.id} className="field check-row">
+          <label key={e.id} className="check-row">
             <input
               type="checkbox"
               checked={ticked.includes(e.id)}

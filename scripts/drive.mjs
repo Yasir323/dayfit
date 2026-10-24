@@ -109,6 +109,40 @@ try {
   await shot('08-focus')
   await api('stopFocus')
 
+  // Wellbeing banners: a check-in, daylight and a custom reminder due now (next tick fires them).
+  const f = (await api('view')).settings.features
+  await api('updateSettings', {
+    features: {
+      ...f,
+      mood: { ...f.mood, times: [now] },
+      daylight: { ...f.daylight, at: now },
+      reminders: [
+        { id: 'r1', title: 'Take vitamin D', kind: 'at', times: [now], everyMin: 0, enabled: true }
+      ]
+    }
+  })
+  await page.getByRole('region', { name: 'How are you feeling?' }).waitFor({ timeout: 45_000 })
+  await shot('15-wellbeing-banners')
+  await click('button', 'Good')
+
+  // Breathing screen from the Today header.
+  await click('button', 'Breathe')
+  await pause(2500)
+  await shot('16-breathe')
+  await click('button', 'Stop')
+
+  // The new Settings groups.
+  await click('button', 'Settings')
+  for (const [group, name] of [
+    ['Features', '17-settings-features'],
+    ['My reminders', '18-settings-reminders'],
+    ['Home setup', '19-settings-home-setup']
+  ]) {
+    await page.getByRole('group', { name: group }).scrollIntoViewIfNeeded()
+    await shot(name)
+  }
+  await click('button', 'Today')
+
   // Lunch clash: a meeting over lunch.
   await api('addItems', [
     item({ title: 'Client call', type: 'fixed', fixedStart: round(now + 85), durationMin: 60 })

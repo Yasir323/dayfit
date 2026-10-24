@@ -149,10 +149,14 @@
   display: flex;
   align-items: center;
   gap: var(--s2);
+  padding-right: var(--s3);
+  border-bottom: 1px solid var(--hairline);
 }
-.reminder-row .toggle-row {
+.settings .reminder-row .toggle-row {
   flex: 1;
   min-width: 0;
+  grid-template-columns: 1fr auto;
+  border-bottom: 0;
 }
 .reminder-when {
   font-size: 12px;
@@ -160,12 +164,16 @@
 }
 
 .home-progress {
-  margin: var(--s2) 0 0;
+  margin: 0;
+  padding: 7px var(--s3);
+  border-bottom: 1px solid var(--hairline);
   font-size: 12px;
 }
 .check-row {
   display: flex;
   align-items: center;
   gap: var(--s2);
+  padding: 7px var(--s3);
+  border-bottom: 1px solid var(--hairline);
   font-size: 13px;
 }

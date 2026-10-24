@@ -116,7 +116,7 @@ Calendar sync, Slack/Teams, AI and mood detection stay in "Later versions".
 ## Original ideas
 
 - [ ] Mood detection
-- [ ] Coffee break suggestion when user feels sleepy
+- [x] Coffee break suggestion when user feels sleepy
 - [x] Water reminder based on daily target intake
 - [x] Stretching reminder
 - [x] Walk reminder
@@ -128,10 +128,11 @@ Calendar sync, Slack/Teams, AI and mood detection stay in "Later versions".
 ## Mood and energy detection
 
 - [ ] On-device webcam cues: yawns, eye-closure duration, slouching
-- [ ] Typing rhythm, typo rate and mouse jitter as fatigue signals (no camera needed)
-- [ ] Quick emoji check-in ("How you feeling?") to train the detector
+- [x] Mouse pace and activity as fatigue signals (no camera needed)
+- [ ] Typing rhythm and typo rate as fatigue signals (needs a native key hook + Accessibility permission)
+- [x] Quick emoji check-in ("How you feeling?") to train the detector
 - [ ] Wearable sync (Apple Health, Fitbit, Oura): sleep score, HRV, steps
-- [ ] Personal energy curve learned from past days; predict the afternoon slump
+- [x] Personal energy curve learned from past days; predict the afternoon slump
 
 ## Body and health
 
@@ -141,15 +142,18 @@ Calendar sync, Slack/Teams, AI and mood detection stay in "Later versions".
 - [ ] Screen-distance warning
 - [x] Caffeine tracker: daily cap + cutoff hour; after cutoff suggest walk/water instead of coffee
 - [x] Meal / skipped-lunch reminder
-- [ ] Snack reminder
-- [ ] Medication reminder
-- [ ] Sit/stand alternation for standing desks
-- [ ] Guided breathing (box breathing) when stress detected
-- [ ] Wind-down mode: blue-light nudge, stop late-night work
+- [x] Snack reminder
+- [x] Medication reminder
+- [x] Sit/stand alternation for standing desks
+- [x] Guided box breathing (header button; offered after long meeting runs)
+- [ ] Offer breathing when stress is detected
+- [x] Wind-down: evening nudge to stop working
+- [ ] Blue-light nudge in the evening
 
 ## Work and focus
 
-- [ ] Auto busy mode during calendar meetings, screen share, or fullscreen apps
+- [x] Auto busy mode while another app is full screen (macOS)
+- [ ] Auto busy mode during screen share
 - [x] Smart break timing: never mid-meeting, moved into gaps
 - [x] Back-to-back meeting detection; auto-add buffer time
 - [ ] Meeting prep pop-up 5 min before: agenda, join link, attendees
@@ -160,9 +164,10 @@ Calendar sync, Slack/Teams, AI and mood detection stay in "Later versions".
 
 ## Reports and motivation
 
-- [ ] Daily / weekly summary: breaks, water, screen time, mood trend
-- [ ] Streaks and badges
-- [ ] Burnout risk score from multi-week trends
+- [x] Daily / weekly summary: breaks, water, screen time, mood trend
+- [x] Streaks (water, breaks, on-time check-out)
+- [ ] Badges
+- [x] Burnout risk score from multi-week trends
 
 ## Team and social
 
@@ -172,16 +177,16 @@ Calendar sync, Slack/Teams, AI and mood detection stay in "Later versions".
 
 ## WFH-specific
 
-- [ ] Virtual commute: short start-of-day and end-of-day ritual (walk, plan, review) to mark work boundaries
+- [x] Virtual commute: short start-of-day and end-of-day ritual (walk, plan, review) to mark work boundaries
 - [ ] Hard stop: after work hours, hide/snooze work apps and notifications
-- [ ] Video-call fatigue: after N hours of calls, suggest camera-off, audio-only or walking meeting
+- [x] Video-call fatigue: after N hours of calls, suggest camera-off, audio-only or walking meeting
 - [ ] Step-deficit nudge: no office walking, so track movement gap and prompt
 - [ ] Isolation check: "no human contact in X hours" nudge; virtual coffee with a teammate
 - [ ] "On a call" signal for household: smart bulb (e.g. Hue) or phone status
-- [ ] Daylight / fresh-air nudge: go outside, open window
+- [x] Daylight / fresh-air nudge: go outside, open window
 - [x] Lunch away from desk reminder
 - [ ] Guilt-free break status: auto "back in 10" message on Slack/Teams during breaks
-- [ ] Home ergonomics checklist (chair, monitor height, lighting)
+- [x] Home ergonomics checklist (chair, monitor height, lighting)
 - [ ] Personal errands (school pickup, deliveries) blended into work calendar
 - [ ] Timezone awareness for remote teams (late/early meeting warnings)
 
@@ -202,5 +207,5 @@ Calendar sync, Slack/Teams, AI and mood detection stay in "Later versions".
 ## Privacy (cross-cutting requirement)
 
 - [ ] All camera processing on-device; no video stored
-- [ ] Per-feature on/off toggle
-- [ ] Camera-free mode
+- [x] Per-feature on/off toggle
+- [x] Camera-free mode
