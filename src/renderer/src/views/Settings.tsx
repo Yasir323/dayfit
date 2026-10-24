@@ -467,7 +467,7 @@ function CalendarGroup({
   return (
     <fieldset>
       <legend>Google Calendar</legend>
-      <div className="group-card">
+      <div className="group-card calendar-card">
         {cal.connected ? (
           <>
             <p className="muted" role="status">

@@ -139,6 +139,20 @@
   gap: var(--s2);
   padding: var(--s2) 0;
 }
+.calendar-card > p,
+.calendar-card > details,
+.calendar-card > .backup-actions {
+  margin: 0;
+  padding: var(--s2) var(--s3);
+  font-size: 13px;
+}
+.calendar-card > details ol {
+  margin: var(--s1) 0 0;
+  padding-left: var(--s4);
+}
+.calendar-card .field {
+  grid-template-columns: 90px 1fr;
+}
 .backup-note {
   margin: 0 0 var(--s2);
   font-size: 12px;
