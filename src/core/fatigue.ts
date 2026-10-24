@@ -10,11 +10,10 @@ export interface Sample {
   idle: number
 }
 
-/** One minute folded: seconds active, cursor path (points) and direction changes. */
+/** One minute folded: seconds the cursor moved, and how far it went (points). */
 export interface MinuteStat {
   active: number
   path: number
-  turns: number
 }
 
 const SAMPLE_SEC = 2
@@ -27,14 +26,9 @@ const SLOW_RATIO = 0.65
 /** The baseline moves a seventh of the way to each day's pace (about a week of memory). */
 const BASELINE_DAYS = 7
 
-const sign = (n: number): number => (n > 0 ? 1 : n < 0 ? -1 : 0)
-
 export function minuteOf(samples: Sample[]): MinuteStat {
   let active = 0
   let path = 0
-  let turns = 0
-  let lastDx = 0
-  let lastDy = 0
   samples.forEach((s, k) => {
     if (k === 0) return
     const dx = s.x - samples[k - 1].x
@@ -42,15 +36,8 @@ export function minuteOf(samples: Sample[]): MinuteStat {
     // Only seconds with the cursor moving count: typing would otherwise read as a slow mouse.
     if (s.idle < SAMPLE_SEC && (dx !== 0 || dy !== 0)) active += SAMPLE_SEC
     path += Math.hypot(dx, dy)
-    if (
-      (sign(dx) !== 0 && sign(dx) === -sign(lastDx)) ||
-      (sign(dy) !== 0 && sign(dy) === -sign(lastDy))
-    )
-      turns++
-    if (dx !== 0) lastDx = dx
-    if (dy !== 0) lastDy = dy
   })
-  return { active, path, turns }
+  return { active, path }
 }
 
 const rate = (minutes: MinuteStat[]): number | null => {

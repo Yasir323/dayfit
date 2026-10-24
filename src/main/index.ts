@@ -11,6 +11,7 @@ import { probeWindows } from './probes'
 import { isFullscreen } from '../core/fullscreen'
 import { toDateStr } from '../core/time'
 import { createFatigueSampler } from './fatigueSampler'
+import { createSingleFlight } from './singleFlight'
 import { planUpdatedNotice, showNotification } from './notify'
 import { DayfitService, type ViewState } from './service'
 import { createPopover } from './tray'
@@ -191,18 +192,16 @@ if (!app.requestSingleInstanceLock()) {
       const snap = sampler.snapshot(toDateStr(new Date()))
       service.setFatigue(snap.minutes, snap.todayRate)
     })
-    const probeThenTick = (): void => {
+    // One run at a time: waking the Mac fires both resume and unlock-screen.
+    const probeThenTick = createSingleFlight(async (): Promise<void> => {
       shareFatigue()
-      fullScreenNow()
-        .catch((e: unknown) => {
-          console.error('full-screen probe failed', e)
-          return false
-        })
-        .then((full) => {
-          service.setAutoBusy(full)
-          tick()
-        })
-    }
+      const full = await fullScreenNow().catch((e: unknown) => {
+        console.error('full-screen probe failed', e)
+        return false
+      })
+      service.setAutoBusy(full)
+      tick()
+    })
     setInterval(probeThenTick, TICK_MS)
     powerMonitor.on('resume', probeThenTick)
     powerMonitor.on('unlock-screen', probeThenTick)

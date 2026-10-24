@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { dayRate, minuteOf, slowing, updateBaseline, type MinuteStat } from '../../src/core/fatigue'
 
 describe('minuteOf', () => {
-  it('adds up active seconds, cursor path and direction changes', () => {
+  it('adds up active seconds, cursor path', () => {
     const samples = [
       { x: 0, y: 0, idle: 0 },
       { x: 30, y: 40, idle: 0 }, // 50 px
@@ -10,15 +10,15 @@ describe('minuteOf', () => {
       { x: 0, y: 40, idle: 9 } // away
     ]
     // Active = seconds the cursor moved while the user was there.
-    expect(minuteOf(samples)).toEqual({ active: 4, path: 80, turns: 1 })
+    expect(minuteOf(samples)).toEqual({ active: 4, path: 80 })
   })
 
   it('an empty minute is all zeros', () => {
-    expect(minuteOf([])).toEqual({ active: 0, path: 0, turns: 0 })
+    expect(minuteOf([])).toEqual({ active: 0, path: 0 })
   })
 })
 
-const m = (path: number, active = 60): MinuteStat => ({ active, path, turns: 0 })
+const m = (path: number, active = 60): MinuteStat => ({ active, path })
 
 describe('slowing', () => {
   it('never fires without a baseline or with under 20 active minutes', () => {

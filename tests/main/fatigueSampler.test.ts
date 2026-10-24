@@ -12,7 +12,7 @@ describe('createFatigueSampler', () => {
     const snap = s.snapshot('2026-10-26')
     expect(snap.minutes).toHaveLength(30)
     // 29 moves inside each 30-sample minute.
-    expect(snap.minutes[0]).toEqual({ active: 58, path: 290, turns: 0 })
+    expect(snap.minutes[0]).toEqual({ active: 58, path: 290 })
     expect(snap.todayRate).toBeCloseTo(290 / 58)
   })
 

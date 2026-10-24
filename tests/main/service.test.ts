@@ -1194,8 +1194,8 @@ describe('DayfitService auto busy', () => {
 })
 
 describe('DayfitService fatigue', () => {
-  const minutes = (path: number): { active: number; path: number; turns: number }[] =>
-    Array.from({ length: 20 }, () => ({ active: 60, path, turns: 0 }))
+  const minutes = (path: number): { active: number; path: number }[] =>
+    Array.from({ length: 20 }, () => ({ active: 60, path }))
 
   it('learns a baseline at rollover and nudges when well below it', () => {
     const f = svc.view().settings.features
