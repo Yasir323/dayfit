@@ -1299,3 +1299,60 @@ describe('DayfitService calendar', () => {
     expect(v.settings.calendar).toEqual({ clientId: 'a', clientSecret: 'b', writeBack: false })
   })
 })
+
+describe('DayfitService calendar sync', () => {
+  const meeting = { eventId: 'e1', title: 'Standup', start: 600, durationMin: 30 }
+
+  it('applyCalendar adds the meeting as a fixed item and plans around it', () => {
+    clock.set(26, 8)
+    const v = svc.applyCalendar([meeting])
+    const m = v.items.find((i) => i.calendarId === 'e1')
+    expect(m).toMatchObject({ type: 'fixed', fixedStart: 600, title: 'Standup' })
+    expect(blockOf(v, m!.id)).toMatchObject({ kind: 'fixed', start: 600, end: 630 })
+    expect(v.calendar.lastSyncAt).toBe(new Date(2026, 9, 26, 8).getTime())
+    expect(v.calendar.lastError).toBeNull()
+  })
+
+  it('calendarFailed shows the error until the next good sync', () => {
+    expect(svc.calendarFailed('offline').calendar.lastError).toBe('offline')
+    expect(svc.applyCalendar([]).calendar.lastError).toBeNull()
+  })
+
+  it('setCalendarLink shows in the view and is not saved', () => {
+    svc.setCalendarLink({ connected: true, connecting: false, canWrite: true })
+    expect(svc.view().calendar).toMatchObject({
+      connected: true,
+      connecting: false,
+      canWrite: true
+    })
+    const again = new DayfitService(file, clock)
+    expect(again.view().calendar.connected).toBe(false)
+  })
+
+  it('writeBlocks lists future task and deep blocks with stable keys', () => {
+    svc.addItems([
+      newItem({ title: 'Email' }),
+      newItem({ title: 'Design', type: 'deep', durationMin: 120 }),
+      newItem({ title: 'Sync', type: 'fixed', fixedStart: 840, durationMin: 30 })
+    ])
+    const v = svc.view()
+    const blocks = svc.writeBlocks()
+    expect(blocks.map((b) => b.title).sort()).toEqual(['Design', 'Email'])
+    for (const b of blocks) {
+      const id = b.key.split('#')[0]
+      const planned = v.plan.blocks.filter((x) => x.itemId === id)
+      expect(b).toEqual({
+        key: `${id}#0`,
+        title: b.title,
+        start: planned[0].start,
+        end: planned[0].end
+      })
+    }
+    const first = [...blocks].sort((a, b) => a.start - b.start)[0]
+    const second = [...blocks].sort((a, b) => a.start - b.start)[1]
+    clock.set(26, Math.floor(first.end / 60), first.end % 60)
+    const later = svc.writeBlocks()
+    expect(later.map((b) => b.key)).not.toContain(first.key)
+    expect(later.map((b) => b.key)).toContain(second.key)
+  })
+})

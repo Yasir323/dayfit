@@ -46,7 +46,14 @@ const view = (over: Partial<ViewState['settings']> = {}): ViewState =>
     daySummary: null,
     ergonomics: [],
     autoBusy: false,
-    coffee: 0
+    coffee: 0,
+    calendar: {
+      connected: false,
+      connecting: false,
+      canWrite: false,
+      lastSyncAt: null,
+      lastError: null
+    }
   }) as ViewState
 
 beforeEach(() => {

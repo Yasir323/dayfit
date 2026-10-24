@@ -18,6 +18,7 @@ import { EMPTY_WELLBEING_STATE, effectiveBusy, stepWellbeing } from '../core/wel
 import { ERGONOMICS } from '../core/ergonomics'
 import { slowing, updateBaseline, type MinuteStat } from '../core/fatigue'
 import { burnoutRisk, energyLow, streaks, type BurnoutRisk, type Streaks } from '../core/trends'
+import { mergeCalendar, type Meeting, type WriteBlock } from '../core/calendar'
 import { EMPTY_DAY_STATS, summarizeDay, type DayStats, type DaySummary } from '../core/summary'
 import { lunchPickError, planDay, slotError } from '../core/scheduler'
 import { addDays, minutesOf, toDateStr, weekday, weekOf } from '../core/time'
@@ -82,6 +83,20 @@ export interface ViewState {
   focus: { itemId: string; title: string; endsAt: number; minutesLeft: number } | null
   /** False when the quick-add shortcut could not be registered (set by the shell). */
   hotkeyOk: boolean
+  /** Google Calendar sync: the link (from the shell) and the last sync result. */
+  calendar: CalendarView
+}
+
+export interface CalendarLink {
+  connected: boolean
+  connecting: boolean
+  /** Google granted write access (needed for write-back). */
+  canWrite: boolean
+}
+
+export interface CalendarView extends CalendarLink {
+  lastSyncAt: number | null
+  lastError: string | null
 }
 
 const MAX_ELAPSED_MIN = 5
@@ -136,6 +151,8 @@ export class DayfitService {
   /** The fatigue signals say the user is slowing down (set by the shell); not saved. */
   private fatigueSlow = false
   private hotkeyOk = true
+  /** Google Calendar link, from the token file and sign-in flow (set by the shell); not saved. */
+  private calendarLink: CalendarLink = { connected: false, connecting: false, canWrite: false }
   /** Clock snapshot taken once per public call, so date and minutes always agree. */
   private at: Date
 
@@ -593,6 +610,57 @@ export class DayfitService {
     this.autoBusy = on
   }
 
+  /** Today's Google Calendar meetings, fetched by the shell; Google owns their title and time. */
+  applyCalendar(meetings: Meeting[]): ViewState {
+    this.begin()
+    const { items, changed } = mergeCalendar(
+      this.state.items,
+      meetings,
+      this.today(),
+      this.idGen,
+      this.at.getTime()
+    )
+    this.state.items = items
+    this.state.calendar = { lastSyncAt: this.at.getTime(), lastError: null }
+    if (changed) return this.replanAndSave()
+    this.save()
+    return this.buildView()
+  }
+
+  /** A sync or sign-in failed; shown in Settings only. */
+  calendarFailed(message: string): ViewState {
+    this.begin()
+    this.state.calendar = { ...this.state.calendar, lastError: message }
+    this.save()
+    return this.buildView()
+  }
+
+  /** Set by the shell from the token file and sign-in flow; not persisted. */
+  setCalendarLink(link: CalendarLink): void {
+    this.calendarLink = { ...link }
+  }
+
+  /**
+   * Today's planned task and deep blocks that haven't ended, for write-back. Keys count each
+   * item's blocks over the whole day, so they stay put as earlier blocks end.
+   */
+  writeBlocks(): WriteBlock[] {
+    this.begin()
+    const now = this.nowMin()
+    const seen = new Map<string, number>()
+    const out: WriteBlock[] = []
+    const blocks = [...this.todayPlan().blocks].sort((a, b) => a.start - b.start)
+    for (const b of blocks) {
+      if ((b.kind !== 'task' && b.kind !== 'deep') || b.itemId === null) continue
+      const n = seen.get(b.itemId) ?? 0
+      seen.set(b.itemId, n + 1)
+      const item = this.find(b.itemId)
+      if (!item || b.end <= now) continue
+      out.push({ key: `${b.itemId}#${n}`, title: item.title, start: b.start, end: b.end })
+    }
+    return out
+  }
+
   /** Called by the shell after (re)registering the quick-add shortcut; not persisted. */
   setHotkeyOk(ok: boolean): void {
     this.hotkeyOk = ok
@@ -1044,7 +1112,8 @@ export class DayfitService {
       daySummary: s.endOfDay.checkedOut ? this.summarize(today) : null,
       trayLabel: s.unseen ?? (focus ? `Focus ${focus.minutesLeft}m` : null),
       focus,
-      hotkeyOk: this.hotkeyOk
+      hotkeyOk: this.hotkeyOk,
+      calendar: { ...this.calendarLink, ...s.calendar }
     })
   }
 }
