@@ -178,6 +178,15 @@ function FeaturesGroup({ s, send }: { s: SettingsShape; send: Send }): React.JSX
               checked={f[k].enabled}
               onChange={(b) => void set(k, { enabled: b })}
             />
+            {k === 'mood' && (
+              <Field
+                label="Check-in times (HH:MM, …)"
+                value={f.mood.times.map(formatClock).join(', ')}
+                parse={parseTimes}
+                onValid={(v) => set('mood', { times: v })}
+                onBlurOnly
+              />
+            )}
             {k === 'standing' &&
               num('Switch sit/stand every (min)', f.standing.intervalMin, (n) =>
                 set('standing', { intervalMin: n })

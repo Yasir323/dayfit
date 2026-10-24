@@ -495,3 +495,22 @@ describe('Settings work days', () => {
     expect(api.updateSettings).toHaveBeenCalledWith({ workDays: [1, 2, 3, 4, 5, 6] })
   })
 })
+
+describe('Settings check-in times', () => {
+  const F = DEFAULT_SETTINGS.features
+  it('saves edited times and rejects bad ones', async () => {
+    api.updateSettings.mockResolvedValue(view())
+    render(<Settings view={view()} />)
+    const group = screen.getByRole('group', { name: 'Features' })
+    const field = within(group).getByLabelText('Check-in times (HH:MM, …)')
+    expect(field).toHaveValue('10:30, 13:30, 16:30')
+    fireEvent.change(field, { target: { value: '11:00, 15:00' } })
+    fireEvent.blur(field)
+    expect(api.updateSettings).toHaveBeenCalledWith({
+      features: { mood: { ...F.mood, times: [660, 900] } }
+    })
+    fireEvent.change(field, { target: { value: 'lunchtime' } })
+    fireEvent.blur(field)
+    expect(within(group).getByRole('alert')).toHaveTextContent('Use times like 08:00, 14:30')
+  })
+})
