@@ -371,8 +371,9 @@ describe('Settings features', () => {
     ])
       expect(within(group).getByRole('switch', { name })).toBeInTheDocument()
     await userEvent.click(within(group).getByRole('switch', { name: 'Sit/stand reminders' }))
+    // Only the changed feature is sent, so two quick toggles can't undo each other.
     expect(api.updateSettings).toHaveBeenCalledWith({
-      features: { ...F, standing: { ...F.standing, enabled: true } }
+      features: { standing: { ...F.standing, enabled: true } }
     })
   })
 
@@ -384,7 +385,7 @@ describe('Settings features', () => {
     fireEvent.change(field, { target: { value: '45' } })
     fireEvent.blur(field)
     expect(api.updateSettings).toHaveBeenCalledWith({
-      features: { ...F, windDown: { ...F.windDown, afterMin: 45 } }
+      features: { windDown: { ...F.windDown, afterMin: 45 } }
     })
     expect(within(group).getByLabelText('Daylight nudge at')).toHaveValue('11:30')
     expect(within(group).getByLabelText('Call fatigue after (min of meetings)')).toHaveValue(180)
@@ -412,7 +413,6 @@ describe('Settings custom reminders', () => {
     await userEvent.click(within(group).getByRole('button', { name: 'Add reminder' }))
     expect(api.updateSettings).toHaveBeenCalledWith({
       features: {
-        ...F,
         reminders: [
           expect.objectContaining({ title: 'Meds', kind: 'at', times: [480, 1230], enabled: true })
         ]
@@ -430,7 +430,6 @@ describe('Settings custom reminders', () => {
     await userEvent.click(within(group).getByRole('button', { name: 'Add reminder' }))
     expect(api.updateSettings).toHaveBeenCalledWith({
       features: {
-        ...F,
         reminders: [
           expect.objectContaining({ title: 'Roll shoulders', kind: 'every', everyMin: 45 })
         ]
@@ -458,10 +457,10 @@ describe('Settings custom reminders', () => {
     expect(within(group).getByText('08:00')).toBeInTheDocument()
     await userEvent.click(within(group).getByRole('switch', { name: 'Take vitamin D' }))
     expect(api.updateSettings).toHaveBeenCalledWith({
-      features: { ...F, reminders: [{ ...pill, enabled: false }] }
+      features: { reminders: [{ ...pill, enabled: false }] }
     })
     await userEvent.click(within(group).getByRole('button', { name: 'Delete Take vitamin D' }))
-    expect(api.updateSettings).toHaveBeenLastCalledWith({ features: { ...F, reminders: [] } })
+    expect(api.updateSettings).toHaveBeenLastCalledWith({ features: { reminders: [] } })
   })
 })
 

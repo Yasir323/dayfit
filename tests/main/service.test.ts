@@ -1263,3 +1263,15 @@ describe('DayfitService work days', () => {
     expect(kinds).toContain('attendance-in')
   })
 })
+
+describe('DayfitService partial feature patches', () => {
+  it('two feature patches in a row both stick', () => {
+    const f = svc.view().settings.features
+    svc.updateSettings({ features: { standing: { ...f.standing, enabled: true } } })
+    svc.updateSettings({ features: { daylight: { ...f.daylight, enabled: false } } })
+    const saved = loadState(file).settings.features
+    expect(saved.standing.enabled).toBe(true)
+    expect(saved.daylight.enabled).toBe(false)
+    expect(saved.mood).toEqual(f.mood)
+  })
+})

@@ -31,7 +31,8 @@ import {
   type LunchChoice,
   type Minutes,
   type NewItem,
-  type Settings
+  type Settings,
+  type SettingsPatch
 } from '../core/types'
 import { toBackup, type Backup } from './backup'
 import { openDb, type Db } from './db'
@@ -597,7 +598,7 @@ export class DayfitService {
     this.hotkeyOk = ok
   }
 
-  updateSettings(p: Partial<Settings>): ViewState {
+  updateSettings(p: SettingsPatch): ViewState {
     this.begin()
     const old = this.state.settings
     // A new lunch time or length overrides today's clash answer.
@@ -606,10 +607,16 @@ export class DayfitService {
       (p.endOfDay !== undefined && p.endOfDay.lunchMin !== old.endOfDay.lunchMin)
     )
       this.state.lunchAnswer = null
-    this.state.settings = { ...this.state.settings, ...p }
+    // Features merge one level deep: a patch names only the features it changes.
+    const { features, ...rest } = p
+    this.state.settings = {
+      ...this.state.settings,
+      ...rest,
+      features: { ...old.features, ...features }
+    }
     // A deleted custom reminder takes its state (and banner) with it.
-    if (p.features) {
-      const ids = new Set(p.features.reminders.map((r) => r.id))
+    if (features?.reminders) {
+      const ids = new Set(features.reminders.map((r) => r.id))
       const keep = <T>(rec: Record<string, T>): Record<string, T> =>
         Object.fromEntries(Object.entries(rec).filter(([id]) => ids.has(id)))
       const w = this.state.wellbeing

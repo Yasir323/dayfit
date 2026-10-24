@@ -127,6 +127,9 @@ export interface Settings {
   firstRunDone: boolean
 }
 
+/** A settings change: any top-level fields, and only the features that changed. */
+export type SettingsPatch = Omit<Partial<Settings>, 'features'> & { features?: Partial<Features> }
+
 export const DEFAULT_SETTINGS: Settings = {
   workStart: 540,
   workEnd: 1080,

@@ -4,7 +4,8 @@ import type {
   CustomReminder,
   Features as FeaturesShape,
   ItemType,
-  Settings as SettingsShape
+  Settings as SettingsShape,
+  SettingsPatch
 } from '../../../core/types'
 import { ERGONOMICS } from '../../../core/ergonomics'
 import { api } from '../api'
@@ -27,7 +28,7 @@ interface Props {
   onView?: (v: ViewState) => void
 }
 
-type Send = (patch: Partial<SettingsShape>) => Promise<boolean>
+type Send = (patch: SettingsPatch) => Promise<boolean>
 
 interface FieldProps<T> {
   label: string
@@ -165,7 +166,7 @@ const FEATURE_LABELS: [Switchable, string][] = [
 function FeaturesGroup({ s, send }: { s: SettingsShape; send: Send }): React.JSX.Element {
   const f = s.features
   const set = <K extends Switchable>(k: K, patch: Partial<FeaturesShape[K]>): Promise<boolean> =>
-    send({ features: { ...f, [k]: { ...f[k], ...patch } } })
+    send({ features: { [k]: { ...f[k], ...patch } } })
   return (
     <fieldset>
       <legend>Features</legend>
@@ -214,8 +215,7 @@ function RemindersGroup({ s, send }: { s: SettingsShape; send: Send }): React.JS
   const [every, setEvery] = useState('')
   const [error, setError] = useState<string | null>(null)
   const ids = { title: useId(), kind: useId(), times: useId(), every: useId() }
-  const save = (reminders: CustomReminder[]): Promise<boolean> =>
-    send({ features: { ...f, reminders } })
+  const save = (reminders: CustomReminder[]): Promise<boolean> => send({ features: { reminders } })
   const add = async (): Promise<void> => {
     if (title.trim() === '') return setError('Give the reminder a name')
     const base = { id: crypto.randomUUID(), title: title.trim(), kind, enabled: true }
