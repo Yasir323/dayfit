@@ -12,6 +12,8 @@ export interface ReminderEvent {
   body: string
   silent: boolean
   parts: BreakPart[] // [] for meetings
+  /** The custom reminder behind a 'custom' event. */
+  reminderId?: string
 }
 export interface ReminderState {
   fired: string[] // 'meeting-soon:<id>:<start>', 'meeting-now:<id>:<start>'

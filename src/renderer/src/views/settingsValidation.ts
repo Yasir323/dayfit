@@ -36,6 +36,18 @@ export function parseTime(s: string): Parsed<Minutes> {
   return m === null ? { ok: false, error: 'Enter a time' } : { ok: true, value: m }
 }
 
+/** A comma-separated list of clock times, e.g. "08:00, 14:30"; sorted, duplicates dropped. */
+export function parseTimes(s: string): Parsed<Minutes[]> {
+  const parts = s
+    .split(',')
+    .map((p) => p.trim())
+    .filter((p) => p !== '')
+  const times = parts.map(parseClock)
+  if (parts.length === 0 || times.some((t) => t === null))
+    return { ok: false, error: 'Use times like 08:00, 14:30' }
+  return { ok: true, value: [...new Set(times as Minutes[])].sort((a, b) => a - b) }
+}
+
 /** Empty lunch is valid (null); otherwise it must lie strictly between start and end. */
 export function parseLunch(s: string, start: Minutes, end: Minutes): Parsed<Minutes | null> {
   if (s.trim() === '') return { ok: true, value: null }

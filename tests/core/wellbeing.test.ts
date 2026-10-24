@@ -75,3 +75,76 @@ describe('mood check-in', () => {
     expect(kinds(stepWellbeing(input({ now: 630, blocks: [meeting], items: [item] })))).toEqual([])
   })
 })
+
+describe('custom reminders', () => {
+  const withReminders = (reminders: Settings['features']['reminders']): Settings => ({
+    ...S,
+    features: { ...S.features, mood: { ...S.features.mood, enabled: false }, reminders }
+  })
+  const pill = {
+    id: 'r1',
+    title: 'Take vitamin D',
+    kind: 'at' as const,
+    times: [480, 1320],
+    everyMin: 0,
+    enabled: true
+  }
+  const stretchy = {
+    id: 'r2',
+    title: 'Roll shoulders',
+    kind: 'every' as const,
+    times: [],
+    everyMin: 45,
+    enabled: true
+  }
+
+  it('an at reminder fires once at its time, even busy or outside hours', () => {
+    const settings = withReminders([pill])
+    const r = stepWellbeing(input({ now: 480, settings, manualBusy: true }))
+    expect(r.events).toEqual([
+      { kind: 'custom', title: 'Take vitamin D', body: 'Reminder', reminderId: 'r1' }
+    ])
+    expect(kinds(stepWellbeing(input({ now: 481, settings, state: r.state })))).toEqual([])
+    expect(kinds(stepWellbeing(input({ now: 1320, settings, state: r.state })))).toEqual(['custom'])
+  })
+
+  it('an at reminder waits for the user to be back, but not past 90 minutes', () => {
+    const settings = withReminders([pill])
+    expect(kinds(stepWellbeing(input({ now: 480, settings, idleSec: 900 })))).toEqual([])
+    expect(kinds(stepWellbeing(input({ now: 560, settings })))).toEqual(['custom'])
+    const late = stepWellbeing(input({ now: 571, settings }))
+    expect(kinds(late)).toEqual([])
+    expect(late.state.customFired.r1).toContain(480)
+  })
+
+  it('an every reminder repeats in working hours and waits while held', () => {
+    const settings = withReminders([stretchy])
+    expect(kinds(stepWellbeing(input({ now: 584, settings })))).toEqual([])
+    const r = stepWellbeing(input({ now: 585, settings }))
+    expect(kinds(r)).toEqual(['custom'])
+    expect(kinds(stepWellbeing(input({ now: 629, settings, state: r.state })))).toEqual([])
+    expect(
+      kinds(stepWellbeing(input({ now: 630, settings, state: r.state, manualBusy: true })))
+    ).toEqual([])
+    expect(kinds(stepWellbeing(input({ now: 630, settings, state: r.state })))).toEqual(['custom'])
+    expect(kinds(stepWellbeing(input({ now: 1100, settings })))).toEqual([])
+  })
+
+  it('a disabled reminder never fires', () => {
+    const settings = withReminders([{ ...pill, enabled: false }])
+    expect(kinds(stepWellbeing(input({ now: 480, settings })))).toEqual([])
+  })
+
+  it('a snoozed reminder comes back at its snooze time', () => {
+    const settings = withReminders([pill])
+    const state = {
+      ...EMPTY_WELLBEING_STATE,
+      customFired: { r1: [480] },
+      customSnooze: { r1: 495 }
+    }
+    expect(kinds(stepWellbeing(input({ now: 494, settings, state })))).toEqual([])
+    const r = stepWellbeing(input({ now: 495, settings, state }))
+    expect(kinds(r)).toEqual(['custom'])
+    expect(r.state.customSnooze.r1).toBeUndefined()
+  })
+})

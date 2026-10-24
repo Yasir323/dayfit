@@ -9,6 +9,8 @@ export interface WellbeingState {
   customFired: Record<string, Minutes[]>
   /** Custom reminder id → when an `every` reminder last fired (or a snooze's restart). */
   customLast: Record<string, Minutes>
+  /** Custom reminder id → when a snoozed reminder comes back. */
+  customSnooze: Record<string, Minutes>
   /** Active work minutes since the last sit/stand switch, and which one is next. */
   standActiveMin: number
   standing: boolean
@@ -24,6 +26,7 @@ export const EMPTY_WELLBEING_STATE: WellbeingState = {
   moodDone: [],
   customFired: {},
   customLast: {},
+  customSnooze: {},
   standActiveMin: 0,
   standing: false,
   daylightFired: false,
@@ -82,7 +85,13 @@ export function stepWellbeing(input: WellbeingInput): {
 } {
   const { now, settings: s } = input
   const f = s.features
-  const state: WellbeingState = { ...input.state, moodDone: [...input.state.moodDone] }
+  const state: WellbeingState = {
+    ...input.state,
+    moodDone: [...input.state.moodDone],
+    customFired: { ...input.state.customFired },
+    customLast: { ...input.state.customLast },
+    customSnooze: { ...input.state.customSnooze }
+  }
   const events: WellbeingEvent[] = []
   const active = input.idleSec < AWAY_SEC
   const held = isHeld(
@@ -111,6 +120,43 @@ export function stepWellbeing(input: WellbeingInput): {
         })
       }
       break
+    }
+  }
+
+  // Custom reminders. `at` ones are about the clock (medication): they ignore busy and working
+  // hours, and only wait for the user to be back. `every` ones are work-time habits.
+  for (const r of f.reminders) {
+    if (!r.enabled) continue
+    const custom: WellbeingEvent = {
+      kind: 'custom',
+      title: r.title,
+      body: 'Reminder',
+      reminderId: r.id
+    }
+    const snooze = state.customSnooze[r.id]
+    if (snooze !== undefined) {
+      if (now >= snooze && active) {
+        delete state.customSnooze[r.id]
+        events.push(custom)
+      }
+      continue
+    }
+    if (r.kind === 'at') {
+      const fired = state.customFired[r.id] ?? []
+      const due = [...r.times].sort((a, b) => a - b).filter((t) => !fired.includes(t) && now >= t)
+      const late = due.filter((t) => now - t > LATE_LIMIT_MIN)
+      const onTime = due.filter((t) => now - t <= LATE_LIMIT_MIN)
+      if (late.length > 0) state.customFired[r.id] = [...fired, ...late]
+      if (onTime.length > 0 && active) {
+        state.customFired[r.id] = [...(state.customFired[r.id] ?? []), ...onTime]
+        events.push(custom)
+      }
+    } else if (inHours && active && !held && r.everyMin > 0) {
+      const last = state.customLast[r.id] ?? s.workStart
+      if (now - last >= r.everyMin) {
+        state.customLast[r.id] = now
+        events.push(custom)
+      }
     }
   }
 

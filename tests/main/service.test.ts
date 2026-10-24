@@ -1071,3 +1071,41 @@ describe('DayfitService week trends', () => {
     expect(svc.checkOut([]).daySummary?.overtime).toBe(true)
   })
 })
+
+describe('DayfitService custom reminders', () => {
+  const pill = {
+    id: 'r1',
+    title: 'Take vitamin D',
+    kind: 'at' as const,
+    times: [545],
+    everyMin: 0,
+    enabled: true
+  }
+  const withPill = (): void => {
+    const f = svc.view().settings.features
+    svc.updateSettings({ features: { ...f, reminders: [pill] } })
+  }
+
+  it('fires as a banner that snooze brings back later', () => {
+    withPill()
+    clock.set(26, 9, 5)
+    const t = svc.tick(0)
+    const alert = t.view.alerts.find((a) => a.kind === 'custom')!
+    expect(alert).toMatchObject({ title: 'Take vitamin D', reminderId: 'r1' })
+    const v = svc.snoozeCustom(alert.id)
+    expect(v.alerts.some((a) => a.kind === 'custom')).toBe(false)
+    clock.set(26, 9, 14)
+    expect(svc.tick(0).events.map((e) => e.kind)).not.toContain('custom')
+    clock.set(26, 9, 15)
+    expect(svc.tick(0).events.map((e) => e.kind)).toContain('custom')
+  })
+
+  it('deleting a reminder drops its state', () => {
+    withPill()
+    clock.set(26, 9, 5)
+    svc.tick(0)
+    const f = svc.view().settings.features
+    svc.updateSettings({ features: { ...f, reminders: [] } })
+    expect(loadState(file).wellbeing.customFired).toEqual({})
+  })
+})

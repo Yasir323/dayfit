@@ -144,3 +144,17 @@
   font-size: 12px;
   overflow-wrap: anywhere;
 }
+
+.reminder-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+}
+.reminder-row .toggle-row {
+  flex: 1;
+  min-width: 0;
+}
+.reminder-when {
+  font-size: 12px;
+  white-space: nowrap;
+}

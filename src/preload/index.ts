@@ -27,6 +27,7 @@ const dayfit = {
   logWater: call('logWater'),
   logCoffee: call('logCoffee'),
   logMood: call('logMood'),
+  snoozeCustom: call('snoozeCustom'),
   markPunched: call('markPunched'),
   snoozeBreak: call('snoozeBreak'),
   startFocus: call('startFocus'),

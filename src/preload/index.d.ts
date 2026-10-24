@@ -20,6 +20,7 @@ export interface DayfitApi {
   logWater: Async<'logWater'>
   logCoffee: Async<'logCoffee'>
   logMood: Async<'logMood'>
+  snoozeCustom: Async<'snoozeCustom'>
   markPunched: Async<'markPunched'>
   snoozeBreak: Async<'snoozeBreak'>
   startFocus: Async<'startFocus'>

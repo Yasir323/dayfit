@@ -386,3 +386,76 @@ describe('Settings features', () => {
     expect(within(group).getByLabelText('Switch sit/stand every (min)')).toHaveValue(30)
   })
 })
+
+describe('Settings custom reminders', () => {
+  const F = DEFAULT_SETTINGS.features
+  const pill = {
+    id: 'r1',
+    title: 'Take vitamin D',
+    kind: 'at' as const,
+    times: [480],
+    everyMin: 0,
+    enabled: true
+  }
+
+  it('adds an at-times reminder with parsed times', async () => {
+    api.updateSettings.mockResolvedValue(view())
+    render(<Settings view={view()} />)
+    const group = screen.getByRole('group', { name: 'My reminders' })
+    await userEvent.type(within(group).getByLabelText('Reminder'), 'Meds')
+    await userEvent.type(within(group).getByLabelText('Times (HH:MM, …)'), '08:00, 20:30')
+    await userEvent.click(within(group).getByRole('button', { name: 'Add reminder' }))
+    expect(api.updateSettings).toHaveBeenCalledWith({
+      features: {
+        ...F,
+        reminders: [
+          expect.objectContaining({ title: 'Meds', kind: 'at', times: [480, 1230], enabled: true })
+        ]
+      }
+    })
+  })
+
+  it('adds an every-N-minutes reminder', async () => {
+    api.updateSettings.mockResolvedValue(view())
+    render(<Settings view={view()} />)
+    const group = screen.getByRole('group', { name: 'My reminders' })
+    await userEvent.type(within(group).getByLabelText('Reminder'), 'Roll shoulders')
+    await userEvent.selectOptions(within(group).getByLabelText('Repeat'), 'every')
+    await userEvent.type(within(group).getByLabelText('Every (min)'), '45')
+    await userEvent.click(within(group).getByRole('button', { name: 'Add reminder' }))
+    expect(api.updateSettings).toHaveBeenCalledWith({
+      features: {
+        ...F,
+        reminders: [
+          expect.objectContaining({ title: 'Roll shoulders', kind: 'every', everyMin: 45 })
+        ]
+      }
+    })
+  })
+
+  it('rejects a bad time and an empty title', async () => {
+    render(<Settings view={view()} />)
+    const group = screen.getByRole('group', { name: 'My reminders' })
+    await userEvent.type(within(group).getByLabelText('Times (HH:MM, …)'), '25:00')
+    await userEvent.click(within(group).getByRole('button', { name: 'Add reminder' }))
+    expect(within(group).getByRole('alert')).toHaveTextContent('Give the reminder a name')
+    await userEvent.type(within(group).getByLabelText('Reminder'), 'Meds')
+    await userEvent.click(within(group).getByRole('button', { name: 'Add reminder' }))
+    expect(within(group).getByRole('alert')).toHaveTextContent('Use times like 08:00, 14:30')
+    expect(api.updateSettings).not.toHaveBeenCalled()
+  })
+
+  it('lists reminders with a switch and Delete', async () => {
+    api.updateSettings.mockResolvedValue(view())
+    const v = view({ features: { ...F, reminders: [pill] } })
+    render(<Settings view={v} />)
+    const group = screen.getByRole('group', { name: 'My reminders' })
+    expect(within(group).getByText('08:00')).toBeInTheDocument()
+    await userEvent.click(within(group).getByRole('switch', { name: 'Take vitamin D' }))
+    expect(api.updateSettings).toHaveBeenCalledWith({
+      features: { ...F, reminders: [{ ...pill, enabled: false }] }
+    })
+    await userEvent.click(within(group).getByRole('button', { name: 'Delete Take vitamin D' }))
+    expect(api.updateSettings).toHaveBeenLastCalledWith({ features: { ...F, reminders: [] } })
+  })
+})

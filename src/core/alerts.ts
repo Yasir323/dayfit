@@ -21,6 +21,8 @@ export interface Alert {
   body: string
   parts: BreakPart[]
   at: Minutes
+  /** The custom reminder behind a 'custom' alert (for its snooze). */
+  reminderId?: string
 }
 export const MAX_ALERTS = 5
 
@@ -134,7 +136,8 @@ export function recordAlerts(
       title: e.title,
       body: e.body,
       parts: e.parts,
-      at: now
+      at: now,
+      ...(e.reminderId ? { reminderId: e.reminderId } : {})
     })
   })
   if (nudgeCount > 0) label = NUDGE_LABEL

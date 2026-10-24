@@ -89,8 +89,17 @@ export function AlertBanner({
             Check out
           </button>
         )}
+        {alert.kind === 'custom' && (
+          <button
+            type="button"
+            className="btn"
+            onClick={() => void run(() => api.snoozeCustom(alert.id))}
+          >
+            Snooze {clampSnooze(snoozeMin)} min
+          </button>
+        )}
         <button type="button" className="btn" onClick={() => void run(dismiss)}>
-          Dismiss
+          {alert.kind === 'custom' ? 'Done' : 'Dismiss'}
         </button>
       </div>
       {alert.kind === 'heads-up' && !canCheckOut && (

@@ -5,7 +5,7 @@ import { itemsForDate, rolloverItems } from '../core/recurrence'
 import { dueReminders, EMPTY_REMINDER_STATE, type ReminderEvent } from '../core/reminders'
 import { diffMoves, frozenBlocks } from '../core/replan'
 import { clearAlerts, recordAlerts, type Alert } from '../core/alerts'
-import { isHeld, PART_ORDER, snoozeBreak, type BreakPart } from '../core/breaks'
+import { clampSnooze, isHeld, PART_ORDER, snoozeBreak, type BreakPart } from '../core/breaks'
 import {
   attendanceDue,
   markPunched,
@@ -420,6 +420,25 @@ export class DayfitService {
     return this.buildView()
   }
 
+  /** A custom reminder's banner Snooze: it comes back after `breaks.snoozeMin` minutes. */
+  snoozeCustom(alertId: string): ViewState {
+    this.begin()
+    const s = this.state
+    const alert = s.alerts.find((a) => a.id === alertId && a.kind === 'custom')
+    if (alert?.reminderId) {
+      s.wellbeing = {
+        ...s.wellbeing,
+        customSnooze: {
+          ...s.wellbeing.customSnooze,
+          [alert.reminderId]: this.nowMin() + clampSnooze(s.settings.breaks.snoozeMin)
+        }
+      }
+      this.clearAlerts((a) => a.id === alertId)
+      this.save()
+    }
+    return this.buildView()
+  }
+
   /** Drops alerts the user has acted on; true when anything changed. */
   private clearAlerts(gone: (a: Alert) => boolean): boolean {
     const s = this.state
@@ -542,6 +561,20 @@ export class DayfitService {
     )
       this.state.lunchAnswer = null
     this.state.settings = { ...this.state.settings, ...p }
+    // A deleted custom reminder takes its state (and banner) with it.
+    if (p.features) {
+      const ids = new Set(p.features.reminders.map((r) => r.id))
+      const keep = <T>(rec: Record<string, T>): Record<string, T> =>
+        Object.fromEntries(Object.entries(rec).filter(([id]) => ids.has(id)))
+      const w = this.state.wellbeing
+      this.state.wellbeing = {
+        ...w,
+        customFired: keep(w.customFired),
+        customLast: keep(w.customLast),
+        customSnooze: keep(w.customSnooze)
+      }
+      this.clearAlerts((a) => a.kind === 'custom' && !ids.has(a.reminderId ?? ''))
+    }
     return this.replanAndSave()
   }
 

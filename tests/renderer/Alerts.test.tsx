@@ -11,6 +11,7 @@ const api = vi.hoisted(() => ({
   logWater: vi.fn(),
   dismissAlert: vi.fn(),
   logMood: vi.fn(),
+  snoozeCustom: vi.fn(),
   hide: vi.fn(),
   onState: vi.fn((cb?: (v: ViewState) => void) => {
     void cb
@@ -47,7 +48,7 @@ beforeEach(() => {
   for (const fn of Object.values(api)) fn.mockReset()
   api.onState.mockReturnValue(() => {})
   api.onFocus.mockReturnValue(() => {})
-  for (const fn of [api.snoozeBreak, api.logWater, api.dismissAlert, api.logMood])
+  for (const fn of [api.snoozeBreak, api.logWater, api.dismissAlert, api.logMood, api.snoozeCustom])
     fn.mockResolvedValue(makeView())
 })
 afterEach(cleanup)
@@ -131,6 +132,23 @@ describe('alert banners', () => {
       expect(within(banner).getByRole('button', { name: n })).toBeInTheDocument()
     await userEvent.click(within(banner).getByRole('button', { name: 'Good' }))
     expect(api.logMood).toHaveBeenCalledWith(4)
+  })
+
+  it('custom reminder banner: Snooze and Done', async () => {
+    await show([
+      alert({
+        id: 'custom:480:0',
+        kind: 'custom',
+        title: 'Take vitamin D',
+        body: 'Reminder',
+        parts: [],
+        reminderId: 'r1'
+      })
+    ])
+    const banner = screen.getByRole('region', { name: 'Take vitamin D' })
+    expect(within(banner).getByRole('button', { name: 'Done' })).toBeInTheDocument()
+    await userEvent.click(within(banner).getByRole('button', { name: 'Snooze 10 min' }))
+    expect(api.snoozeCustom).toHaveBeenCalledWith('custom:480:0')
   })
 
   it('lunch banner only dismisses', async () => {

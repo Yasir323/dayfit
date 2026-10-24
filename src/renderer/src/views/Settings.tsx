@@ -1,6 +1,7 @@
 import { useId, useState } from 'react'
 import { formatClock } from '../../../core/time'
 import type {
+  CustomReminder,
   Features as FeaturesShape,
   ItemType,
   Settings as SettingsShape
@@ -13,6 +14,7 @@ import {
   parseLunch,
   parsePortalUrl,
   parsePositive,
+  parseTimes,
   parseSnooze,
   parseTime
 } from './settingsValidation'
@@ -186,6 +188,119 @@ function FeaturesGroup({ s, send }: { s: SettingsShape; send: Send }): React.JSX
               )}
           </div>
         ))}
+      </div>
+    </fieldset>
+  )
+}
+
+/** The user's own reminders: add (at set times or every N minutes), switch off, delete. */
+function RemindersGroup({ s, send }: { s: SettingsShape; send: Send }): React.JSX.Element {
+  const f = s.features
+  const [title, setTitle] = useState('')
+  const [kind, setKind] = useState<CustomReminder['kind']>('at')
+  const [times, setTimes] = useState('')
+  const [every, setEvery] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const ids = { title: useId(), kind: useId(), times: useId(), every: useId() }
+  const save = (reminders: CustomReminder[]): Promise<boolean> =>
+    send({ features: { ...f, reminders } })
+  const add = async (): Promise<void> => {
+    if (title.trim() === '') return setError('Give the reminder a name')
+    const base = { id: crypto.randomUUID(), title: title.trim(), kind, enabled: true }
+    let r: CustomReminder
+    if (kind === 'at') {
+      const t = parseTimes(times)
+      if (!t.ok) return setError(t.error)
+      r = { ...base, times: t.value, everyMin: 0 }
+    } else {
+      const n = parsePositive(every)
+      if (!n.ok) return setError(n.error)
+      r = { ...base, times: [], everyMin: n.value }
+    }
+    setError(null)
+    if (await save([...f.reminders, r])) {
+      setTitle('')
+      setTimes('')
+      setEvery('')
+    }
+  }
+  return (
+    <fieldset>
+      <legend>My reminders</legend>
+      <div className="group-card">
+        {f.reminders.map((r) => (
+          <div key={r.id} className="reminder-row">
+            <Toggle
+              label={r.title}
+              checked={r.enabled}
+              onChange={(b) =>
+                void save(f.reminders.map((x) => (x.id === r.id ? { ...x, enabled: b } : x)))
+              }
+            />
+            <span className="muted reminder-when">
+              {r.kind === 'at' ? r.times.map(formatClock).join(', ') : `every ${r.everyMin} min`}
+            </span>
+            <button
+              type="button"
+              className="btn-ghost"
+              aria-label={`Delete ${r.title}`}
+              onClick={() => void save(f.reminders.filter((x) => x.id !== r.id))}
+            >
+              Delete
+            </button>
+          </div>
+        ))}
+        <div className="field">
+          <label htmlFor={ids.title}>Reminder</label>
+          <input
+            id={ids.title}
+            value={title}
+            placeholder="e.g. Take vitamin D"
+            onChange={(e) => setTitle(e.target.value)}
+          />
+        </div>
+        <div className="field">
+          <label htmlFor={ids.kind}>Repeat</label>
+          <select
+            id={ids.kind}
+            value={kind}
+            onChange={(e) => setKind(e.target.value as CustomReminder['kind'])}
+          >
+            <option value="at">At times</option>
+            <option value="every">Every N minutes of work</option>
+          </select>
+        </div>
+        {kind === 'at' ? (
+          <div className="field">
+            <label htmlFor={ids.times}>Times (HH:MM, …)</label>
+            <input
+              id={ids.times}
+              value={times}
+              placeholder="08:00, 20:00"
+              onChange={(e) => setTimes(e.target.value)}
+            />
+          </div>
+        ) : (
+          <div className="field">
+            <label htmlFor={ids.every}>Every (min)</label>
+            <input
+              id={ids.every}
+              type="number"
+              value={every}
+              onChange={(e) => setEvery(e.target.value)}
+            />
+          </div>
+        )}
+        {error && (
+          <p className="field-error" role="alert">
+            {error}
+          </p>
+        )}
+        <div className="backup-actions">
+          <button type="button" className="btn" onClick={() => void add()}>
+            Add reminder
+          </button>
+        </div>
       </div>
     </fieldset>
   )
@@ -496,6 +611,8 @@ export function Settings({ view, onView }: Props): React.JSX.Element {
       </fieldset>
 
       <FeaturesGroup s={s} send={send} />
+
+      <RemindersGroup s={s} send={send} />
 
       <Backup onView={onView} />
     </section>
