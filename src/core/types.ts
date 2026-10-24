@@ -99,6 +99,8 @@ export interface Features {
 export interface Settings {
   workStart: Minutes
   workEnd: Minutes
+  /** Days worked, 0 = Sunday … 6 = Saturday. */
+  workDays: number[]
   lunch: Minutes | null
   bufferMin: number
   /** Kept free of tasks after back-to-back meetings. */
@@ -128,6 +130,7 @@ export interface Settings {
 export const DEFAULT_SETTINGS: Settings = {
   workStart: 540,
   workEnd: 1080,
+  workDays: [1, 2, 3, 4, 5],
   lunch: null,
   bufferMin: 5,
   meetingGapMin: 10,

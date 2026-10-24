@@ -177,3 +177,25 @@
   border-bottom: 1px solid var(--hairline);
   font-size: 13px;
 }
+
+.settings .work-days-row {
+  grid-template-columns: 1fr;
+}
+.work-days {
+  display: flex;
+  gap: 4px;
+}
+.day-chip {
+  flex: 1;
+  padding: 4px 0;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 12px;
+}
+.day-chip[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+}

@@ -478,3 +478,21 @@ describe('Settings home setup', () => {
     expect(api.setErgonomics).toHaveBeenCalledWith(['chair', 'feet'])
   })
 })
+
+describe('Settings work days', () => {
+  it('toggles a day and saves the sorted list', async () => {
+    api.updateSettings.mockResolvedValue(view())
+    render(<Settings view={view()} />)
+    const group = screen.getByRole('group', { name: 'Work days' })
+    expect(within(group).getByRole('button', { name: 'Mon' })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    )
+    expect(within(group).getByRole('button', { name: 'Sat' })).toHaveAttribute(
+      'aria-pressed',
+      'false'
+    )
+    await userEvent.click(within(group).getByRole('button', { name: 'Sat' }))
+    expect(api.updateSettings).toHaveBeenCalledWith({ workDays: [1, 2, 3, 4, 5, 6] })
+  })
+})

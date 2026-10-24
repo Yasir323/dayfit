@@ -20,7 +20,7 @@ import { slowing, updateBaseline, type MinuteStat } from '../core/fatigue'
 import { burnoutRisk, energyLow, streaks, type BurnoutRisk, type Streaks } from '../core/trends'
 import { EMPTY_DAY_STATS, summarizeDay, type DayStats, type DaySummary } from '../core/summary'
 import { lunchPickError, planDay, slotError } from '../core/scheduler'
-import { addDays, minutesOf, toDateStr, weekOf } from '../core/time'
+import { addDays, minutesOf, toDateStr, weekday, weekOf } from '../core/time'
 import {
   isFixed,
   type Block,
@@ -84,6 +84,13 @@ export interface ViewState {
 }
 
 const MAX_ELAPSED_MIN = 5
+/** On a day off only these still fire: meetings, focus sessions and the user's own reminders. */
+const OFF_DAY_KINDS: ReminderEvent['kind'][] = [
+  'meeting-soon',
+  'meeting-now',
+  'focus-done',
+  'custom'
+]
 /** Idle under this long counts as screen time. */
 const SCREEN_IDLE_SEC = 60
 /** Saved days read for the week view's trends (risk, streaks). */
@@ -694,7 +701,9 @@ export class DayfitService {
     const busy = isHeld(blocks, items, now, busyNow, 0)
     const overdueBefore = s.overdue.length
     for (const id of due) if (!s.overdue.includes(id)) s.overdue.push(id)
-    const nudges = busy ? [] : due
+    // A day off: no time's-up nudges, and only the reminders that aren't about work (below).
+    const offDay = !s.settings.workDays.includes(weekday(today))
+    const nudges = busy || offDay ? [] : due
     for (const id of nudges) s.nudges[id] = { count: (s.nudges[id]?.count ?? 0) + 1, lastAt: now }
 
     // A focus session past its end finishes once: busy goes back, and a short break is queued.
@@ -718,6 +727,11 @@ export class DayfitService {
         silent: false,
         parts: []
       })
+    }
+
+    if (offDay) {
+      const keep = events.filter((e) => OFF_DAY_KINDS.includes(e.kind))
+      events.splice(0, events.length, ...keep)
     }
 
     if (idleSec < SCREEN_IDLE_SEC) {

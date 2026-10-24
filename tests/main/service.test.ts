@@ -1231,3 +1231,35 @@ describe('DayfitService settings read', () => {
     expect(svc.currentSettings().bufferMin).toBe(9)
   })
 })
+
+describe('DayfitService work days', () => {
+  it('on a day off only meetings, focus and your own reminders fire', () => {
+    const f = svc.view().settings.features
+    svc.updateSettings({
+      features: {
+        ...f,
+        reminders: [
+          { id: 'r1', title: 'Meds', kind: 'at', times: [545], everyMin: 0, enabled: true }
+        ]
+      }
+    })
+    clock.set(31, 9, 0) // Saturday
+    svc.tick(0)
+    const kinds: string[] = []
+    for (let m = 1; m <= 120; m++) {
+      clock.set(31, 9 + Math.floor(m / 60), m % 60)
+      kinds.push(...svc.tick(0).events.map((e) => e.kind))
+    }
+    expect(kinds).toEqual(['custom'])
+  })
+
+  it('a weekday still gets its reminders', () => {
+    svc.tick(0)
+    const kinds: string[] = []
+    for (let m = 1; m <= 30; m++) {
+      clock.set(26, 9, m)
+      kinds.push(...svc.tick(0).events.map((e) => e.kind))
+    }
+    expect(kinds).toContain('attendance-in')
+  })
+})

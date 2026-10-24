@@ -135,6 +135,17 @@ function Toggle({
   )
 }
 
+/** Monday first, as people read a week. */
+const WEEK: [number, string][] = [
+  [1, 'Mon'],
+  [2, 'Tue'],
+  [3, 'Wed'],
+  [4, 'Thu'],
+  [5, 'Fri'],
+  [6, 'Sat'],
+  [0, 'Sun']
+]
+
 const DURATION_TYPES: ItemType[] = ['task', 'call', 'deep', 'household', 'fixed']
 
 type Switchable = Exclude<keyof FeaturesShape, 'reminders'>
@@ -481,6 +492,28 @@ export function Settings({ view, onView }: Props): React.JSX.Element {
             parse={(d) => parseLunch(d, s.workStart, s.workEnd)}
             onValid={(v) => send({ lunch: v })}
           />
+          <div className="field work-days-row">
+            <span>Work days</span>
+            <div role="group" aria-label="Work days" className="work-days">
+              {WEEK.map(([day, name]) => (
+                <button
+                  key={day}
+                  type="button"
+                  className="day-chip"
+                  aria-pressed={s.workDays.includes(day)}
+                  onClick={() =>
+                    void send({
+                      workDays: s.workDays.includes(day)
+                        ? s.workDays.filter((d) => d !== day)
+                        : [...s.workDays, day].sort((a, b) => a - b)
+                    })
+                  }
+                >
+                  {name}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       </fieldset>
 
