@@ -1,5 +1,5 @@
 import type { CalendarAction } from '../main/calendarSync'
-import type { ExportResult, ImportResult } from '../main/ipc'
+import type { CameraAction, ExportResult, ImportResult } from '../main/ipc'
 import type { DayfitService, ViewState } from '../main/service'
 
 type Async<K extends keyof DayfitService> = (
@@ -38,6 +38,8 @@ export interface DayfitApi {
   importData(): Promise<ImportResult>
   /** Google Calendar: connect, cancel, disconnect, sync, write-back on or off. */
   calendar(a: CalendarAction): Promise<ViewState>
+  /** Camera cues: enable (asks for access), disable, calibrate. */
+  camera(a: CameraAction): Promise<ViewState>
   hide(): void
   openPortal(): void
   onState(cb: (v: ViewState) => void): () => void

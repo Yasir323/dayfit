@@ -46,7 +46,11 @@ export interface ShellActions {
   openPortal(): void
   /** `dayfit:calendar`: Google Calendar connect, sync and write-back; never rejects. */
   calendar(a: CalendarAction): Promise<ViewState>
+  /** `dayfit:camera`: camera cues on (asks for access), off, or calibrate. */
+  camera(a: CameraAction): Promise<ViewState>
 }
+
+export type CameraAction = 'enable' | 'disable' | 'calibrate'
 
 /**
  * Registers the handlers; `onState` runs after every call with the fresh view (push + side
@@ -71,6 +75,7 @@ export function registerIpc(
   ipcMain.handle('dayfit:calendar', async (_e, a: CalendarAction) =>
     onState(await shell.calendar(a))
   )
+  ipcMain.handle('dayfit:camera', async (_e, a: CameraAction) => onState(await shell.camera(a)))
   ipcMain.on('dayfit:hide', () => shell.hide())
   ipcMain.on('dayfit:openPortal', () => shell.openPortal())
 }

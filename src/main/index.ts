@@ -1,15 +1,26 @@
-import { app, dialog, globalShortcut, powerMonitor, safeStorage, screen, shell } from 'electron'
+import {
+  app,
+  dialog,
+  globalShortcut,
+  ipcMain,
+  powerMonitor,
+  safeStorage,
+  screen,
+  session,
+  shell,
+  systemPreferences
+} from 'electron'
 import { readFile, writeFile } from 'node:fs/promises'
 import { join } from 'path'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { APP_ID } from './appId'
 import { guarded } from './guard'
 import { createHotkeyBinder } from './hotkey'
-import { registerIpc, type ExportResult, type ImportResult } from './ipc'
+import { registerIpc, type CameraAction, type ExportResult, type ImportResult } from './ipc'
 import { parseBackup } from './backup'
 import { probeWindows } from './probes'
 import { isFullscreen } from '../core/fullscreen'
-import { minutesOf, toDateStr } from '../core/time'
+import { minutesOf, toDateStr, weekday } from '../core/time'
 import { createFatigueSampler } from './fatigueSampler'
 import { createSingleFlight } from './singleFlight'
 import {
@@ -19,6 +30,9 @@ import {
   type CalendarController
 } from './calendarSync'
 import { createTokenStore } from './tokenStore'
+import { createCameraController, type CameraController } from './camera'
+import { createCameraWindow, handleCameraScheme, registerCameraScheme } from './cameraWindow'
+import type { CameraPermission } from './service'
 import { planUpdatedNotice, showNotification } from './notify'
 import { DayfitService, type ViewState } from './service'
 import { createPopover } from './tray'
@@ -34,6 +48,19 @@ const CALENDAR_SYNC_MS = 15 * 60_000
 // The screenshot driver (scripts/drive.mjs) runs against a throwaway profile.
 if (process.env.DAYFIT_USER_DATA) app.setPath('userData', process.env.DAYFIT_USER_DATA)
 
+// Before ready: the camera page's scheme needs fetch() for MediaPipe's WASM and model.
+registerCameraScheme()
+
+/** Electron's camera status in Dayfit's terms. */
+const cameraStatus = (): CameraPermission => {
+  if (process.platform !== 'darwin' && process.platform !== 'win32') return 'granted'
+  const st = systemPreferences.getMediaAccessStatus('camera')
+  if (st === 'granted') return 'granted'
+  if (st === 'not-determined') return 'not-determined'
+  if (st === 'denied' || st === 'restricted') return 'denied'
+  return 'unknown'
+}
+
 if (!app.requestSingleInstanceLock()) {
   app.quit()
 } else {
@@ -42,6 +69,7 @@ if (!app.requestSingleInstanceLock()) {
     app.dock?.hide()
     app.on('browser-window-created', (_, window) => optimizer.watchWindowShortcuts(window))
 
+    handleCameraScheme()
     const userData = app.getPath('userData')
     const db = openDb(join(userData, 'dayfit.db'))
     // First launch on the database: bring over the old JSON state once.
@@ -56,6 +84,9 @@ if (!app.requestSingleInstanceLock()) {
 
     const bindHotkey = createHotkeyBinder(globalShortcut, () => popover.focus('quick-add'))
     let launchAtLogin: boolean | null = null
+    // Camera cues: created below, opened and closed after each tick.
+    let camera: CameraController | null = null
+    let screenLocked = false
     // Created below; publish tells it when the blocks to write back change.
     let calendar: CalendarController | null = null
     let lastWriteBlocks = ''
@@ -157,12 +188,56 @@ if (!app.requestSingleInstanceLock()) {
         return service.view()
       }
     }
+    // Camera cues: a hidden window that only runs while the conditions allow it.
+    const cam = createCameraController({
+      createWindow: createCameraWindow,
+      mediaStatus: cameraStatus,
+      askAccess: () =>
+        process.platform === 'darwin'
+          ? systemPreferences.askForMediaAccess('camera')
+          : Promise.resolve(true),
+      service,
+      publish: (v) => {
+        publish(v)
+      },
+      nowMs: () => Date.now()
+    })
+    camera = cam
+    // Only the camera window may use the camera; other permissions keep Electron's default.
+    session.defaultSession.setPermissionRequestHandler((wc, permission, callback, details) => {
+      if (permission !== 'media') return callback(true)
+      const media = 'mediaTypes' in details ? (details.mediaTypes ?? []) : []
+      callback(cam.fromCamera(wc.id) && !media.includes('audio'))
+    })
+    session.defaultSession.setPermissionCheckHandler((wc, permission) =>
+      permission === 'media' ? wc !== null && cam.fromCamera(wc.id) : true
+    )
+    for (const [channel, handle] of [
+      ['camera:minute', (p: unknown) => cam.onMinute(p)],
+      ['camera:calibration', (p: unknown) => cam.onCalibration(p)],
+      ['camera:error', (p: unknown) => cam.onError(String(p))]
+    ] as const)
+      ipcMain.on(channel, (e, payload: unknown) => {
+        if (cam.fromCamera(e.sender.id)) handle(payload)
+      })
+    const cameraAction = async (a: CameraAction): Promise<ViewState> => {
+      try {
+        const v =
+          a === 'enable' ? await cam.enable() : a === 'disable' ? cam.disable() : cam.calibrate()
+        updateCamera(v)
+        return service.view()
+      } catch (e) {
+        console.error('camera action failed', e)
+        return service.view()
+      }
+    }
     registerIpc(service, publish, {
       hide: () => popover.hide(),
       openPortal,
       exportData,
       importData,
-      calendar: calendarAction
+      calendar: calendarAction,
+      camera: cameraAction
     })
     const initial = publish(service.view())
     // A menu bar app shows nothing at launch; open the popover once so first-run setup is seen.
@@ -189,6 +264,24 @@ if (!app.requestSingleInstanceLock()) {
         target ? popover.focus(target) : popover.show()
     }
 
+    /** Opens or closes the camera window to match the view (feature, hours, meeting, busy…). */
+    function updateCamera(v: ViewState): void {
+      if (!camera) return
+      const s = v.settings
+      camera.update({
+        enabled: s.features.camera.enabled,
+        workDay: s.workDays.includes(weekday(v.today)),
+        inHours: v.now >= s.workStart && v.now < s.workEnd,
+        checkedOut: v.checkedOut,
+        locked: screenLocked,
+        idleSec: powerMonitor.getSystemIdleTime(),
+        inFixedBlock: v.plan.blocks.some(
+          (b) => b.kind === 'fixed' && b.start <= v.now && v.now < b.end
+        ),
+        busy: v.manualBusy === true || v.autoBusy
+      })
+    }
+
     const tick = guarded('tick', (): void => {
       const { events, nudges, view } = service.tick(powerMonitor.getSystemIdleTime())
       for (const event of events)
@@ -212,6 +305,7 @@ if (!app.requestSingleInstanceLock()) {
           )
       }
       publish(view)
+      updateCamera(service.view())
     })
     // Before each tick: is another app full screen? A failed probe counts as no.
     const fullScreenNow = async (): Promise<boolean> => {
@@ -252,6 +346,15 @@ if (!app.requestSingleInstanceLock()) {
     setInterval(probeThenTick, TICK_MS)
     powerMonitor.on('resume', probeThenTick)
     powerMonitor.on('unlock-screen', probeThenTick)
+    // The camera turns off the moment the screen locks.
+    powerMonitor.on('lock-screen', () => {
+      screenLocked = true
+      updateCamera(service.view())
+    })
+    powerMonitor.on('unlock-screen', () => {
+      screenLocked = false
+      updateCamera(service.view())
+    })
     // Meetings may have changed while the Mac slept; the controller runs one sync at a time.
     powerMonitor.on('resume', syncCalendar)
     powerMonitor.on('unlock-screen', syncCalendar)

@@ -42,6 +42,7 @@ const dayfit = {
   exportData: () => ipcRenderer.invoke('dayfit:exportData'),
   importData: () => ipcRenderer.invoke('dayfit:importData'),
   calendar: (a: string) => ipcRenderer.invoke('dayfit:calendar', a),
+  camera: (a: string) => ipcRenderer.invoke('dayfit:camera', a),
   hide: () => ipcRenderer.send('dayfit:hide'),
   openPortal: () => ipcRenderer.send('dayfit:openPortal'),
   onState: subscribe('dayfit:state'),
