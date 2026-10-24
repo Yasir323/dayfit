@@ -180,6 +180,21 @@ describe('alert banners', () => {
     expect(await screen.findByRole('heading', { name: 'Today' })).toBeInTheDocument()
   })
 
+  it('shows 3 banners at most; the rest wait behind Show more', async () => {
+    const many = [1, 2, 3, 4, 5].map((n) =>
+      alert({ id: `slump:${n}`, kind: 'slump', title: `Banner ${n}`, parts: [], at: n })
+    )
+    await show(many)
+    const stack = (): HTMLElement => document.querySelector('.banners') as HTMLElement
+    expect(within(stack()).getAllByRole('region')).toHaveLength(3)
+    // Newest first.
+    expect(screen.getByRole('region', { name: 'Banner 5' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Show 2 more' }))
+    expect(within(stack()).getAllByRole('region')).toHaveLength(5)
+    await userEvent.click(screen.getByRole('button', { name: 'Show fewer' }))
+    expect(within(stack()).getAllByRole('region')).toHaveLength(3)
+  })
+
   it('lunch banner only dismisses', async () => {
     await show([alert({ id: 'lunch:780:0', kind: 'lunch', title: 'Lunch time', parts: [] })])
     const banner = screen.getByRole('region', { name: 'Lunch time' })

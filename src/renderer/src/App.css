@@ -905,3 +905,9 @@ body {
     transition: none;
   }
 }
+
+.banner-more {
+  align-self: center;
+  color: var(--muted);
+  font-size: 12px;
+}

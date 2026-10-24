@@ -16,6 +16,7 @@ import type { Item } from '../../core/types'
 import { Settings } from './views/Settings'
 import { TodayTab } from './views/TodayTab'
 import { Breathe } from './views/Breathe'
+import { BannerStack } from './views/BannerStack'
 import { TabBar, type Tab } from './ui/TabBar'
 import './App.css'
 
@@ -96,6 +97,16 @@ export function App(): React.JSX.Element {
       .map((k) => (
         <AttendanceBanner key={`punch-${k}`} kind={k} portalUrl={portalUrl} onView={setView} />
       )),
+    // Things to act on now come first: punches, then time's-up nudges, then the newest alerts.
+    ...view.nudges.map((id, k) => (
+      <NudgeBanner
+        key={id}
+        id={id}
+        title={titleOf(id)}
+        onView={setView}
+        ref={k === 0 ? nudgeRef : undefined}
+      />
+    )),
     ...[...view.alerts]
       .reverse()
       .map((a) => (
@@ -109,16 +120,7 @@ export function App(): React.JSX.Element {
           onBreathe={() => setBreathing(true)}
           onOpenPlan={() => setTab('today')}
         />
-      )),
-    ...view.nudges.map((id, k) => (
-      <NudgeBanner
-        key={id}
-        id={id}
-        title={titleOf(id)}
-        onView={setView}
-        ref={k === 0 ? nudgeRef : undefined}
-      />
-    ))
+      ))
   ]
   const wrapUp = checkout && firstRunDone && !review
   const editOpen = editing !== null && firstRunDone && !review && !wrapUp
@@ -130,7 +132,7 @@ export function App(): React.JSX.Element {
       <div className="app">
         {!(review && firstRunDone) && banners.length > 0 && (
           <div className="banners" inert={overlay}>
-            {banners}
+            <BannerStack banners={banners} />
           </div>
         )}
 
@@ -201,7 +203,7 @@ export function App(): React.JSX.Element {
         {review && firstRunDone && (
           // Banners move inside the overlay so a nudge is never hidden behind Review.
           <div className="overlay" role="dialog" aria-modal="true" aria-label="Review your plan">
-            {banners}
+            <BannerStack banners={banners} />
             <Review
               // New decisions start a fresh review; a changed lunch clash keeps the answers so far.
               key={JSON.stringify(view.plan.decisions)}
