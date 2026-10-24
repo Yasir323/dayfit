@@ -9,6 +9,8 @@ import { registerIpc, type ExportResult, type ImportResult } from './ipc'
 import { parseBackup } from './backup'
 import { probeWindows } from './probes'
 import { isFullscreen } from '../core/fullscreen'
+import { toDateStr } from '../core/time'
+import { createFatigueSampler } from './fatigueSampler'
 import { planUpdatedNotice, showNotification } from './notify'
 import { DayfitService, type ViewState } from './service'
 import { createPopover } from './tray'
@@ -18,6 +20,7 @@ import type { BreakPart } from '../core/breaks'
 import { isPortalUrl } from '../core/portalUrl'
 
 const TICK_MS = 30_000
+const FATIGUE_SAMPLE_MS = 2_000
 
 // The screenshot driver (scripts/drive.mjs) runs against a throwaway profile.
 if (process.env.DAYFIT_USER_DATA) app.setPath('userData', process.env.DAYFIT_USER_DATA)
@@ -171,7 +174,23 @@ if (!app.requestSingleInstanceLock()) {
         .map((d) => ({ x: d.bounds.x, y: d.bounds.y, w: d.bounds.width, h: d.bounds.height }))
       return windows !== null && isFullscreen(windows, displays, process.pid)
     }
+    // Fatigue signals (opt-in): cursor and idle sampled every 2 s, kept in memory as minute totals.
+    const sampler = createFatigueSampler(
+      () => screen.getCursorScreenPoint(),
+      () => powerMonitor.getSystemIdleTime()
+    )
+    const fatigueOn = (): boolean => service.view().settings.features.fatigue.enabled
+    setInterval(
+      guarded('fatigue sample', () => {
+        if (fatigueOn()) sampler.sample(toDateStr(new Date()))
+      }),
+      FATIGUE_SAMPLE_MS
+    )
     const probeThenTick = (): void => {
+      if (fatigueOn()) {
+        const snap = sampler.snapshot(toDateStr(new Date()))
+        service.setFatigue(snap.minutes, snap.todayRate)
+      }
       fullScreenNow()
         .catch((e: unknown) => {
           console.error('full-screen probe failed', e)

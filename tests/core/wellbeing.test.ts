@@ -285,3 +285,34 @@ describe('virtual commute', () => {
     expect(kinds(stepWellbeing(input({ now: 547, settings, state: r.state })))).toEqual([])
   })
 })
+
+describe('fatigue nudge', () => {
+  const settings: Settings = {
+    ...S,
+    features: {
+      ...S.features,
+      mood: { ...S.features.mood, enabled: false },
+      fatigue: { enabled: true }
+    }
+  }
+  it('fires when slowing, at most once per 90 minutes, never while held', () => {
+    expect(kinds(stepWellbeing(input({ now: 600, settings, fatigueSlow: false })))).toEqual([])
+    expect(
+      kinds(stepWellbeing(input({ now: 600, settings, fatigueSlow: true, manualBusy: true })))
+    ).toEqual([])
+    const r = stepWellbeing(input({ now: 600, settings, fatigueSlow: true }))
+    expect(r.events).toEqual([
+      { kind: 'fatigue', title: 'You seem to be slowing down', body: 'A 5 min break might help.' }
+    ])
+    expect(
+      kinds(stepWellbeing(input({ now: 689, settings, fatigueSlow: true, state: r.state })))
+    ).toEqual([])
+    expect(
+      kinds(stepWellbeing(input({ now: 690, settings, fatigueSlow: true, state: r.state })))
+    ).toEqual(['fatigue'])
+  })
+
+  it('is off by default', () => {
+    expect(kinds(stepWellbeing(input({ now: 600, fatigueSlow: true })))).toEqual([])
+  })
+})

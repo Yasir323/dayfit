@@ -16,6 +16,7 @@ import {
 } from '../core/endOfDay'
 import { EMPTY_WELLBEING_STATE, effectiveBusy, stepWellbeing } from '../core/wellbeing'
 import { ERGONOMICS } from '../core/ergonomics'
+import { slowing, updateBaseline, type MinuteStat } from '../core/fatigue'
 import { burnoutRisk, energyLow, streaks, type BurnoutRisk, type Streaks } from '../core/trends'
 import { EMPTY_DAY_STATS, summarizeDay, type DayStats, type DaySummary } from '../core/summary'
 import { lunchPickError, planDay, slotError } from '../core/scheduler'
@@ -124,6 +125,8 @@ export class DayfitService {
   private lastTickAt: number | null = null
   /** Another app is full screen (set by the shell's probe); not saved. */
   private autoBusy = false
+  /** The fatigue signals say the user is slowing down (set by the shell); not saved. */
+  private fatigueSlow = false
   private hotkeyOk = true
   /** Clock snapshot taken once per public call, so date and minutes always agree. */
   private at: Date
@@ -562,6 +565,16 @@ export class DayfitService {
     return this.buildView()
   }
 
+  /**
+   * The shell's latest fatigue sample: recent minutes (oldest first) and the day's pace so far.
+   * Decides "slowing down" against the saved baseline; nothing raw is kept.
+   */
+  setFatigue(minutes: MinuteStat[], todayRate: number | null): void {
+    this.begin()
+    this.fatigueSlow = slowing(minutes, this.state.fatigueBaseline)
+    if (todayRate !== null) this.stats().fatigueRate = todayRate
+  }
+
   /** Set by the shell's full-screen probe each tick; not persisted. */
   setAutoBusy(on: boolean): void {
     this.autoBusy = on
@@ -662,6 +675,7 @@ export class DayfitService {
       settings: s.settings,
       manualBusy: s.manualBusy,
       autoBusy: this.autoBusy,
+      fatigueSlow: this.fatigueSlow,
       state: s.wellbeing
     })
     s.wellbeing = wb.state
@@ -821,6 +835,10 @@ export class DayfitService {
     // A day that ended without "Done for today" still gets its summary, once.
     const last = s.lastDate
     if (last && this.db.days(last, last).length === 0) this.db.putDay(last, this.summarize(last))
+    // Yesterday's cursor pace teaches the fatigue baseline.
+    if (last)
+      s.fatigueBaseline = updateBaseline(s.fatigueBaseline, s.stats[last]?.fatigueRate ?? null)
+    this.fatigueSlow = false
     s.stats = today in s.stats ? { [today]: s.stats[today] } : {}
     // A session still running at midnight belongs to yesterday: it ends with no credit.
     this.endFocusQuietly()

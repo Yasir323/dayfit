@@ -5,6 +5,8 @@ import { isFixed, type Block, type DateStr, type Item } from './types'
 export interface DayStats {
   /** Minutes at the computer (not idle). Absent in older state. */
   activeMin?: number
+  /** Cursor pace (fatigue signals) for the day so far, when measured. */
+  fatigueRate?: number | null
   /** Breaks fired and not snoozed. */
   breaksTaken: number
   /** Focus sessions that ran to the end. */

@@ -1190,3 +1190,28 @@ describe('DayfitService auto busy', () => {
     expect(kinds).not.toContain('break')
   })
 })
+
+describe('DayfitService fatigue', () => {
+  const minutes = (path: number): { active: number; path: number; turns: number }[] =>
+    Array.from({ length: 20 }, () => ({ active: 60, path, turns: 0 }))
+
+  it('learns a baseline at rollover and nudges when well below it', () => {
+    const f = svc.view().settings.features
+    svc.updateSettings({ features: { ...f, fatigue: { enabled: true } } })
+    svc.setFatigue(minutes(6000), 100)
+    clock.set(27, 9, 0)
+    svc.view()
+    expect(loadState(file).fatigueBaseline).toBe(100)
+    svc.setFatigue(minutes(60 * 50), 50)
+    clock.set(27, 9, 1)
+    expect(svc.tick(0).events.map((e) => e.kind)).toContain('fatigue')
+  })
+
+  it('no nudge on the first day (no baseline yet)', () => {
+    const f = svc.view().settings.features
+    svc.updateSettings({ features: { ...f, fatigue: { enabled: true } } })
+    svc.setFatigue(minutes(10), 1)
+    clock.set(26, 9, 30)
+    expect(svc.tick(0).events.map((e) => e.kind)).not.toContain('fatigue')
+  })
+})

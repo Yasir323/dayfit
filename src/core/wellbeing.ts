@@ -71,9 +71,13 @@ export interface WellbeingInput {
   manualBusy: boolean | null
   /** Another app is full screen (auto busy); manual Busy/Available still wins. */
   autoBusy: boolean
+  /** The fatigue signals say the user is slowing down. */
+  fatigueSlow?: boolean
   state: WellbeingState
 }
 
+/** The fatigue nudge repeats at most this often. */
+const FATIGUE_EVERY_MIN = 90
 /** Meetings this close together count as one run. */
 const RUN_GAP_MIN = 5
 /** A run of meetings at least this long earns a breathing offer… */
@@ -231,6 +235,22 @@ export function stepWellbeing(input: WellbeingInput): {
       kind: 'commute',
       title: 'Start your day',
       body: 'Look over the plan, then a 5 min walk.'
+    })
+  }
+
+  if (
+    f.fatigue.enabled &&
+    input.fatigueSlow === true &&
+    inHours &&
+    active &&
+    !held &&
+    (state.fatigueLastAt === null || now - state.fatigueLastAt >= FATIGUE_EVERY_MIN)
+  ) {
+    state.fatigueLastAt = now
+    events.push({
+      kind: 'fatigue',
+      title: 'You seem to be slowing down',
+      body: 'A 5 min break might help.'
     })
   }
 
