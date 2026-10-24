@@ -25,7 +25,7 @@ Everything below "Full backlog" is unprioritised beyond the v1 / later split.
 - [x] In-app reminder fallback: menu-bar label + popover banners
 - [x] Busy mode: mutes Dayfit's own notifications during deep work and fixed items
 - [x] Local-only storage, no account, no cloud
-- [ ] Open source release (MIT license in place; needs README, screenshots, signed builds)
+- [ ] Open source release (README, screenshots, contributing guide, CI done; needs signed builds)
 
 ## Known issues and polish (from reviews)
 
@@ -88,7 +88,7 @@ Everything below "Full backlog" is unprioritised beyond the v1 / later split.
 - [ ] Calendar: Google calls have no timeout (a hung request blocks Sync now for ~5 min)
 - [ ] Calendar: disable the write-back toggle while an action runs
 - [ ] Calendar: cache the connection state instead of decrypting the token file on each check
-- [ ] README Privacy still says data is in dayfit.json; it's dayfit.db now
+- [x] README Privacy still says data is in dayfit.json; it's dayfit.db now
 - [ ] Camera: status reaches the popover one tick late (after a tick, lock or unlock)
 - [ ] Camera: cues should also yield to break, meeting and end-of-day reminders on the same tick
 - [ ] Camera: tell "no camera / camera busy / failed to load" apart from "access off"
@@ -126,9 +126,9 @@ Calendar sync, Slack/Teams, AI and mood detection stay in "Later versions".
 
 ### Release (end)
 
-- [ ] App icon and packaging for Mac + Windows
+- [x] App icon and packaging for Mac + Windows
 - [ ] Sign dev and release builds (Apple Development / Developer ID)
-- [ ] Open-source release: README, screenshots, contributing guide, CI
+- [x] Open-source release: README, screenshots, contributing guide, CI
 
 ## Next up
 
