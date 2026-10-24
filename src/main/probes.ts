@@ -31,10 +31,27 @@ export function parseWindows(out: string): WindowInfo[] | null {
   )
 }
 
+/** `p`, or `fallback` if it hasn't settled within `ms` (a child that ignores its kill). */
+export function withTimeout<T>(p: Promise<T>, ms: number, fallback: T): Promise<T> {
+  return new Promise((resolve) => {
+    const t = setTimeout(() => resolve(fallback), ms)
+    p.then(
+      (v) => {
+        clearTimeout(t)
+        resolve(v)
+      },
+      () => {
+        clearTimeout(t)
+        resolve(fallback)
+      }
+    )
+  })
+}
+
 /** On-screen windows on macOS; null elsewhere, on any error, or after 2 s. */
 export function probeWindows(): Promise<WindowInfo[] | null> {
   if (process.platform !== 'darwin') return Promise.resolve(null)
-  return new Promise((resolve) => {
+  const run = new Promise<WindowInfo[] | null>((resolve) => {
     execFile(
       'osascript',
       ['-l', 'JavaScript', '-e', JXA],
@@ -42,4 +59,5 @@ export function probeWindows(): Promise<WindowInfo[] | null> {
       (err, stdout) => resolve(err ? null : parseWindows(stdout))
     )
   })
+  return withTimeout(run, TIMEOUT_MS + 500, null)
 }

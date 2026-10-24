@@ -36,10 +36,11 @@ export function minuteOf(samples: Sample[]): MinuteStat {
   let lastDx = 0
   let lastDy = 0
   samples.forEach((s, k) => {
-    if (s.idle < SAMPLE_SEC) active += SAMPLE_SEC
     if (k === 0) return
     const dx = s.x - samples[k - 1].x
     const dy = s.y - samples[k - 1].y
+    // Only seconds with the cursor moving count: typing would otherwise read as a slow mouse.
+    if (s.idle < SAMPLE_SEC && (dx !== 0 || dy !== 0)) active += SAMPLE_SEC
     path += Math.hypot(dx, dy)
     if (
       (sign(dx) !== 0 && sign(dx) === -sign(lastDx)) ||

@@ -575,6 +575,11 @@ export class DayfitService {
     if (todayRate !== null) this.stats().fatigueRate = todayRate
   }
 
+  /** The saved settings, for the shell's frequent checks (no clock read, no view built). */
+  currentSettings(): Settings {
+    return this.state.settings
+  }
+
   /** Set by the shell's full-screen probe each tick; not persisted. */
   setAutoBusy(on: boolean): void {
     this.autoBusy = on

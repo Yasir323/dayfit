@@ -40,6 +40,8 @@ export function energyLow(
 
 export interface BurnoutRisk {
   level: 'Low' | 'Watch' | 'High'
+  /** Saved days judged; the view shows nothing until there are enough. */
+  days: number
   /** Days past working hours. */
   late: number
   /** Days with fewer than 3 breaks. */
@@ -57,6 +59,7 @@ export function burnoutRisk(days: DaySummary[]): BurnoutRisk {
   const signalDays = new Set([...late, ...fewBreaks, ...lowMood].map((d) => d.date)).size
   return {
     level: signalDays >= 6 ? 'High' : signalDays >= 3 ? 'Watch' : 'Low',
+    days: recent.length,
     late: late.length,
     fewBreaks: fewBreaks.length,
     lowMood: lowMood.length
@@ -69,20 +72,22 @@ export interface Streaks {
   onTime: number
 }
 
+/** A saved day with less screen time than this (a weekend peek) neither counts nor breaks. */
+const STREAK_MIN_SCREEN = 60
+
 /**
- * Days in a row meeting each goal, counted back from the newest day. `days` runs oldest first,
- * one entry per calendar day, null where nothing was saved; a missing newest day (today, before
- * check-out) is skipped rather than breaking the streak.
+ * Days in a row meeting each goal, counted back from the newest day. `days` runs oldest first;
+ * days with nothing saved (weekends, today before check-out) or barely any screen time are
+ * skipped rather than breaking a streak.
  */
 export function streaks(days: (DaySummary | null)[]): Streaks {
-  const list = days.length > 0 && days[days.length - 1] === null ? days.slice(0, -1) : days
+  const list = days.filter(
+    (d): d is DaySummary =>
+      d !== null && (d.screenMin === undefined || d.screenMin >= STREAK_MIN_SCREEN)
+  )
   const run = (ok: (d: DaySummary) => boolean): number => {
     let n = 0
-    for (let k = list.length - 1; k >= 0; k--) {
-      const d = list[k]
-      if (!d || !ok(d)) break
-      n++
-    }
+    for (let k = list.length - 1; k >= 0 && ok(list[k]); k--) n++
     return n
   }
   return {

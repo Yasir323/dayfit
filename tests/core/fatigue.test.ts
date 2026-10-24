@@ -9,7 +9,8 @@ describe('minuteOf', () => {
       { x: 0, y: 40, idle: 1 }, // 30 px, turned back
       { x: 0, y: 40, idle: 9 } // away
     ]
-    expect(minuteOf(samples)).toEqual({ active: 6, path: 80, turns: 1 })
+    // Active = seconds the cursor moved while the user was there.
+    expect(minuteOf(samples)).toEqual({ active: 4, path: 80, turns: 1 })
   })
 
   it('an empty minute is all zeros', () => {
@@ -61,5 +62,12 @@ describe('baseline', () => {
   it('dayRate is path per active second over active minutes, or null', () => {
     expect(dayRate([m(600, 60), m(300, 30), m(0, 5)])).toBe(10)
     expect(dayRate([])).toBeNull()
+  })
+})
+
+describe('typing does not look like slowing down', () => {
+  it('only seconds with cursor movement count as active', () => {
+    const typing = Array.from({ length: 30 }, () => ({ x: 5, y: 5, idle: 0 }))
+    expect(minuteOf(typing).active).toBe(0)
   })
 })

@@ -27,8 +27,12 @@ export function createFatigueSampler(
       if (samples.length < PER_MINUTE) return
       const m = minuteOf(samples)
       samples = []
+      // A new day starts fresh: last night's minutes say nothing about this morning.
+      if (day?.date !== today) {
+        day = { date: today, minutes: [] }
+        recent = []
+      }
       recent = [...recent, m].slice(-KEEP_MINUTES)
-      if (day?.date !== today) day = { date: today, minutes: [] }
       day.minutes.push(m)
     },
     snapshot(today) {

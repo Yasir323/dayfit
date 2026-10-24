@@ -1070,7 +1070,9 @@ describe('DayfitService week trends', () => {
     const w = svc.week()
     expect(w.days).toHaveLength(7)
     expect(w.risk.level).toBe('Low')
-    expect(w.streaks).toEqual({ water: 0, breaks: 0, onTime: 1 })
+    // Checked out with no screen time yet: the day neither counts nor breaks a streak.
+    expect(w.streaks).toEqual({ water: 0, breaks: 0, onTime: 0 })
+    expect(w.risk.days).toBe(1)
     expect(w.energyLow).toBeNull()
   })
 
@@ -1197,7 +1199,14 @@ describe('DayfitService fatigue', () => {
 
   it('learns a baseline at rollover and nudges when well below it', () => {
     const f = svc.view().settings.features
-    svc.updateSettings({ features: { ...f, fatigue: { enabled: true } } })
+    svc.updateSettings({
+      features: {
+        ...f,
+        fatigue: { enabled: true },
+        mood: { ...f.mood, enabled: false },
+        commute: { enabled: false }
+      }
+    })
     svc.setFatigue(minutes(6000), 100)
     clock.set(27, 9, 0)
     svc.view()
@@ -1213,5 +1222,12 @@ describe('DayfitService fatigue', () => {
     svc.setFatigue(minutes(10), 1)
     clock.set(26, 9, 30)
     expect(svc.tick(0).events.map((e) => e.kind)).not.toContain('fatigue')
+  })
+})
+
+describe('DayfitService settings read', () => {
+  it('currentSettings returns the saved settings without building a view', () => {
+    svc.updateSettings({ bufferMin: 9 })
+    expect(svc.currentSettings().bufferMin).toBe(9)
   })
 })

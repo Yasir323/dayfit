@@ -68,3 +68,28 @@ describe('recordAlerts', () => {
     expect(recordAlerts(alerts, 'Lunch', [], 0, 700, S)).toEqual({ alerts, unseen: 'Lunch' })
   })
 })
+
+describe('alert overflow', () => {
+  it('a full list drops older ordinary banners before a reminder or the wrap-up', () => {
+    const mk = (kind: Alert['kind'], at: number): Alert => ({
+      id: `${kind}:${at}`,
+      kind,
+      title: kind,
+      body: '',
+      parts: [],
+      at
+    })
+    const alerts = [
+      mk('custom', 1),
+      mk('heads-up', 2),
+      mk('daylight', 3),
+      mk('slump', 4),
+      mk('lunch', 5)
+    ]
+    const r = recordAlerts(alerts, null, [ev('posture'), ev('breathe')], 0, 9, DEFAULT_SETTINGS)
+    expect(r.alerts).toHaveLength(5)
+    expect(r.alerts.map((a) => a.kind)).toEqual(
+      expect.arrayContaining(['custom', 'heads-up', 'posture', 'breathe'])
+    )
+  })
+})

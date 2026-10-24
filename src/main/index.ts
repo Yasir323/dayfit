@@ -167,7 +167,7 @@ if (!app.requestSingleInstanceLock()) {
     })
     // Before each tick: is another app full screen? A failed probe counts as no.
     const fullScreenNow = async (): Promise<boolean> => {
-      if (!service.view().settings.features.autoBusyFullscreen.enabled) return false
+      if (!service.currentSettings().features.autoBusyFullscreen.enabled) return false
       const windows = await probeWindows()
       const displays = screen
         .getAllDisplays()
@@ -179,18 +179,20 @@ if (!app.requestSingleInstanceLock()) {
       () => screen.getCursorScreenPoint(),
       () => powerMonitor.getSystemIdleTime()
     )
-    const fatigueOn = (): boolean => service.view().settings.features.fatigue.enabled
+    const fatigueOn = (): boolean => service.currentSettings().features.fatigue.enabled
     setInterval(
       guarded('fatigue sample', () => {
         if (fatigueOn()) sampler.sample(toDateStr(new Date()))
       }),
       FATIGUE_SAMPLE_MS
     )
+    const shareFatigue = guarded('fatigue update', (): void => {
+      if (!fatigueOn()) return
+      const snap = sampler.snapshot(toDateStr(new Date()))
+      service.setFatigue(snap.minutes, snap.todayRate)
+    })
     const probeThenTick = (): void => {
-      if (fatigueOn()) {
-        const snap = sampler.snapshot(toDateStr(new Date()))
-        service.setFatigue(snap.minutes, snap.todayRate)
-      }
+      shareFatigue()
       fullScreenNow()
         .catch((e: unknown) => {
           console.error('full-screen probe failed', e)

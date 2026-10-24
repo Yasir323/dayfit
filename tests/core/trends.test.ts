@@ -51,9 +51,14 @@ describe('energyLow', () => {
 })
 
 describe('burnoutRisk', () => {
+  it('reports how many days it judged (the view waits for 5)', () => {
+    expect(burnoutRisk([day('a'), day('b')]).days).toBe(2)
+  })
+
   it('is Low with few signal days', () => {
     expect(burnoutRisk([day('a'), day('b', { overtime: true })])).toEqual({
       level: 'Low',
+      days: 2,
       late: 1,
       fewBreaks: 0,
       lowMood: 0
@@ -64,7 +69,7 @@ describe('burnoutRisk', () => {
     const bad = (d: string): DaySummary => day(d, { overtime: true, breaksTaken: 1, moodAvg: 2 })
     expect(burnoutRisk(['a', 'b', 'c'].map(bad)).level).toBe('Watch')
     const six = ['a', 'b', 'c', 'd', 'e', 'f'].map(bad)
-    expect(burnoutRisk(six)).toEqual({ level: 'High', late: 6, fewBreaks: 6, lowMood: 6 })
+    expect(burnoutRisk(six)).toEqual({ level: 'High', days: 6, late: 6, fewBreaks: 6, lowMood: 6 })
   })
 
   it('only looks at the last 10 days', () => {
@@ -77,7 +82,7 @@ describe('burnoutRisk', () => {
 })
 
 describe('streaks', () => {
-  it('counts back from the latest day and stops at a gap or a miss', () => {
+  it('counts back from the latest day and stops at a miss', () => {
     const days = [
       day('1'),
       null,
@@ -87,6 +92,11 @@ describe('streaks', () => {
       day('6')
     ]
     expect(streaks(days)).toEqual({ water: 3, breaks: 2, onTime: 1 })
+  })
+
+  it('days with no summary (weekends) or barely any screen time are skipped, not breaks', () => {
+    const days = [day('1'), day('2'), null, null, day('5', { screenMin: 20, waterMl: 0 }), day('6')]
+    expect(streaks(days)).toEqual({ water: 3, breaks: 3, onTime: 3 })
   })
 
   it('today without a summary yet does not break the streak', () => {

@@ -202,3 +202,9 @@ describe('store', () => {
     expect(loadState(nested).version).toBe(1)
   })
 })
+
+describe('feature defaults', () => {
+  it('busy-when-full-screen is opt-in (native full screen is common for work)', () => {
+    expect(DEFAULT_SETTINGS.features.autoBusyFullscreen.enabled).toBe(false)
+  })
+})

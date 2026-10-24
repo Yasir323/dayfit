@@ -316,3 +316,99 @@ describe('fatigue nudge', () => {
     expect(kinds(stepWellbeing(input({ now: 600, fatigueSlow: true })))).toEqual([])
   })
 })
+
+describe('review fixes', () => {
+  const all: Settings = {
+    ...D,
+    features: {
+      ...D.features,
+      mood: { ...D.features.mood, enabled: false },
+      commute: { enabled: false }
+    }
+  }
+  const meeting = (start: number, end: number): Block => ({
+    itemId: null,
+    kind: 'fixed',
+    start,
+    end,
+    chunk: null,
+    reason: ''
+  })
+
+  it('at most one wellbeing nudge per tick; the rest follow on later ticks', () => {
+    const blocks = [meeting(600, 700), meeting(700, 790)]
+    const r1 = stepWellbeing(input({ now: 791, settings: all, blocks }))
+    expect(r1.events).toHaveLength(1)
+    const r2 = stepWellbeing(input({ now: 792, settings: all, blocks, state: r1.state }))
+    expect(r2.events).toHaveLength(1)
+    expect(r2.events[0].kind).not.toBe(r1.events[0].kind)
+  })
+
+  it('a custom at reminder is never queued behind another nudge', () => {
+    const settings: Settings = {
+      ...all,
+      features: {
+        ...all.features,
+        reminders: [
+          { id: 'r1', title: 'Meds', kind: 'at', times: [700], everyMin: 0, enabled: true }
+        ]
+      }
+    }
+    expect(kinds(stepWellbeing(input({ now: 700, settings })))).toEqual(['daylight', 'custom'])
+  })
+
+  it('daylight more than 90 minutes late is skipped', () => {
+    const r = stepWellbeing(input({ now: 781, settings: all }))
+    expect(kinds(r)).not.toContain('daylight')
+    expect(r.state.daylightFired).toBe(true)
+  })
+
+  it('breathe and call fatigue wait for working hours', () => {
+    const blocks = [meeting(980, 1081)]
+    const r = stepWellbeing(input({ now: 1082, settings: all, blocks }))
+    expect(kinds(r)).not.toContain('breathe')
+    expect(kinds(r)).not.toContain('call-fatigue')
+  })
+
+  it('a snoozed every reminder waits for working hours and holds; a disabled one forgets its snooze', () => {
+    const every = {
+      id: 'r2',
+      title: 'Roll shoulders',
+      kind: 'every' as const,
+      times: [],
+      everyMin: 45,
+      enabled: true
+    }
+    const settings: Settings = {
+      ...S,
+      features: { ...S.features, mood: { ...S.features.mood, enabled: false }, reminders: [every] }
+    }
+    const state = { ...EMPTY_WELLBEING_STATE, customLast: { r2: 1070 }, customSnooze: { r2: 1085 } }
+    expect(kinds(stepWellbeing(input({ now: 1090, settings, state })))).toEqual([])
+    const held = { ...state, customSnooze: { r2: 600 } }
+    expect(
+      kinds(stepWellbeing(input({ now: 610, settings, state: held, manualBusy: true })))
+    ).toEqual([])
+    const off: Settings = {
+      ...settings,
+      features: { ...settings.features, reminders: [{ ...every, enabled: false }] }
+    }
+    expect(
+      stepWellbeing(input({ now: 610, settings: off, state: held })).state.customSnooze.r2
+    ).toBeUndefined()
+  })
+
+  it('the start-of-day banner only comes in the first two working hours', () => {
+    const settings: Settings = {
+      ...S,
+      features: {
+        ...S.features,
+        mood: { ...S.features.mood, enabled: false },
+        commute: { enabled: true }
+      }
+    }
+    const late = stepWellbeing(input({ now: 661, settings }))
+    expect(kinds(late)).toEqual([])
+    expect(late.state.commuteFired).toBe(true)
+  })
+})

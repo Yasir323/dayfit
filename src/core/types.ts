@@ -148,7 +148,7 @@ export const DEFAULT_SETTINGS: Settings = {
     daylight: { enabled: true, at: 690 },
     callFatigue: { enabled: true, thresholdMin: 180 },
     commute: { enabled: true },
-    autoBusyFullscreen: { enabled: true },
+    autoBusyFullscreen: { enabled: false },
     fatigue: { enabled: false },
     reminders: []
   },

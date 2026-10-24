@@ -76,6 +76,8 @@ export interface WellbeingInput {
   state: WellbeingState
 }
 
+/** The start-of-day banner is only offered in the first two working hours. */
+const COMMUTE_WITHIN_MIN = 120
 /** The fatigue nudge repeats at most this often. */
 const FATIGUE_EVERY_MIN = 90
 /** Meetings this close together count as one run. */
@@ -136,6 +138,14 @@ export function stepWellbeing(input: WellbeingInput): {
     s.bufferMin
   )
   const inHours = now >= s.workStart && now < s.workEnd
+  // One nudge per tick: when a hold ends, the waiting ones come one at a time rather than as a
+  // pile of notifications. Clock-time custom reminders (medication) never wait behind them.
+  let free = true
+  const nudge = (e: WellbeingEvent): void => {
+    events.push(e)
+    free = false
+  }
+  const ready = active && inHours && !held
 
   // Mood check-in: one at a time; a missed one is dropped once it is too late to matter.
   if (f.mood.enabled) {
@@ -145,13 +155,9 @@ export function stepWellbeing(input: WellbeingInput): {
         state.moodDone.push(t)
         continue
       }
-      if (active && inHours && !held) {
+      if (ready && free) {
         state.moodDone.push(t)
-        events.push({
-          kind: 'checkin',
-          title: 'How are you feeling?',
-          body: 'Tap a face in Dayfit.'
-        })
+        nudge({ kind: 'checkin', title: 'How are you feeling?', body: 'Tap a face in Dayfit.' })
       }
       break
     }
@@ -160,8 +166,8 @@ export function stepWellbeing(input: WellbeingInput): {
   // Sit/stand: counts active work time, switches each interval (the switch waits out a hold).
   if (f.standing.enabled && inHours && active) {
     state.standActiveMin += input.elapsedMin
-    if (state.standActiveMin >= f.standing.intervalMin && !held) {
-      events.push(
+    if (state.standActiveMin >= f.standing.intervalMin && !held && free) {
+      nudge(
         state.standing
           ? { kind: 'posture', title: 'Time to sit down', body: 'Switch back to sitting.' }
           : { kind: 'posture', title: 'Time to stand up', body: 'Switch to standing for a while.' }
@@ -171,20 +177,16 @@ export function stepWellbeing(input: WellbeingInput): {
     }
   }
 
-  if (
-    f.daylight.enabled &&
-    !state.daylightFired &&
-    now >= f.daylight.at &&
-    inHours &&
-    active &&
-    !held
-  ) {
-    state.daylightFired = true
-    events.push({
-      kind: 'daylight',
-      title: 'Get some daylight',
-      body: 'Step outside or open a window for 5 min.'
-    })
+  if (f.daylight.enabled && !state.daylightFired && now >= f.daylight.at) {
+    if (now - f.daylight.at > LATE_LIMIT_MIN) state.daylightFired = true
+    else if (ready && free) {
+      state.daylightFired = true
+      nudge({
+        kind: 'daylight',
+        title: 'Get some daylight',
+        body: 'Step outside or open a window for 5 min.'
+      })
+    }
   }
 
   // Wind-down is about the evening: no hold, no working hours.
@@ -192,23 +194,20 @@ export function stepWellbeing(input: WellbeingInput): {
     f.windDown.enabled &&
     !state.windDownFired &&
     now >= s.workEnd + f.windDown.afterMin &&
-    active
+    active &&
+    free
   ) {
     state.windDownFired = true
-    events.push({
-      kind: 'wind-down',
-      title: 'Time to wind down',
-      body: 'Close the laptop for today.'
-    })
+    nudge({ kind: 'wind-down', title: 'Time to wind down', body: 'Close the laptop for today.' })
   }
 
-  if (f.callFatigue.enabled && !state.callFatigueFired && active && !held) {
+  if (f.callFatigue.enabled && !state.callFatigueFired && ready && free) {
     const callMin = input.blocks
       .filter((b) => b.kind === 'fixed' && b.end <= now)
       .reduce((sum, b) => sum + (b.end - b.start), 0)
     if (callMin >= f.callFatigue.thresholdMin) {
       state.callFatigueFired = true
-      events.push({
+      nudge({
         kind: 'call-fatigue',
         title: 'Lots of calls today',
         body: 'Try camera off, audio only or a walking call next.'
@@ -217,47 +216,50 @@ export function stepWellbeing(input: WellbeingInput): {
   }
 
   // Breathing: offered once, just after a long run of back-to-back meetings.
-  if (f.breathe.enabled && !state.breatheOffered && active && !held) {
+  if (f.breathe.enabled && !state.breatheOffered && ready && free) {
     const end = meetingRunEnd(input.blocks, now)
     if (end !== null && now - end <= BREATHE_WITHIN_MIN) {
       state.breatheOffered = true
-      events.push({
-        kind: 'breathe',
-        title: 'Take a breather',
-        body: 'One minute of box breathing?'
-      })
+      nudge({ kind: 'breathe', title: 'Take a breather', body: 'One minute of box breathing?' })
     }
   }
 
-  if (f.commute.enabled && !state.commuteFired && inHours && active && !held) {
-    state.commuteFired = true
-    events.push({
-      kind: 'commute',
-      title: 'Start your day',
-      body: 'Look over the plan, then a 5 min walk.'
-    })
+  // The start-of-day ritual only makes sense early on; later it is quietly skipped.
+  if (f.commute.enabled && !state.commuteFired && now >= s.workStart) {
+    if (now >= s.workStart + COMMUTE_WITHIN_MIN) state.commuteFired = true
+    else if (ready && free) {
+      state.commuteFired = true
+      nudge({
+        kind: 'commute',
+        title: 'Start your day',
+        body: 'Look over the plan, then a 5 min walk.'
+      })
+    }
   }
 
   if (
     f.fatigue.enabled &&
     input.fatigueSlow === true &&
-    inHours &&
-    active &&
-    !held &&
+    ready &&
+    free &&
     (state.fatigueLastAt === null || now - state.fatigueLastAt >= FATIGUE_EVERY_MIN)
   ) {
     state.fatigueLastAt = now
-    events.push({
+    nudge({
       kind: 'fatigue',
       title: 'You seem to be slowing down',
       body: 'A 5 min break might help.'
     })
   }
 
-  // Custom reminders. `at` ones are about the clock (medication): they ignore busy and working
-  // hours, and only wait for the user to be back. `every` ones are work-time habits.
+  // Custom reminders. `at` ones are about the clock (medication): they ignore busy, working
+  // hours and the one-per-tick rule, and only wait for the user to be back. `every` ones are
+  // work-time habits.
   for (const r of f.reminders) {
-    if (!r.enabled) continue
+    if (!r.enabled) {
+      delete state.customSnooze[r.id]
+      continue
+    }
     const custom: WellbeingEvent = {
       kind: 'custom',
       title: r.title,
@@ -266,9 +268,11 @@ export function stepWellbeing(input: WellbeingInput): {
     }
     const snooze = state.customSnooze[r.id]
     if (snooze !== undefined) {
-      if (now >= snooze && active) {
+      const back = r.kind === 'at' ? active : ready && free
+      if (now >= snooze && back) {
         delete state.customSnooze[r.id]
-        events.push(custom)
+        if (r.kind === 'at') events.push(custom)
+        else nudge(custom)
       }
       continue
     }
@@ -282,11 +286,11 @@ export function stepWellbeing(input: WellbeingInput): {
         state.customFired[r.id] = [...(state.customFired[r.id] ?? []), ...onTime]
         events.push(custom)
       }
-    } else if (inHours && active && !held && r.everyMin > 0) {
+    } else if (ready && free && r.everyMin > 0) {
       const last = state.customLast[r.id] ?? s.workStart
       if (now - last >= r.everyMin) {
         state.customLast[r.id] = now
-        events.push(custom)
+        nudge(custom)
       }
     }
   }

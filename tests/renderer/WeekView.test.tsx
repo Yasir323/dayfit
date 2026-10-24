@@ -40,7 +40,7 @@ const trend = (
 ): WeekTrend => ({
   days,
   energyLow: null,
-  risk: { level: 'Low', late: 0, fewBreaks: 0, lowMood: 0 },
+  risk: { level: 'Low', days: 10, late: 0, fewBreaks: 0, lowMood: 0 },
   streaks: { water: 0, breaks: 0, onTime: 0 },
   ...o
 })
@@ -88,7 +88,7 @@ describe('WeekView', () => {
     api.week.mockResolvedValue(
       trend(days, {
         energyLow: 900,
-        risk: { level: 'Watch', late: 3, fewBreaks: 2, lowMood: 0 },
+        risk: { level: 'Watch', days: 10, late: 3, fewBreaks: 2, lowMood: 0 },
         streaks: { water: 3, breaks: 5, onTime: 2 }
       })
     )
@@ -100,5 +100,14 @@ describe('WeekView', () => {
     expect(
       screen.getByText('Streaks: water 3 days · breaks 5 days · on-time 2 days')
     ).toBeInTheDocument()
+  })
+  it('no burnout card until 5 days are saved', async () => {
+    const days = dates.map((date) => ({ date, summary: day(date) }))
+    api.week.mockResolvedValue(
+      trend(days, { risk: { level: 'Watch', days: 3, late: 3, fewBreaks: 0, lowMood: 0 } })
+    )
+    render(<WeekView view={makeView()} />)
+    await screen.findByRole('group', { name: 'Focus hours' })
+    expect(screen.queryByRole('status', { name: 'Burnout risk' })).toBeNull()
   })
 })

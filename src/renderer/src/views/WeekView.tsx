@@ -46,6 +46,9 @@ const ROWS: Row[] = [
   }
 ]
 
+/** The burnout card waits for this many saved days. */
+const RISK_MIN_DAYS = 5
+
 /** The last seven days from saved summaries: focus, water and breaks as bars. */
 export function WeekView({ view }: { view: ViewState }): React.JSX.Element {
   const [trend, setTrend] = useState<WeekTrend | null>(null)
@@ -82,13 +85,15 @@ export function WeekView({ view }: { view: ViewState }): React.JSX.Element {
 
   return (
     <div className="week-view">
-      <div
-        role="status"
-        aria-label="Burnout risk"
-        className={`week-risk is-${risk.level.toLowerCase()}`}
-      >
-        {`Burnout risk: ${risk.level}${reasons.length > 0 ? ` — ${reasons.join(', ')}` : ''}`}
-      </div>
+      {risk.days >= RISK_MIN_DAYS && (
+        <div
+          role="status"
+          aria-label="Burnout risk"
+          className={`week-risk is-${risk.level.toLowerCase()}`}
+        >
+          {`Burnout risk: ${risk.level}${reasons.length > 0 ? ` — ${reasons.join(', ')}` : ''}`}
+        </div>
+      )}
       <p className="week-note muted">
         {`Streaks: water ${days(st.water)} · breaks ${days(st.breaks)} · on-time ${days(st.onTime)}`}
       </p>

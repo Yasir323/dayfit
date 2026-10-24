@@ -46,6 +46,8 @@ const BANNER_KINDS: ReminderKind[] = [
   'fatigue'
 ]
 const NUDGE_LABEL = "Time's up"
+/** Banners never pushed out by newer ones. */
+const KEPT_KINDS: AlertKind[] = ['custom', 'heads-up']
 
 /** Short text shown next to the menu-bar icon for a reminder. */
 export function labelFor(event: ReminderEvent, s: Settings): string {
@@ -141,5 +143,11 @@ export function recordAlerts(
     })
   })
   if (nudgeCount > 0) label = NUDGE_LABEL
-  return { alerts: next.slice(-MAX_ALERTS), unseen: label }
+  // Over the cap, the oldest ordinary banners go first; a reminder of the user's own or the
+  // wrap-up warning stays until acted on.
+  while (next.length > MAX_ALERTS) {
+    const k = next.findIndex((a) => !KEPT_KINDS.includes(a.kind))
+    next.splice(k === -1 ? 0 : k, 1)
+  }
+  return { alerts: next, unseen: label }
 }
