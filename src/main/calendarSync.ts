@@ -95,6 +95,13 @@ export function createCalendarController(d: CalendarDeps): CalendarController {
   let access: { token: string; expiresAt: number } | null = null
   let syncing: Promise<ViewState> | null = null
   let writeTimer: ReturnType<typeof setTimeout> | null = null
+  /** Write passes, removals and disconnect run one after another, in call order. */
+  let writes: Promise<unknown> = Promise.resolve()
+  const queued = <T>(fn: () => Promise<T>): Promise<T> => {
+    const run = writes.then(fn, fn)
+    writes = run.catch(() => undefined)
+    return run
+  }
 
   const creds = (): { clientId: string; clientSecret: string } => {
     const c = svc.currentSettings().calendar
@@ -172,11 +179,16 @@ export function createCalendarController(d: CalendarDeps): CalendarController {
     }
   }
 
-  /** Makes Dayfit's own events match the planned blocks. */
-  const writePass = async (events?: GEvent[]): Promise<ViewState> => {
+  /**
+   * Makes Dayfit's own events match the planned blocks. Queued, and lists the calendar afresh,
+   * so two passes never both create the same block; skipped once write-back is off.
+   */
+  const writePass = (): Promise<ViewState> => queued(runWritePass)
+  const runWritePass = async (): Promise<ViewState> => {
+    if (!writeBackOn()) return svc.view()
     const today = d.today()
     try {
-      const list = events ?? (await withRetry((c) => c.listDay(today)))
+      const list = await withRetry((c) => c.listDay(today))
       const diff = diffWrites(svc.writeBlocks(), ownEvents(list, today), d.nowMin())
       for (const b of diff.create) await withRetry((c) => c.insert(today, b))
       for (const u of diff.update) await withRetry((c) => c.patch(u.eventId, today, u.block))
@@ -189,7 +201,7 @@ export function createCalendarController(d: CalendarDeps): CalendarController {
     }
   }
 
-  /** Deletes today's own events that haven't ended (best effort). */
+  /** Deletes today's own events that haven't ended (best effort); run inside the queue. */
   const removeOwn = async (): Promise<void> => {
     const today = d.today()
     try {
@@ -211,7 +223,7 @@ export function createCalendarController(d: CalendarDeps): CalendarController {
       return failed(e)
     }
     const v = svc.applyCalendar(eventsToMeetings(events, today))
-    return writeBackOn() ? writePass(events) : v
+    return writeBackOn() ? writePass() : v
   }
 
   const sync = (): Promise<ViewState> => {
@@ -241,20 +253,27 @@ export function createCalendarController(d: CalendarDeps): CalendarController {
     },
     async disconnect() {
       if (writeTimer) clearTimeout(writeTimer)
-      if (writeBackOn()) await removeOwn()
-      const t = d.tokens.read()
-      if (t) await revokeToken(d.fetch, t.refreshToken)
-      d.tokens.remove()
-      access = null
+      const wasOn = writeBackOn()
+      // Off first: passes still queued skip, and the one running finishes before cleanup.
+      svc.updateSettings({ calendar: { writeBack: false } })
+      await queued(async () => {
+        if (wasOn) await removeOwn()
+        const t = d.tokens.read()
+        if (t) await revokeToken(d.fetch, t.refreshToken)
+        d.tokens.remove()
+        access = null
+      })
       refreshLink()
-      return svc.updateSettings({ calendar: { writeBack: false } })
+      return svc.view()
     },
     sync,
     async setWriteBack(on) {
       if (!on) {
         if (writeTimer) clearTimeout(writeTimer)
-        if (link().canWrite) await removeOwn()
-        return svc.updateSettings({ calendar: { writeBack: false } })
+        const canWrite = link().canWrite
+        svc.updateSettings({ calendar: { writeBack: false } })
+        if (canWrite) await queued(removeOwn)
+        return svc.view()
       }
       if (!link().connected) return svc.view()
       if (!link().canWrite) {

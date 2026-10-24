@@ -83,8 +83,18 @@ class FakeGoogle {
     }
     if (method !== 'GET' && this.writeStatus !== 200)
       return json(this.writeStatus, { error: { message: 'Rate Limit Exceeded' } })
-    if (base === EVENTS && method === 'POST') return json(200, { id: 'new' })
-    if (base.startsWith(EVENTS + '/')) return json(200, {})
+    if (base === EVENTS && method === 'POST') {
+      const id = `new${this.calls.length}`
+      this.events.push({ ...(JSON.parse(body) as Omit<GEvent, 'id'>), id })
+      return json(200, { id })
+    }
+    if (base.startsWith(EVENTS + '/')) {
+      if (method === 'DELETE') {
+        const id = decodeURIComponent(url.pathname.split('/').pop() ?? '')
+        this.events = this.events.filter((e) => e.id !== id)
+      }
+      return json(200, {})
+    }
     return json(404, {})
   }) as Fetch
   count(method: string, base: string): number {
@@ -404,6 +414,54 @@ describe('calendar controller: write-back', () => {
     c.blocksChanged()
     await vi.advanceTimersByTimeAsync(60_000)
     expect(google.calls).toEqual([])
+  })
+})
+
+describe('calendar controller: one write at a time', () => {
+  const both = `${READ_SCOPE} ${WRITE_SCOPE}`
+  const plan = (): void => {
+    svc.addItems([
+      {
+        title: 'Email',
+        type: 'task',
+        durationMin: 30,
+        label: null,
+        priority: 'med',
+        half: null,
+        date: '2026-10-26',
+        fixedStart: null,
+        deadline: null,
+        repeat: { kind: 'none' },
+        dnd: false
+      }
+    ])
+  }
+
+  it('two passes at once write each block once', async () => {
+    withCreds()
+    plan()
+    svc.updateSettings({ calendar: { writeBack: true } })
+    const c = make(memoryTokens({ refreshToken: 'ref', scope: both }))
+    await Promise.all([c.sync(), c.setWriteBack(true)])
+    expect(google.writes().filter((w) => w.method === 'POST')).toHaveLength(1)
+  })
+  it('disconnect waits for a running pass, then cleans up without an error', async () => {
+    withCreds()
+    plan()
+    svc.updateSettings({ calendar: { writeBack: true } })
+    const c = make(memoryTokens({ refreshToken: 'ref', scope: both }))
+    const pass = c.sync()
+    const v = await c.disconnect()
+    await pass
+    const revokeAt = google.calls.findIndex((x) => x.url.href.startsWith(REVOKE))
+    const lastWrite = google.calls.findLastIndex(
+      (x) => x.method === 'POST' && x.url.href.startsWith(EVENTS)
+    )
+    expect(lastWrite).toBeLessThan(revokeAt)
+    const left = google.events.filter((e) => e.extendedProperties?.private?.dayfit === '1')
+    expect(left).toEqual([])
+    expect(svc.view().calendar.lastError).toBeNull()
+    expect(v.calendar.connected).toBe(false)
   })
 })
 
