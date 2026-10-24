@@ -77,6 +77,11 @@ export function EditItem({ item, today, settings, onDone, onCancel }: Props): Re
     >
       <h2>Edit item</h2>
       {item.repeat.kind !== 'none' && <p className="muted">Changes every occurrence</p>}
+      {item.calendarId !== undefined && (
+        <p className="muted">
+          From Google Calendar · changes to time and title are replaced at the next sync
+        </p>
+      )}
       <label className="field">
         <span>Title</span>
         <input aria-label="Title" value={title} onChange={(e) => setTitle(e.target.value)} />

@@ -99,3 +99,18 @@ describe('Edit from the list', () => {
     expect(screen.getByRole('dialog', { name: 'Edit item' })).toBeInTheDocument()
   })
 })
+
+describe('EditItem from Google Calendar', () => {
+  it('says sync owns the title and time', () => {
+    open(item('m', 'Standup', { type: 'fixed', fixedStart: 600, calendarId: 'e1' }))
+    expect(
+      screen.getByText(
+        'From Google Calendar · changes to time and title are replaced at the next sync'
+      )
+    ).toBeInTheDocument()
+  })
+  it('shows nothing for a typed item', () => {
+    open()
+    expect(screen.queryByText(/From Google Calendar/)).toBeNull()
+  })
+})

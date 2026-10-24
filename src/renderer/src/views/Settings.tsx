@@ -1,5 +1,5 @@
 import { useId, useState } from 'react'
-import { formatClock } from '../../../core/time'
+import { formatClock, minutesOf } from '../../../core/time'
 import type {
   CustomReminder,
   Features as FeaturesShape,
@@ -33,7 +33,7 @@ type Send = (patch: SettingsPatch) => Promise<boolean>
 interface FieldProps<T> {
   label: string
   value: string
-  type?: 'text' | 'time' | 'number'
+  type?: 'text' | 'time' | 'number' | 'password'
   parse: (draft: string) => Parsed<T>
   /** Resolves false when saving failed; the draft then reverts to the saved value. */
   onValid: (v: T) => Promise<boolean> | void
@@ -439,6 +439,124 @@ function Backup({ onView }: { onView?: (v: ViewState) => void }): React.JSX.Elem
   )
 }
 
+const asText = (d: string): Parsed<string> => ({ ok: true, value: d.trim() })
+
+/** Google Calendar: the user's own OAuth client, sign-in, sync and write-back. */
+function CalendarGroup({
+  view,
+  send,
+  onView
+}: {
+  view: ViewState
+  send: Send
+  onView?: (v: ViewState) => void
+}): React.JSX.Element {
+  const creds = view.settings.calendar
+  const cal = view.calendar
+  const [busy, setBusy] = useState(false)
+  const act = async (a: Parameters<typeof api.calendar>[0]): Promise<void> => {
+    setBusy(true)
+    try {
+      const v = await api.calendar(a)
+      onView?.(v)
+    } finally {
+      setBusy(false)
+    }
+  }
+  const ready = creds.clientId.trim() !== '' && creds.clientSecret.trim() !== ''
+  return (
+    <fieldset>
+      <legend>Google Calendar</legend>
+      <div className="group-card">
+        {cal.connected ? (
+          <>
+            <p className="muted" role="status">
+              {cal.lastSyncAt === null
+                ? 'Connected'
+                : `Connected · last synced ${formatClock(minutesOf(new Date(cal.lastSyncAt)))}`}
+            </p>
+            <Toggle
+              label="Show my planned blocks on Google Calendar"
+              checked={creds.writeBack}
+              onChange={(on) => void act(on ? 'writeBackOn' : 'writeBackOff')}
+            />
+            <div className="backup-actions">
+              <button
+                type="button"
+                className="btn"
+                disabled={busy}
+                onClick={() => void act('sync')}
+              >
+                Sync now
+              </button>
+              <button
+                type="button"
+                className="btn"
+                disabled={busy}
+                onClick={() => void act('disconnect')}
+              >
+                Disconnect
+              </button>
+            </div>
+          </>
+        ) : cal.connecting ? (
+          <div className="backup-actions">
+            <span className="muted" role="status">
+              Waiting for Google in your browser…
+            </span>
+            <button type="button" className="btn" onClick={() => void act('cancel')}>
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <>
+            {!ready && <p className="muted">Add your Google OAuth client ID</p>}
+            <Field
+              label="Client ID"
+              value={creds.clientId}
+              parse={asText}
+              onValid={(clientId) => send({ calendar: { clientId } })}
+              onBlurOnly
+            />
+            <Field
+              label="Client secret"
+              type="password"
+              value={creds.clientSecret}
+              parse={asText}
+              onValid={(clientSecret) => send({ calendar: { clientSecret } })}
+              onBlurOnly
+            />
+            <details className="muted">
+              <summary>How to get these</summary>
+              <ol>
+                <li>Open Google Cloud Console and pick or create a project.</li>
+                <li>Enable the Google Calendar API.</li>
+                <li>Create an OAuth client ID of type Desktop app.</li>
+                <li>Copy its client ID and client secret here.</li>
+              </ol>
+            </details>
+            <div className="backup-actions">
+              <button
+                type="button"
+                className="btn"
+                disabled={!ready || busy}
+                onClick={() => void act('connect')}
+              >
+                Connect
+              </button>
+            </div>
+          </>
+        )}
+        {cal.lastError && (
+          <p className="field-error" role="alert">
+            {cal.lastError}
+          </p>
+        )}
+      </div>
+    </fieldset>
+  )
+}
+
 export function Settings({ view, onView }: Props): React.JSX.Element {
   const s = view.settings
   const [saveError, setSaveError] = useState<string | null>(null)
@@ -690,6 +808,7 @@ export function Settings({ view, onView }: Props): React.JSX.Element {
       <FeaturesGroup s={s} send={send} />
 
       <RemindersGroup s={s} send={send} />
+      <CalendarGroup view={view} send={send} onView={onView} />
 
       <HomeSetup ticked={view.ergonomics ?? []} onView={onView} />
 
