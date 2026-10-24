@@ -878,13 +878,13 @@ describe('DayfitService daily summary', () => {
     expect(rows[0].summary).toMatchObject({ done: 1 })
   })
 
-  it('rollover keeps the check-out summary', () => {
+  it('rollover keeps the check-out summary, including what was logged after it', () => {
     svc.logWater()
     svc.checkOut([])
-    svc.logWater() // after check-out: not in the saved summary
+    svc.logWater()
     clock.set(27, 9, 0)
     svc.view()
-    expect(daysIn()).toEqual([{ date: D, summary: expect.objectContaining({ waterMl: 250 }) }])
+    expect(daysIn()).toEqual([{ date: D, summary: expect.objectContaining({ waterMl: 500 }) }])
   })
 })
 
@@ -943,5 +943,93 @@ describe('DayfitService backup', () => {
     expect(v.checkedOut).toBe(false)
     expect(loadState(file).items.map((i) => i.title)).toEqual(['New'])
     expect(svc.week().every((d) => d.summary === null)).toBe(true)
+  })
+})
+
+describe('DayfitService review minors', () => {
+  const daysIn = (): { date: string; summary: unknown }[] => {
+    const db = openDb(file)
+    try {
+      return db.days('2026-01-01', '2026-12-31')
+    } finally {
+      db.close()
+    }
+  }
+
+  it('after check-out, later logging keeps the saved summary current', () => {
+    svc.checkOut([])
+    svc.logWater()
+    svc.logCoffee()
+    expect(daysIn()).toEqual([
+      { date: D, summary: expect.objectContaining({ waterMl: 250, coffeeCups: 1 }) }
+    ])
+  })
+
+  it('a Busy choice made during focus stays after focus ends', () => {
+    svc.addItems([newItem()])
+    svc.startFocus('id1', 25)
+    svc.setManualBusy(false)
+    clock.set(26, 9, 26)
+    expect(svc.tick(0).view.manualBusy).toBe(false)
+  })
+
+  it('a focus session still running at midnight ends quietly with no credit', () => {
+    svc.addItems([newItem()])
+    clock.set(26, 23, 50)
+    svc.startFocus('id1', 25)
+    clock.set(27, 0, 20)
+    const t = svc.tick(0)
+    expect(t.events.map((e) => e.kind)).not.toContain('focus-done')
+    expect(t.view.focus).toBeNull()
+    expect(t.view.manualBusy).toBeNull()
+    expect(svc.checkOut([]).daySummary?.focusMin).toBe(0)
+  })
+
+  it('a focus session long past its end ends quietly (no late "Focus done")', () => {
+    svc.addItems([newItem()])
+    svc.startFocus('id1', 25)
+    clock.set(26, 11, 0)
+    const t = svc.tick(0)
+    expect(t.events.map((e) => e.kind)).not.toContain('focus-done')
+    expect(t.view.focus).toBeNull()
+  })
+
+  it('rollover keeps only recent doneDates on repeating items', () => {
+    svc.addItems([newItem({ repeat: { kind: 'daily' } })])
+    const s = loadState(file)
+    s.items[0].doneDates = ['2026-09-01', '2026-10-10', '2026-10-20', D]
+    const db = openDb(file)
+    db.writeState(s)
+    db.close()
+    const again = new DayfitService(file, clock)
+    clock.set(27, 9, 0)
+    again.view()
+    expect(loadState(file).items[0].doneDates).toEqual(['2026-10-20', D])
+  })
+
+  it('snoozing a notification for a break not fired today keeps the count', () => {
+    svc.markPunched('in')
+    svc.tick(0)
+    let parts: string[] = []
+    for (let m = 1; m <= 20 && parts.length === 0; m++) {
+      clock.set(26, 9, m)
+      parts = svc.tick(0).events.find((e) => e.kind === 'break')?.parts ?? []
+    }
+    expect(parts.length).toBeGreaterThan(0)
+    // An old notification for parts this break didn't include.
+    svc.snoozeBreak(['walk'])
+    expect(svc.checkOut([]).daySummary?.breaksTaken).toBe(1)
+  })
+
+  it('call slots avoid where a clashing lunch would move to', () => {
+    clock.set(26, 13, 30)
+    svc.updateSettings({ lunch: 780 }) // lunch time already passed: Move is offered from now
+    const v = svc.addItems([newItem({ title: 'Call Sam', type: 'call', durationMin: 15 })])
+    const move = v.plan.lunchClash?.move ?? null
+    expect(move).not.toBeNull()
+    const lunchEnd = move! + 45
+    const call = v.items.find((i) => i.title === 'Call Sam')!
+    expect(call.suggestedSlots.length).toBeGreaterThan(0)
+    for (const s of call.suggestedSlots) expect(s + 15 <= move! || s >= lunchEnd).toBe(true)
   })
 })

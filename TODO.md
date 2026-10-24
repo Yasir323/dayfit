@@ -63,14 +63,14 @@ Everything below "Full backlog" is unprioritised beyond the v1 / later split.
 - [x] Alert banner "Check out" dismisses even if a pending review blocks the check-out screen
 - [x] `markSeen` exposed over IPC but unused by the renderer
 - [x] No test for popover show → markSeen wiring (first-run order depends on line order in index.ts)
-- [ ] Daily summary saved at check-out isn't updated by water/coffee/done logged afterwards
-- [ ] Unreadable or invalid `dayfit.json` at migration is silent and never retried
-- [ ] Corrupt `dayfit.db` starts fresh without offering `dayfit.json.migrated`
-- [ ] Ending focus overrides a Busy change made during the session
-- [ ] Focus crossing midnight credits the new day and fires a late "Focus done"
-- [ ] `doneDates` on daily items grows without limit (prune at rollover)
-- [ ] Snoozing a pre-midnight break notification lowers today's break count
-- [ ] During a lunch clash, call-slot suggestions can offer the slot lunch would move to
+- [x] Daily summary saved at check-out isn't updated by water/coffee/done logged afterwards
+- [x] Unreadable or invalid `dayfit.json` at migration is silent and never retried
+- [x] Corrupt `dayfit.db` starts fresh without offering `dayfit.json.migrated`
+- [x] Ending focus overrides a Busy change made during the session
+- [x] Focus crossing midnight credits the new day and fires a late "Focus done"
+- [x] `doneDates` on daily items grows without limit (prune at rollover)
+- [x] Snoozing a pre-midnight break notification lowers today's break count
+- [x] During a lunch clash, call-slot suggestions can offer the slot lunch would move to
 
 ## Pick next — finish the app end to end (tick what to build)
 Calendar sync, Slack/Teams, AI and mood detection stay in "Later versions".

@@ -6,6 +6,8 @@ import type { DateStr } from '../core/types'
 /** Small local database: the app state as one JSON document, plus one summary row per day. */
 export interface Db {
   readonly file: string
+  /** True when an unreadable file was set aside at open and this one started empty. */
+  readonly recovered: boolean
   readState(): unknown | null
   writeState(state: unknown): void
   putDay(date: DateStr, summary: unknown): void
@@ -38,12 +40,14 @@ function connect(file: string): DatabaseSync {
 export function openDb(file: string): Db {
   fs.mkdirSync(path.dirname(file), { recursive: true })
   let db: DatabaseSync
+  let recovered = false
   try {
     db = connect(file)
   } catch {
     fs.renameSync(file, `${file}.corrupt-${Date.now()}`)
     for (const side of ['-wal', '-shm']) fs.rmSync(file + side, { force: true })
     db = connect(file)
+    recovered = true
   }
   const read = db.prepare('SELECT json FROM state WHERE id = 1')
   const write = db.prepare('INSERT OR REPLACE INTO state (id, json, updated_at) VALUES (1, ?, ?)')
@@ -53,6 +57,7 @@ export function openDb(file: string): Db {
   )
   return {
     file,
+    recovered,
     readState() {
       const row = read.get() as { json: string } | undefined
       if (!row) return null
@@ -100,10 +105,33 @@ export function migrateJson(db: Db, jsonFile: string): boolean {
   let parsed: unknown
   try {
     parsed = JSON.parse(fs.readFileSync(jsonFile, 'utf8'))
-  } catch {
+  } catch (e) {
+    // Kept aside (not deleted) so the data can still be recovered by hand.
+    const aside = `${jsonFile}.corrupt-${Date.now()}`
+    console.error(`Dayfit: could not import ${jsonFile}; moved to ${aside}`, e)
+    try {
+      fs.renameSync(jsonFile, aside)
+    } catch {
+      // Unreadable and unmovable: leave it where it is.
+    }
     return false
   }
   db.writeState(parsed)
   fs.renameSync(jsonFile, `${jsonFile}.migrated`)
   return true
+}
+
+/**
+ * After a corrupt database was set aside, starts again from the JSON copy kept at migration
+ * (older, but better than nothing). The copy stays in place. Returns true when it restored.
+ */
+export function restoreMigrated(db: Db, jsonFile: string): boolean {
+  const copy = `${jsonFile}.migrated`
+  if (!db.recovered || db.readState() !== null || !fs.existsSync(copy)) return false
+  try {
+    db.writeState(JSON.parse(fs.readFileSync(copy, 'utf8')))
+    return true
+  } catch {
+    return false
+  }
 }

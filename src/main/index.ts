@@ -11,7 +11,7 @@ import { planUpdatedNotice, showNotification } from './notify'
 import { DayfitService, type ViewState } from './service'
 import { createPopover } from './tray'
 import { createSeenHandler } from './seen'
-import { migrateJson, openDb } from './db'
+import { migrateJson, openDb, restoreMigrated } from './db'
 import type { BreakPart } from '../core/breaks'
 import { isPortalUrl } from '../core/portalUrl'
 
@@ -32,6 +32,8 @@ if (!app.requestSingleInstanceLock()) {
     const db = openDb(join(userData, 'dayfit.db'))
     // First launch on the database: bring over the old JSON state once.
     migrateJson(db, join(userData, 'dayfit.json'))
+    // A corrupt database starts again from the copy kept at migration, if there is one.
+    restoreMigrated(db, join(userData, 'dayfit.json'))
     const service = new DayfitService(db, {
       now: () => new Date()
     })

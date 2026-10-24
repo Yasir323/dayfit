@@ -69,6 +69,10 @@ export interface ViewState {
 }
 
 const MAX_ELAPSED_MIN = 5
+/** A focus session this far past its end finishes without "Focus done" or a break. */
+const STALE_FOCUS_MS = 30 * 60_000
+/** Repeating items keep done dates this many days back (the summary only needs yesterday). */
+const DONE_DATES_KEPT_DAYS = 7
 const CALL_SLOTS = 3
 /** Matches nudge.ts MAX_NUDGES: a nudge state at this count is never repeated. */
 const NUDGES_EXHAUSTED = 2
@@ -380,9 +384,12 @@ export class DayfitService {
     this.clearAlerts(
       (a) => a.kind === 'break' && (given.length === 0 || a.parts.every((p) => given.includes(p)))
     )
+    const lastFired = s.reminder.breaks.lastFired
     const breaks = snoozeBreak(s.reminder.breaks, this.nowMin(), s.settings.breaks.snoozeMin, given)
-    // A snoozed break wasn't taken; it counts again when it comes back.
-    if (breaks !== s.reminder.breaks) {
+    // A snoozed break wasn't taken; it counts again when it comes back. Only the break fired
+    // last is uncounted: an old notification (e.g. from before midnight) never was today's.
+    const firedLast = lastFired.length > 0 && given.every((p) => lastFired.includes(p))
+    if (breaks !== s.reminder.breaks && firedLast) {
       const stats = this.stats()
       stats.breaksTaken = Math.max(0, stats.breaksTaken - 1)
     }
@@ -481,6 +488,8 @@ export class DayfitService {
   setManualBusy(v: boolean | null): ViewState {
     this.begin()
     this.state.manualBusy = v
+    // A choice made during focus is the one to keep when the session ends.
+    if (this.state.focus) this.state.focus.prevManualBusy = v
     this.save()
     return this.buildView()
   }
@@ -559,6 +568,8 @@ export class DayfitService {
     for (const id of nudges) s.nudges[id] = { count: (s.nudges[id]?.count ?? 0) + 1, lastAt: now }
 
     // A focus session past its end finishes once: busy goes back, and a short break is queued.
+    // A session that ended long ago (asleep, quit, an old import) ends quietly: no late break.
+    if (s.focus && at - s.focus.endsAt > STALE_FOCUS_MS) this.endFocusQuietly()
     if (s.focus && at >= s.focus.endsAt) {
       // Deep work is counted from its done blocks; a session on it would count twice.
       if (this.find(s.focus.itemId)?.type !== 'deep') this.stats().focusMin += s.focus.minutes
@@ -640,6 +651,14 @@ export class DayfitService {
       .reduce<Block | undefined>((best, b) => (!best || b.end > best.end ? b : best), undefined)
   }
 
+  /** Ends a running focus session without credit, a break or a notification. */
+  private endFocusQuietly(): void {
+    const s = this.state
+    if (!s.focus) return
+    s.manualBusy = s.focus.prevManualBusy
+    s.focus = null
+  }
+
   /** Today's summary counters, created on first use. */
   private stats(): DayStats {
     const today = this.today()
@@ -662,6 +681,9 @@ export class DayfitService {
 
   private save(): void {
     saveState(this.db, this.state)
+    // Once checked out, the saved summary follows anything logged afterwards.
+    if (this.state.endOfDay.checkedOut && this.state.lastDate === this.today())
+      this.db.putDay(this.today(), this.summarize(this.today()))
   }
 
   /** Day rollover, run lazily whenever the local date has changed since the last run. */
@@ -673,6 +695,10 @@ export class DayfitService {
     const last = s.lastDate
     if (last && this.db.days(last, last).length === 0) this.db.putDay(last, this.summarize(last))
     s.stats = today in s.stats ? { [today]: s.stats[today] } : {}
+    // A session still running at midnight belongs to yesterday: it ends with no credit.
+    this.endFocusQuietly()
+    const keepFrom = addDays(today, -DONE_DATES_KEPT_DAYS)
+    for (const i of s.items) if (i.doneDates) i.doneDates = i.doneDates.filter((d) => d >= keepFrom)
     s.items = rolloverItems(s.items, today)
     s.reminder = structuredClone(EMPTY_REMINDER_STATE)
     s.endOfDay = structuredClone(EMPTY_END_OF_DAY_STATE)
@@ -711,8 +737,24 @@ export class DayfitService {
     const lunch = s.lunchAnswer?.date === today ? s.lunchAnswer.answer : null
     const input = { date: today, now, settings: s.settings, frozen, answers: this.answers, lunch }
     const first = planDay({ ...input, items })
+    // While lunch waits on a Move answer, keep calls out of the slot it would move to.
+    const move = first.lunchClash?.move ?? null
+    const taken: Block[] =
+      move === null
+        ? first.blocks
+        : [
+            ...first.blocks,
+            {
+              itemId: null,
+              kind: 'lunch',
+              start: move,
+              end: move + s.settings.endOfDay.lunchMin,
+              chunk: null,
+              reason: 'Lunch'
+            }
+          ]
     for (const item of items.filter(isAwaitingCall))
-      (this.find(item.id) as Item).suggestedSlots = this.callSlots(item, first.blocks, now)
+      (this.find(item.id) as Item).suggestedSlots = this.callSlots(item, taken, now)
     items = itemsForDate(s.items, today)
     const next = planDay({ ...input, items })
 
