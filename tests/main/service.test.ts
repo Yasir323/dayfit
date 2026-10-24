@@ -1291,3 +1291,11 @@ describe('DayfitService days off: review fixes', () => {
     expect(svc.week().risk.days).toBe(0)
   })
 })
+
+describe('DayfitService calendar', () => {
+  it('calendar settings merge one level deep', () => {
+    svc.updateSettings({ calendar: { clientId: 'a' } })
+    const v = svc.updateSettings({ calendar: { clientSecret: 'b' } })
+    expect(v.settings.calendar).toEqual({ clientId: 'a', clientSecret: 'b', writeBack: false })
+  })
+})

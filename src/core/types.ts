@@ -27,6 +27,8 @@ export interface Item {
   dnd: boolean // holds break reminders while this item runs
   /** Repeating items: the dates they were marked done (a one-off uses `status`). */
   doneDates?: DateStr[]
+  /** Google Calendar event this meeting came from; sync owns its title and time. */
+  calendarId?: string
   createdAt: number
 }
 export type NewItem = Omit<
@@ -122,13 +124,18 @@ export interface Settings {
     overtime: boolean
   }
   features: Features
+  /** Google Calendar sync: the user's own Desktop OAuth client, and write-back. */
+  calendar: { clientId: string; clientSecret: string; writeBack: boolean }
   hotkey: string
   launchAtLogin: boolean
   firstRunDone: boolean
 }
 
-/** A settings change: any top-level fields, and only the features that changed. */
-export type SettingsPatch = Omit<Partial<Settings>, 'features'> & { features?: Partial<Features> }
+/** A settings change: any top-level fields, and only the features (or calendar fields) that changed. */
+export type SettingsPatch = Omit<Partial<Settings>, 'features' | 'calendar'> & {
+  features?: Partial<Features>
+  calendar?: Partial<Settings['calendar']>
+}
 
 export const DEFAULT_SETTINGS: Settings = {
   workStart: 540,
@@ -158,6 +165,7 @@ export const DEFAULT_SETTINGS: Settings = {
     fatigue: { enabled: false },
     reminders: []
   },
+  calendar: { clientId: '', clientSecret: '', writeBack: false },
   hotkey: 'CommandOrControl+Shift+Space',
   launchAtLogin: true,
   firstRunDone: false

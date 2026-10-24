@@ -608,11 +608,12 @@ export class DayfitService {
     )
       this.state.lunchAnswer = null
     // Features merge one level deep: a patch names only the features it changes.
-    const { features, ...rest } = p
+    const { features, calendar, ...rest } = p
     this.state.settings = {
       ...this.state.settings,
       ...rest,
-      features: { ...old.features, ...features }
+      features: { ...old.features, ...features },
+      calendar: { ...old.calendar, ...calendar }
     }
     // A deleted custom reminder takes its state (and banner) with it.
     if (features?.reminders) {

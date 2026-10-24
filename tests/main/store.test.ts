@@ -110,6 +110,17 @@ describe('store', () => {
     expect(s.fatigueBaseline).toBeNull()
   })
 
+  it('older state without calendar gets defaults', () => {
+    const older: Record<string, unknown> = { ...defaultState() }
+    delete older.calendar
+    const settings: Record<string, unknown> = { ...defaultState().settings }
+    delete settings.calendar
+    writeRaw({ ...older, settings })
+    const s = loadState(file)
+    expect(s.settings.calendar).toEqual({ clientId: '', clientSecret: '', writeBack: false })
+    expect(s.calendar).toEqual({ lastSyncAt: null, lastError: null })
+  })
+
   it('older state without lunchAnswer loads with null', () => {
     const older: Record<string, unknown> = { ...defaultState() }
     delete older.lunchAnswer

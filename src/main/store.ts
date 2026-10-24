@@ -63,6 +63,8 @@ export interface AppState {
   unseen: string | null
   nudges: NudgeState
   overdue: string[]
+  /** Google Calendar sync status; whether it's connected comes from the token file. */
+  calendar: { lastSyncAt: number | null; lastError: string | null }
   manualBusy: boolean | null
   lastDate: DateStr | null
 }
@@ -90,6 +92,7 @@ export const defaultState = (): AppState => ({
   unseen: null,
   nudges: {},
   overdue: [],
+  calendar: { lastSyncAt: null, lastError: null },
   manualBusy: null,
   lastDate: null
 })
@@ -148,6 +151,7 @@ export function normalizeState(parsed: unknown): AppState | null {
           breaks: clone(EMPTY_BREAK_STATE)
         }
   state.wellbeing = deepMerge(defaults.wellbeing, parsed.wellbeing)
+  state.calendar = deepMerge(defaults.calendar, parsed.calendar)
   state.endOfDay = isPlainObject(parsed.endOfDay)
     ? deepMerge(defaults.endOfDay, parsed.endOfDay)
     : clone(EMPTY_END_OF_DAY_STATE)
