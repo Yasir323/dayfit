@@ -57,8 +57,10 @@ describe('app icon and installers', () => {
     for (const f of ['build/icon.svg', 'build/icon.png', 'build/icon.icns', 'build/icon.ico'])
       expect(fs.existsSync(path.join(root, f)), f).toBe(true)
   })
-  it('mac builds are unsigned until signing is set up', () => {
-    expect(yml).toMatch(/^ {2}identity: null$/m)
+  it('mac builds are ad-hoc signed, without hardened runtime, and not notarized', () => {
+    expect(yml).toMatch(/^ {2}identity: '-'$/m)
+    expect(yml).toMatch(/^ {2}hardenedRuntime: false$/m)
+    expect(yml).toMatch(/^ {2}notarize: false$/m)
   })
   it('dist scripts never publish', () => {
     const pkg = JSON.parse(read('package.json')) as { scripts: Record<string, string> }
