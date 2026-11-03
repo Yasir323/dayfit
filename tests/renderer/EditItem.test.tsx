@@ -100,6 +100,40 @@ describe('Edit from the list', () => {
   })
 })
 
+describe('EditItem in the app: Esc and focus', () => {
+  const openEdit = async (): Promise<HTMLElement> => {
+    const base = makeView()
+    api.view.mockResolvedValue(
+      makeView({ items: [task], plan: { ...base.plan, blocks: [block('t', 'task', 600, 630)] } })
+    )
+    render(<App />)
+    const row = await screen.findByRole('listitem', { name: 'Write report' })
+    const edit = within(row).getByRole('button', { name: 'Edit' })
+    await userEvent.click(edit)
+    return edit
+  }
+  it('Esc with no changes closes and returns focus to the Edit button', async () => {
+    const edit = await openEdit()
+    await userEvent.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog', { name: 'Edit item' })).toBeNull()
+    expect(document.activeElement).toBe(edit)
+    expect(api.hide).not.toHaveBeenCalled()
+  })
+  it('Esc with unsaved changes asks first', async () => {
+    await openEdit()
+    const dialog = screen.getByRole('dialog', { name: 'Edit item' })
+    await userEvent.type(within(dialog).getByLabelText('Title'), ' v2')
+    await userEvent.keyboard('{Escape}')
+    expect(screen.getByRole('dialog', { name: 'Edit item' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Keep editing' }))
+    expect(within(dialog).getByLabelText('Title')).toHaveValue('Write report v2')
+    await userEvent.keyboard('{Escape}')
+    await userEvent.click(screen.getByRole('button', { name: 'Discard changes' }))
+    expect(screen.queryByRole('dialog', { name: 'Edit item' })).toBeNull()
+    expect(api.updateItem).not.toHaveBeenCalled()
+  })
+})
+
 describe('EditItem from Google Calendar', () => {
   it('says sync owns the title and time', () => {
     open(item('m', 'Standup', { type: 'fixed', fixedStart: 600, calendarId: 'e1' }))

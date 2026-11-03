@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useContext, useState } from 'react'
 import type { Item } from '../../../core/types'
 import { api } from '../api'
 import type { ViewState } from '../api'
@@ -8,6 +8,7 @@ import { Icon } from '../ui/Icon'
 import { CallSlots } from './CallSlots'
 import { ItemActions } from './ItemActions'
 import { nextIndex } from '../lib/arrowNav'
+import { EditContext } from '../lib/editContext'
 
 interface Props {
   view: ViewState
@@ -20,6 +21,8 @@ const isAwaitingCall = (i: Item): boolean => i.type === 'call' && i.fixedStart =
 export function ListView({ view, onView, onAddTask }: Props): React.JSX.Element {
   const [failure, setFailure] = useState<string | null>(null)
   const [open, setOpen] = useState<Partial<Record<SectionKey, boolean>>>({})
+  const [activeId, setActiveId] = useState<string | null>(null)
+  const edit = useContext(EditContext)
 
   const run = async (p: () => Promise<ViewState>): Promise<void> => {
     setFailure(null)
@@ -32,6 +35,9 @@ export function ListView({ view, onView, onAddTask }: Props): React.JSX.Element 
 
   const sections = buildSections(view)
   const isOpen = (s: Section): boolean => open[s.key] ?? !s.collapsedByDefault
+  // Roving focus: one row is in the tab order (the last one focused, else the first).
+  const rowIds = sections.filter(isOpen).flatMap((s) => s.rows.map((r) => r.item.id))
+  const tabbable = activeId !== null && rowIds.includes(activeId) ? activeId : rowIds[0]
   const addRow = (
     <button type="button" className="add-row" onClick={onAddTask}>
       <Icon name="add" size={15} />
@@ -49,7 +55,16 @@ export function ListView({ view, onView, onAddTask }: Props): React.JSX.Element 
         key={item.id}
         className={`list-row${done ? ' is-done' : ''}`}
         aria-label={item.title}
-        tabIndex={0}
+        tabIndex={item.id === tabbable ? 0 : -1}
+        onFocus={(e) => {
+          if (e.target === e.currentTarget) setActiveId(item.id)
+        }}
+        onKeyDown={(e) => {
+          // Enter on the row itself (not one of its buttons) opens Edit item.
+          if (e.key !== 'Enter' || e.target !== e.currentTarget || done || !edit) return
+          e.preventDefault()
+          edit(item)
+        }}
       >
         {item.fixedStart !== null ? (
           <span className="row-lead" title="Fixed">

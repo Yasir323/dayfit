@@ -16,11 +16,16 @@ export function Overlay({
 }): React.JSX.Element {
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {
+    // Whatever had focus before the overlay opened gets it back when it closes.
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null
     const root = ref.current
     const target =
       (initialFocus ? root?.querySelector<HTMLElement>(initialFocus) : null) ??
       root?.querySelector<HTMLElement>(FOCUSABLE)
     target?.focus()
+    return () => {
+      if (opener?.isConnected) opener.focus()
+    }
   }, [initialFocus])
   return (
     <div ref={ref} className="overlay" role="dialog" aria-modal="true" aria-label={label}>

@@ -78,10 +78,10 @@ Everything below "Full backlog" is unprioritised beyond the v1 / later split.
 - [x] Cursor jitter (`turns`) is measured but not used in the fatigue signal
 - [x] Work days setting: check-ins, start-of-day and wind-down also fire on weekends
 - [x] Mood check-in times can't be changed in Settings
-- [ ] Work days: two quick taps can drop the first (list built from the last saved view)
-- [ ] List rows: one Tab stop per row (use roving focus); Enter on a row does nothing
-- [ ] Focus isn't returned to the opener when an overlay closes
-- [ ] Esc in Edit item discards unsaved edits without asking
+- [x] Work days: two quick taps can drop the first (list built from the last saved view)
+- [x] List rows: one Tab stop per row (use roving focus); Enter on a row does nothing
+- [x] Focus isn't returned to the opener when an overlay closes
+- [x] Esc in Edit item discards unsaved edits without asking
 - [x] Calendar: a sync running across midnight can import yesterday's meetings until the next sync
 - [x] Calendar: check secure storage before opening the browser (today it fails after consent; Linux only)
 - [x] Calendar: a stray request with the wrong state ends the sign-in instead of being ignored

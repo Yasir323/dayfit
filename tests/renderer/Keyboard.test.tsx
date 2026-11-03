@@ -72,6 +72,29 @@ describe('keyboard navigation', () => {
     expect(within(views).getByRole('tab', { name: 'List' })).toHaveFocus()
   })
 
+  it('only one list row is in the tab order, and it follows the arrow keys', async () => {
+    const base = makeView()
+    await show(makeView({ items: [...base.items, item('t', 'Write report')] }))
+    const rows = screen.getAllByRole('listitem').filter((li) => li.classList.contains('list-row'))
+    expect(rows.filter((r) => r.getAttribute('tabindex') === '0')).toEqual([rows[0]])
+    rows[0].focus()
+    await userEvent.keyboard('{ArrowDown}')
+    expect(rows[1]).toHaveAttribute('tabindex', '0')
+    expect(rows[0]).toHaveAttribute('tabindex', '-1')
+  })
+  it('Enter on a list row opens Edit item', async () => {
+    const base = makeView()
+    await show(
+      makeView({
+        items: [...base.items, item('t', 'Write report')],
+        plan: { ...base.plan, blocks: [...base.plan.blocks, block('t', 'task', 600, 630)] }
+      })
+    )
+    const row = screen.getByRole('listitem', { name: 'Write report' })
+    row.focus()
+    await userEvent.keyboard('{Enter}')
+    expect(screen.getByRole('dialog', { name: 'Edit item' })).toBeInTheDocument()
+  })
   it('up and down move between list rows', async () => {
     const base = makeView()
     await show(makeView({ items: [...base.items, item('t', 'Write report')] }))

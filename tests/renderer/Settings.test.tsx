@@ -514,6 +514,18 @@ describe('Settings work days', () => {
     await userEvent.click(within(group).getByRole('button', { name: 'Sat' }))
     expect(api.updateSettings).toHaveBeenCalledWith({ workDays: [1, 2, 3, 4, 5, 6] })
   })
+  it('keeps both of two quick taps made before the first save returns', async () => {
+    api.updateSettings.mockReturnValue(new Promise(() => {}))
+    render(<Settings view={view()} />)
+    const group = screen.getByRole('group', { name: 'Work days' })
+    await userEvent.click(within(group).getByRole('button', { name: 'Sat' }))
+    await userEvent.click(within(group).getByRole('button', { name: 'Sun' }))
+    expect(api.updateSettings).toHaveBeenLastCalledWith({ workDays: [0, 1, 2, 3, 4, 5, 6] })
+    expect(within(group).getByRole('button', { name: 'Sat' })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    )
+  })
 })
 
 describe('Settings check-in times', () => {

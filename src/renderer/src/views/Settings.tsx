@@ -684,6 +684,18 @@ export function Settings({ view, onView }: Props): React.JSX.Element {
       return false
     }
   }
+  // Work-day taps build on each other, not on the last saved view: a second tap made before
+  // the first save returns must keep the first. A newer saved list replaces the local one.
+  const savedDays = s.workDays.join(',')
+  const [dayDraft, setDayDraft] = useState({ from: savedDays, list: s.workDays })
+  const workDays = dayDraft.from === savedDays ? dayDraft.list : s.workDays
+  const toggleDay = async (day: number): Promise<void> => {
+    const list = workDays.includes(day)
+      ? workDays.filter((d) => d !== day)
+      : [...workDays, day].sort((a, b) => a - b)
+    setDayDraft({ from: savedDays, list })
+    if (!(await send({ workDays: list }))) setDayDraft({ from: savedDays, list: s.workDays })
+  }
   const lunchOk = (start: number, end: number): boolean =>
     s.lunch === null || (s.lunch > start && s.lunch < end)
 
@@ -740,14 +752,8 @@ export function Settings({ view, onView }: Props): React.JSX.Element {
                   key={day}
                   type="button"
                   className="day-chip"
-                  aria-pressed={s.workDays.includes(day)}
-                  onClick={() =>
-                    void send({
-                      workDays: s.workDays.includes(day)
-                        ? s.workDays.filter((d) => d !== day)
-                        : [...s.workDays, day].sort((a, b) => a - b)
-                    })
-                  }
+                  aria-pressed={workDays.includes(day)}
+                  onClick={() => void toggleDay(day)}
                 >
                   {name}
                 </button>
