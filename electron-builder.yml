@@ -40,10 +40,14 @@ mac:
   extendInfo:
     LSUIElement: true
     NSCameraUsageDescription: Dayfit uses the camera on your Mac to notice tiredness and posture. Nothing is recorded or sent.
-  # Unsigned local build. To sign and notarize, remove `identity: null`, set
-  # `notarize: true`, and provide a Developer ID certificate and Apple
-  # credentials (see README, "Signing").
-  identity: null
+  # Ad-hoc signed ("-"): free, seals the bundle so a downloaded copy is not
+  # reported as "damaged" on Apple silicon, but it is not trusted by Gatekeeper.
+  # Hardened runtime is off because an ad-hoc signed app with it on fails to
+  # launch (library validation). To sign and notarize, remove `identity` and
+  # `hardenedRuntime`, set `notarize: true`, and provide a Developer ID
+  # certificate and Apple credentials (see README, "Signing").
+  identity: '-'
+  hardenedRuntime: false
   notarize: false
 dmg:
   artifactName: ${productName}-${version}-${arch}.${ext}

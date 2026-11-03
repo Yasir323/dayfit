@@ -29,9 +29,9 @@ It lives in the macOS menu bar or the Windows tray, opens with a global shortcut
 
 Build it yourself (see [Build](#build)), or download a release once they are published: a `.dmg` for macOS (Apple silicon `arm64` or Intel `x64`) or a `-setup.exe` for Windows.
 
-Release builds are **not signed** yet:
+Release builds are not signed with a trusted certificate yet:
 
-- **macOS:** Gatekeeper blocks the first launch. Open **System Settings → Privacy & Security** and click **Open Anyway** next to the Dayfit message. Only do this for a build you downloaded from this project or built yourself.
+- **macOS:** builds are ad-hoc signed, so Gatekeeper blocks the first launch ("Apple could not verify…"). Try to open Dayfit once, then open **System Settings → Privacy & Security** and click **Open Anyway** next to the Dayfit message. Only do this for a build you downloaded from this project or built yourself. An ad-hoc signature changes with every build, so macOS asks for camera access again after each update.
 - **Windows:** SmartScreen warns about an unknown publisher. Click **More info → Run anyway**.
 
 ### Known limitation: notifications on unsigned macOS builds
@@ -125,9 +125,9 @@ Run each on its own platform. The first build downloads the Electron binaries fo
 
 ### Signing
 
-Builds are unsigned by default (`mac.identity: null`, `notarize: false` in `electron-builder.yml`), so macOS Gatekeeper and Windows SmartScreen will warn on first launch. To sign:
+macOS builds are ad-hoc signed by default (`mac.identity: '-'`, `notarize: false` in `electron-builder.yml`) and Windows builds are unsigned, so macOS Gatekeeper and Windows SmartScreen will warn on first launch. To sign:
 
-- macOS: install a Developer ID Application certificate in your keychain, remove `identity: null`, set `notarize: true`, and export `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD` and `APPLE_TEAM_ID`.
+- macOS: install a Developer ID Application certificate in your keychain, remove `identity: '-'` and `hardenedRuntime: false`, set `notarize: true`, and export `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD` and `APPLE_TEAM_ID`.
 - Windows: set `CSC_LINK` and `CSC_KEY_PASSWORD` to your code-signing certificate before running `dist:win`.
 
 ## Roadmap
