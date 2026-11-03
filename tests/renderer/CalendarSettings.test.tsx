@@ -12,6 +12,7 @@ const api = vi.hoisted(() => ({
   onFocus: vi.fn()
 }))
 vi.mock('../../src/renderer/src/api', () => ({ api }))
+vi.mock('../../src/core/flags', () => ({ FLAGS: { calendar: true } }))
 
 import { Settings } from '../../src/renderer/src/views/Settings'
 import { makeView } from './fixtures'

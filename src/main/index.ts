@@ -40,6 +40,7 @@ import { createSeenHandler } from './seen'
 import { migrateJson, openDb, restoreMigrated } from './db'
 import type { BreakPart } from '../core/breaks'
 import { isPortalUrl } from '../core/portalUrl'
+import { FLAGS } from '../core/flags'
 
 const TICK_MS = 30_000
 const FATIGUE_SAMPLE_MS = 2_000
@@ -161,26 +162,32 @@ if (!app.requestSingleInstanceLock()) {
       }
     }
     // Google Calendar: no network until a token is stored or the user clicks Connect.
-    calendar = createCalendarController({
-      fetch,
-      tokens: createTokenStore(join(userData, 'google-token.bin'), safeStorage),
-      openExternal: (url) => void shell.openExternal(url),
-      service,
-      today: () => toDateStr(new Date()),
-      nowMin: () => minutesOf(new Date()),
-      nowMs: () => Date.now(),
-      publish: (v) => {
-        publish(v)
-      }
-    })
+    // Off in builds where it hasn't shipped yet (FLAGS.calendar).
+    calendar = !FLAGS.calendar
+      ? null
+      : createCalendarController({
+          fetch,
+          tokens: createTokenStore(join(userData, 'google-token.bin'), safeStorage),
+          openExternal: (url) => void shell.openExternal(url),
+          service,
+          today: () => toDateStr(new Date()),
+          nowMin: () => minutesOf(new Date()),
+          nowMs: () => Date.now(),
+          publish: (v) => {
+            publish(v)
+          }
+        })
     const cal = calendar
-    cal.refreshLink()
+    cal?.refreshLink()
     const syncCalendar = (): void => {
-      cal.sync().then(publish, (e: unknown) => console.error('calendar sync failed', e))
+      cal?.sync().then(publish, (e: unknown) => console.error('calendar sync failed', e))
     }
-    syncCalendar()
-    setInterval(syncCalendar, CALENDAR_SYNC_MS)
+    if (cal) {
+      syncCalendar()
+      setInterval(syncCalendar, CALENDAR_SYNC_MS)
+    }
     const calendarAction = async (a: CalendarAction): Promise<ViewState> => {
+      if (!cal) return service.view()
       try {
         return await runCalendarAction(cal, a)
       } catch (e) {

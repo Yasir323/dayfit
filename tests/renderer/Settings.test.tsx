@@ -75,6 +75,10 @@ beforeEach(() => {
 afterEach(cleanup)
 
 describe('Settings', () => {
+  it('hides Google Calendar until it ships', () => {
+    render(<Settings view={view()} />)
+    expect(screen.queryByRole('group', { name: 'Google Calendar' })).toBeNull()
+  })
   it('says when the shortcut could not be registered', () => {
     const { rerender } = render(<Settings view={view()} />)
     expect(screen.queryByText('Shortcut unavailable — pick another')).toBeNull()

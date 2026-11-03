@@ -16,7 +16,6 @@ Dayfit is a menu bar (macOS) and system tray (Windows) day planner for people wh
 - **Wellbeing nudges.** Posture and desk set-up, daylight, mood check-ins, call fatigue after long meeting runs, guided box breathing, caffeine cap and cut-off, sit/stand, meal and medication reminders. Mouse pace feeds a tiredness signal; optional on-device camera cues (below) add blinks, yawns and posture.
 - **Week view.** The last seven days of focus time, water and breaks, plus streaks.
 - **Backup.** Export everything to one JSON file from Settings and import it on another machine.
-- **Optional Google Calendar sync** for meetings in and planned blocks out (below).
 
 It lives in the macOS menu bar or the Windows tray, opens with a global shortcut, and works with the keyboard.
 
@@ -62,7 +61,7 @@ Times accept `14:30`, `2pm` and `2:30pm`. Example: `Call John 15m #work !high @a
 
 ## Privacy
 
-Everything stays on your machine. There is no account, no cloud, no telemetry, no analytics and no update check. Dayfit makes no network requests at all unless you connect Google Calendar (below), and then it talks only to Google. Camera cues (below) run entirely on your Mac: no frame is stored or sent.
+Everything stays on your machine. There is no account, no cloud, no telemetry, no analytics and no update check. Dayfit makes no network requests at all. Camera cues (below) run entirely on your Mac: no frame is stored or sent.
 
 Data lives in one SQLite database:
 
@@ -70,17 +69,6 @@ Data lives in one SQLite database:
 - Windows: `%APPDATA%\Dayfit\dayfit.db`
 
 Delete that folder to remove all of Dayfit's data. Backups are plain JSON files that you save where you choose.
-
-## Google Calendar (optional)
-
-Dayfit can bring today's meetings in as fixed items and, if you turn it on, show your planned task and deep-work blocks on your calendar as busy time. You use your own Google OAuth client:
-
-1. In [Google Cloud Console](https://console.cloud.google.com/), pick or create a project.
-2. Enable the **Google Calendar API**.
-3. Create an **OAuth client ID** of type **Desktop app** (set up the consent screen first if asked; add yourself as a test user).
-4. In Dayfit, open **Settings → Google Calendar**, paste the client ID and client secret, and click **Connect**.
-
-Sign-in happens in your browser. Dayfit first asks for read-only access; it asks again for write access only when you turn on "Show my planned blocks on Google Calendar". The sign-in token is encrypted with the system keychain and kept out of backups. Dayfit only edits or deletes events it created itself. Sync runs every 15 minutes, when the Mac wakes, and on **Sync now**.
 
 ## Camera cues (optional, off by default)
 
@@ -133,6 +121,8 @@ macOS builds are ad-hoc signed by default (`mac.identity: '-'`, `notarize: false
 ## Roadmap
 
 See [TODO.md](TODO.md) for v1 scope, later versions and the full backlog.
+
+Integrations with outside services come in later versions. Google Calendar sync (meetings in, planned blocks out) is already built but switched off in this release: `FLAGS.calendar` in `src/core/flags.ts`.
 
 ## License
 

@@ -22,6 +22,7 @@ import {
 } from './settingsValidation'
 import type { Parsed } from './settingsValidation'
 import './Settings.css'
+import { FLAGS } from '../../../core/flags'
 
 interface Props {
   view: ViewState
@@ -921,7 +922,7 @@ export function Settings({ view, onView }: Props): React.JSX.Element {
       <CameraGroup view={view} send={send} onView={onView} />
 
       <RemindersGroup s={s} send={send} />
-      <CalendarGroup view={view} send={send} onView={onView} />
+      {FLAGS.calendar && <CalendarGroup view={view} send={send} onView={onView} />}
 
       <HomeSetup ticked={view.ergonomics ?? []} onView={onView} />
 

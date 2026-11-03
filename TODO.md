@@ -25,7 +25,8 @@ Everything below "Full backlog" is unprioritised beyond the v1 / later split.
 - [x] In-app reminder fallback: menu-bar label + popover banners
 - [x] Busy mode: mutes Dayfit's own notifications during deep work and fixed items
 - [x] Local-only storage, no account, no cloud
-- [ ] Open source release (README, screenshots, contributing guide, CI done; needs signed builds)
+- [ ] Open source release (README, screenshots, contributing guide, CI, ad-hoc signed mac builds done; needs a public repo and the first tagged release)
+- [x] v1 ships without outside integrations: Google Calendar is built but off (`FLAGS.calendar`) until a later version
 
 ## Known issues and polish (from reviews)
 
