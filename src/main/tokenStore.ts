@@ -22,28 +22,39 @@ export interface TokenStore {
   remove(): void
 }
 
+/**
+ * Reads the file once and keeps the result: this store is the file's only writer, so the
+ * cache changes only through `write` and `remove`.
+ */
 export function createTokenStore(file: string, crypto: Crypto): TokenStore {
   const available = (): boolean => crypto.isEncryptionAvailable()
+  let cached: { t: StoredToken | null } | null = null
+  const load = (): StoredToken | null => {
+    if (!available() || !fs.existsSync(file)) return null
+    try {
+      const raw: unknown = JSON.parse(crypto.decryptString(fs.readFileSync(file)))
+      if (typeof raw !== 'object' || raw === null) return null
+      const { refreshToken, scope } = raw as Record<string, unknown>
+      if (typeof refreshToken !== 'string' || refreshToken === '') return null
+      return { refreshToken, scope: typeof scope === 'string' ? scope : '' }
+    } catch {
+      return null
+    }
+  }
   return {
     available,
     read() {
-      if (!available() || !fs.existsSync(file)) return null
-      try {
-        const raw: unknown = JSON.parse(crypto.decryptString(fs.readFileSync(file)))
-        if (typeof raw !== 'object' || raw === null) return null
-        const { refreshToken, scope } = raw as Record<string, unknown>
-        if (typeof refreshToken !== 'string' || refreshToken === '') return null
-        return { refreshToken, scope: typeof scope === 'string' ? scope : '' }
-      } catch {
-        return null
-      }
+      cached ??= { t: load() }
+      return cached.t ? { ...cached.t } : null
     },
     write(t) {
       if (!available()) throw new Error("Secure storage isn't available on this system")
       fs.writeFileSync(file, crypto.encryptString(JSON.stringify(t)), { mode: 0o600 })
+      cached = { t: { ...t } }
     },
     remove() {
       fs.rmSync(file, { force: true })
+      cached = { t: null }
     }
   }
 }

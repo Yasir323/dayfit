@@ -12,6 +12,7 @@ import {
   revokeToken,
   SIGN_IN_CANCELLED,
   WRITE_SCOPE,
+  withTimeout,
   type Fetch,
   type Loopback
 } from './googleAuth'
@@ -25,6 +26,8 @@ const EXPIRY_MARGIN_MS = 60_000
 /** Write-back waits this long after the planned blocks last changed. */
 const WRITE_DEBOUNCE_MS = 30_000
 const BUSY = 'Google is busy; will retry at next sync'
+/** A Google call that takes longer than this is abandoned. */
+const CALL_TIMEOUT_MS = 30_000
 
 export interface CalendarDeps {
   fetch: Fetch
@@ -46,6 +49,8 @@ export interface CalendarDeps {
   /** Pushes a view produced in the background (sign-in started, a debounced write). */
   publish(v: ViewState): void
   listen?: typeof listenForCode
+  /** Tests shorten the per-call timeout. */
+  callTimeoutMs?: number
 }
 
 export interface CalendarController {
@@ -90,6 +95,7 @@ const isCancel = (e: unknown): boolean => e instanceof Error && e.message === SI
  */
 export function createCalendarController(d: CalendarDeps): CalendarController {
   const listen = d.listen ?? listenForCode
+  const fetch = withTimeout(d.fetch, d.callTimeoutMs ?? CALL_TIMEOUT_MS)
   const svc = d.service
   let pending: Loopback | null = null
   let access: { token: string; expiresAt: number } | null = null
@@ -122,11 +128,11 @@ export function createCalendarController(d: CalendarDeps): CalendarController {
     if (access && access.expiresAt - EXPIRY_MARGIN_MS > d.nowMs()) return access.token
     const t = d.tokens.read()
     if (!t) throw new GoogleError('Reconnect Google Calendar', 'invalid_grant', 401)
-    const r = await refreshAccess(d.fetch, { ...creds(), refreshToken: t.refreshToken }, d.nowMs())
+    const r = await refreshAccess(fetch, { ...creds(), refreshToken: t.refreshToken }, d.nowMs())
     access = { token: r.accessToken, expiresAt: r.expiresAt }
     return access.token
   }
-  const client: CalendarClient = createCalendarClient(d.fetch, accessToken)
+  const client: CalendarClient = createCalendarClient(fetch, accessToken)
   /** One retry with a fresh access token when Google answers 401. */
   const withRetry = async <T>(fn: (c: CalendarClient) => Promise<T>): Promise<T> => {
     try {
@@ -154,6 +160,8 @@ export function createCalendarController(d: CalendarDeps): CalendarController {
 
   /** Browser sign-in; resolves once the token is stored. A newer sign-in cancels this one. */
   const signIn = async (scopes: string[], incremental: boolean): Promise<void> => {
+    // Checked before the browser opens: without it the token can't be kept after consent.
+    if (!d.tokens.available()) throw new Error("Secure storage isn't available on this system")
     pending?.close()
     const { verifier, challenge } = pkcePair()
     const state = randomBytes(16).toString('hex')
@@ -167,7 +175,7 @@ export function createCalendarController(d: CalendarDeps): CalendarController {
       )
       const code = await lb.code
       const t = await exchangeCode(
-        d.fetch,
+        fetch,
         { ...creds(), code, verifier, redirectUri: lb.redirectUri },
         d.nowMs()
       )
@@ -189,9 +197,14 @@ export function createCalendarController(d: CalendarDeps): CalendarController {
     const today = d.today()
     try {
       const list = await withRetry((c) => c.listDay(today))
+      // The day rolled over meanwhile: the blocks are now tomorrow's; the next sync writes them.
+      if (d.today() !== today) return svc.view()
       const diff = diffWrites(svc.writeBlocks(), ownEvents(list, today), d.nowMin())
       for (const b of diff.create) await withRetry((c) => c.insert(today, b))
-      for (const u of diff.update) await withRetry((c) => c.patch(u.eventId, today, u.block))
+      for (const u of diff.update) {
+        const patched = await withRetry((c) => c.patch(u.eventId, today, u.block))
+        if (!patched) await withRetry((c) => c.insert(today, u.block))
+      }
       for (const id of diff.remove) await withRetry((c) => c.remove(id))
       return svc.view()
     } catch (e) {
@@ -212,7 +225,7 @@ export function createCalendarController(d: CalendarDeps): CalendarController {
     }
   }
 
-  const runSync = async (): Promise<ViewState> => {
+  const runSync = async (retried = false): Promise<ViewState> => {
     refreshLink()
     if (!d.tokens.read()) return svc.view()
     const today = d.today()
@@ -222,6 +235,8 @@ export function createCalendarController(d: CalendarDeps): CalendarController {
     } catch (e) {
       return failed(e)
     }
+    // Midnight passed while listing: those were yesterday's meetings. List the new day once.
+    if (d.today() !== today && !retried) return runSync(true)
     const v = svc.applyCalendar(eventsToMeetings(events, today))
     return writeBackOn() ? writePass() : v
   }
@@ -259,7 +274,7 @@ export function createCalendarController(d: CalendarDeps): CalendarController {
       await queued(async () => {
         if (wasOn) await removeOwn()
         const t = d.tokens.read()
-        if (t) await revokeToken(d.fetch, t.refreshToken)
+        if (t) await revokeToken(fetch, t.refreshToken)
         d.tokens.remove()
         access = null
       })

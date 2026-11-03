@@ -53,13 +53,21 @@ class FakeGoogle {
   listStatus: number[] = [] // statuses to answer list calls with before succeeding
   refreshError: string | null = null
   writeStatus = 200
+  patchStatus = 200
   offline = false
+  hang = false
+  /** Runs before a list call is answered. */
+  onList: (() => void) | null = null
   fetch: Fetch = (async (input: string | URL, init?: RequestInit) => {
     const url = new URL(String(input))
     const method = init?.method ?? 'GET'
     const body = init?.body ? String(init.body) : ''
     this.calls.push({ method, url, body })
     if (this.offline) throw new TypeError('fetch failed')
+    if (this.hang)
+      return new Promise<Response>((_res, rej) => {
+        init?.signal?.addEventListener('abort', () => rej(init.signal?.reason))
+      })
     const json = (status: number, b: unknown): Response =>
       new Response(JSON.stringify(b), { status })
     const base = url.origin + url.pathname
@@ -77,6 +85,7 @@ class FakeGoogle {
     }
     if (base === REVOKE) return json(200, {})
     if (base === EVENTS && method === 'GET') {
+      this.onList?.()
       const status = this.listStatus.shift()
       if (status) return json(status, { error: { message: `list ${status}` } })
       return json(200, { items: this.events })
@@ -89,6 +98,8 @@ class FakeGoogle {
       return json(200, { id })
     }
     if (base.startsWith(EVENTS + '/')) {
+      if (method === 'PATCH' && this.patchStatus !== 200)
+        return json(this.patchStatus, { error: { message: 'Not Found' } })
       if (method === 'DELETE') {
         const id = decodeURIComponent(url.pathname.split('/').pop() ?? '')
         this.events = this.events.filter((e) => e.id !== id)
@@ -158,7 +169,8 @@ let published: number
 
 const make = (
   tokens: TokenStore,
-  listen: CalendarDeps['listen'] = fakeListen([]).listen
+  listen: CalendarDeps['listen'] = fakeListen([]).listen,
+  callTimeoutMs?: number
 ): CalendarController =>
   createCalendarController({
     fetch: google.fetch,
@@ -171,7 +183,8 @@ const make = (
     publish: () => {
       published++
     },
-    listen
+    listen,
+    callTimeoutMs
   })
 
 const withCreds = (): void => {
@@ -477,6 +490,65 @@ describe('calendar controller: disconnect', () => {
     expect(tokens.t).toBeNull()
     expect(v.settings.calendar.writeBack).toBe(false)
     expect(v.calendar.connected).toBe(false)
+  })
+})
+
+describe('calendar controller: edge cases', () => {
+  const writeScope = (): TokenStore =>
+    memoryTokens({ refreshToken: 'ref', scope: `${READ_SCOPE} ${WRITE_SCOPE}` })
+
+  it('a sync that runs across midnight lists the new day before applying', async () => {
+    withCreds()
+    clock.t = new Date(2026, 9, 26, 23, 59, 59)
+    google.onList = () => {
+      clock.t = new Date(2026, 9, 27, 0, 0, 5)
+      google.onList = null
+    }
+    const c = make(memoryTokens({ refreshToken: 'ref', scope: READ_SCOPE }))
+    await c.sync()
+    const lists = google.calls.filter((x) => x.method === 'GET' && x.url.href.startsWith(EVENTS))
+    expect(lists).toHaveLength(2)
+    expect(new Date(lists[1].url.searchParams.get('timeMin') ?? '').getDate()).toBe(27)
+  })
+  it('checks secure storage before opening the browser', async () => {
+    withCreds()
+    const tokens = { ...memoryTokens(), available: () => false }
+    const v = await make(tokens, fakeListen(['code']).listen).connect()
+    expect(opened).toEqual([])
+    expect(v.calendar.lastError).toBe("Secure storage isn't available on this system")
+  })
+  it('recreates a block whose event was deleted in Google', async () => {
+    withCreds()
+    svc.addItems([
+      {
+        title: 'Email',
+        type: 'task',
+        durationMin: 30,
+        label: null,
+        priority: 'med',
+        half: null,
+        date: '2026-10-26',
+        fixedStart: null,
+        deadline: null,
+        repeat: { kind: 'none' },
+        dnd: false
+      }
+    ])
+    const [b] = svc.writeBlocks()
+    google.events = [own('w1', b.key, 16, 17, 'Email')]
+    google.patchStatus = 404
+    svc.updateSettings({ calendar: { writeBack: true } })
+    const v = await make(writeScope()).sync()
+    const writes = google.writes().map((w) => `${w.method} ${w.url.pathname.split('/').pop()}`)
+    expect(writes).toEqual(['PATCH w1', 'POST events'])
+    expect(v.calendar.lastError).toBeNull()
+  })
+  it('gives up on a Google call that does not answer', async () => {
+    withCreds()
+    google.hang = true
+    const c = make(memoryTokens({ refreshToken: 'ref', scope: READ_SCOPE }), undefined, 20)
+    const v = await c.sync()
+    expect(v.calendar.lastError).toBe("Google Calendar didn't answer")
   })
 })
 

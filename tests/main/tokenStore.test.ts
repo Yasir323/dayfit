@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createTokenStore, type Crypto } from '../../src/main/tokenStore'
 
 const fakeCrypto = (available = true): Crypto => ({
@@ -61,5 +61,25 @@ describe('token store', () => {
     store.remove()
     expect(fs.existsSync(file)).toBe(false)
     expect(() => store.remove()).not.toThrow()
+  })
+})
+
+describe('token store: cache', () => {
+  it('decrypts the file once and keeps the result until it changes', () => {
+    const crypto = fakeCrypto()
+    const decrypt = vi.spyOn(crypto, 'decryptString')
+    const store = createTokenStore(file, crypto)
+    expect(store.read()).toBeNull()
+    store.write(token)
+    expect(store.read()).toEqual(token)
+    expect(store.read()).toEqual(token)
+    expect(decrypt).not.toHaveBeenCalled()
+    store.remove()
+    expect(store.read()).toBeNull()
+    const fresh = createTokenStore(file, crypto)
+    fs.writeFileSync(file, crypto.encryptString(JSON.stringify(token)))
+    fresh.read()
+    fresh.read()
+    expect(decrypt).toHaveBeenCalledTimes(1)
   })
 })

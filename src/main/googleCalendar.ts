@@ -8,7 +8,8 @@ const EVENTS = 'https://www.googleapis.com/calendar/v3/calendars/primary/events'
 export interface CalendarClient {
   listDay(date: DateStr): Promise<GEvent[]>
   insert(date: DateStr, b: WriteBlock): Promise<void>
-  patch(eventId: string, date: DateStr, b: WriteBlock): Promise<void>
+  /** False when the event is gone (deleted in Google). */
+  patch(eventId: string, date: DateStr, b: WriteBlock): Promise<boolean>
   /** Deleting an event that is already gone counts as done. */
   remove(eventId: string): Promise<void>
 }
@@ -33,7 +34,7 @@ export function createCalendarClient(f: Fetch, accessToken: () => Promise<string
       headers,
       body: body === undefined ? undefined : JSON.stringify(body)
     })
-    if (okStatus.includes(res.status)) return {}
+    if (okStatus.includes(res.status)) return { gone: true }
     const text = await res.text()
     let parsed: Record<string, unknown> = {}
     try {
@@ -71,7 +72,8 @@ export function createCalendarClient(f: Fetch, accessToken: () => Promise<string
       })
     },
     async patch(eventId, date, b) {
-      await call(one(eventId), 'PATCH', times(date, b))
+      const body = await call(one(eventId), 'PATCH', times(date, b), [404, 410])
+      return body.gone !== true
     },
     async remove(eventId) {
       await call(one(eventId), 'DELETE', undefined, [404, 410])

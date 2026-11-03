@@ -143,6 +143,19 @@ describe('Google Calendar settings: connected', () => {
     await userEvent.click(sw)
     expect(api.calendar).toHaveBeenLastCalledWith('writeBackOff')
   })
+  it('locks the write-back switch while an action runs', async () => {
+    let done!: (v: ViewState) => void
+    api.calendar.mockReturnValue(new Promise<ViewState>((r) => (done = r)))
+    render(<Settings view={connected()} />)
+    const g = within(group())
+    const sw = g.getByRole('switch', { name: 'Show my planned blocks on Google Calendar' })
+    await userEvent.click(g.getByRole('button', { name: 'Sync now' }))
+    expect(sw).toBeDisabled()
+    await userEvent.click(sw)
+    expect(api.calendar).toHaveBeenCalledTimes(1)
+    done(connected())
+    await vi.waitFor(() => expect(sw).toBeEnabled())
+  })
   it('hands the new view back', async () => {
     const onView = vi.fn()
     const next = connected({ lastSyncAt: syncedAt + 60_000 })

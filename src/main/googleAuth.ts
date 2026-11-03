@@ -86,8 +86,8 @@ export function listenForCode(state: string, timeoutMs: number): Promise<Loopbac
       res.end(page(text))
     }
     if (q.get('state') !== state) {
-      reply(400, "Sign-in didn't match. Close this tab and try again from Dayfit.")
-      finish(new Error("Sign-in didn't match. Try again."))
+      // Not from this sign-in (a stale tab, another app): ignore it and keep waiting.
+      reply(400, "This sign-in link doesn't match. Close this tab and use the one Dayfit opened.")
     } else if (q.has('error') || !q.get('code')) {
       reply(200, 'Sign-in was cancelled. You can close this tab.')
       finish(new Error('Google sign-in was cancelled'))
@@ -117,6 +117,19 @@ export function listenForCode(state: string, timeoutMs: number): Promise<Loopbac
       })
     })
   })
+}
+
+/** A fetch that gives up after `ms`, failing with a GoogleError coded `timeout`. */
+export function withTimeout(f: Fetch, ms: number): Fetch {
+  return (async (input: Parameters<Fetch>[0], init?: RequestInit) => {
+    const signal = AbortSignal.timeout(ms)
+    try {
+      return await f(input, { ...init, signal })
+    } catch (e) {
+      if (signal.aborted) throw new GoogleError("Google Calendar didn't answer", 'timeout', 0)
+      throw e
+    }
+  }) as Fetch
 }
 
 /** POSTs a form to Google's token endpoint; a non-2xx answer becomes a GoogleError. */

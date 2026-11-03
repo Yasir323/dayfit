@@ -5,6 +5,7 @@ import {
   exchangeCode,
   GoogleError,
   listenForCode,
+  withTimeout,
   pkcePair,
   READ_SCOPE,
   refreshAccess,
@@ -75,11 +76,13 @@ describe('listenForCode', () => {
     expect(await res.text()).toContain('Dayfit is connected')
     await expect(lb.code).resolves.toBe('abc')
   })
-  it('rejects a mismatched state', async () => {
+  it('ignores a stray request with the wrong state and keeps waiting', async () => {
     const lb = await listenForCode('s1', 5000)
-    const caught = lb.code.catch((e: Error) => e.message)
-    await fetch(`${lb.redirectUri}/?code=abc&state=bad`)
-    expect(await caught).toBe("Sign-in didn't match. Try again.")
+    const stray = await fetch(`${lb.redirectUri}/?code=abc&state=bad`)
+    expect(stray.status).toBe(400)
+    const res = await fetch(`${lb.redirectUri}/?code=good&state=s1`)
+    expect(res.status).toBe(200)
+    expect(await lb.code).toBe('good')
   })
   it('rejects when the user cancels at Google', async () => {
     const lb = await listenForCode('s1', 5000)
@@ -183,5 +186,26 @@ describe('revokeToken', () => {
       throw new TypeError('offline')
     }) as unknown as Fetch
     await expect(revokeToken(f, 'r')).resolves.toBeUndefined()
+  })
+})
+
+describe('withTimeout', () => {
+  const hanging: Fetch = ((_u: string, init?: RequestInit) =>
+    new Promise((_res, rej) => {
+      init?.signal?.addEventListener('abort', () => rej(init.signal?.reason))
+    })) as Fetch
+  it('gives up on a call that does not answer in time', async () => {
+    const err = await withTimeout(hanging, 20)('https://x.test/', {}).catch((e: unknown) => e)
+    expect(err).toBeInstanceOf(GoogleError)
+    expect((err as GoogleError).message).toBe("Google Calendar didn't answer")
+    expect((err as GoogleError).code).toBe('timeout')
+  })
+  it('passes answers and other failures through', async () => {
+    const ok: Fetch = (async () => new Response('hi')) as Fetch
+    expect(await (await withTimeout(ok, 1000)('https://x.test/')).text()).toBe('hi')
+    const off: Fetch = (async () => {
+      throw new TypeError('fetch failed')
+    }) as Fetch
+    await expect(withTimeout(off, 1000)('https://x.test/')).rejects.toBeInstanceOf(TypeError)
   })
 })

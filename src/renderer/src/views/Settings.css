@@ -91,6 +91,10 @@
 .switch[aria-checked='true'] .knob {
   transform: translateX(14px);
 }
+.switch:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
 
 .firstrun h2 {
   margin: 0 0 4px;

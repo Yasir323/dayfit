@@ -113,11 +113,13 @@ const num = (
 function Toggle({
   label,
   checked,
-  onChange
+  onChange,
+  disabled = false
 }: {
   label: string
   checked: boolean
   onChange: (b: boolean) => void
+  disabled?: boolean
 }): React.JSX.Element {
   return (
     <div className="field toggle-row">
@@ -128,6 +130,7 @@ function Toggle({
         aria-checked={checked}
         aria-label={label}
         className="switch"
+        disabled={disabled}
         onClick={() => onChange(!checked)}
       >
         <span className="knob" />
@@ -577,6 +580,7 @@ function CalendarGroup({
             <Toggle
               label="Show my planned blocks on Google Calendar"
               checked={creds.writeBack}
+              disabled={busy}
               onChange={(on) => void act(on ? 'writeBackOn' : 'writeBackOff')}
             />
             <div className="backup-actions">
