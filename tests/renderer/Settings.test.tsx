@@ -58,6 +58,8 @@ const view = (over: Partial<ViewState['settings']> = {}): ViewState =>
       running: false,
       permission: 'unknown',
       calibrating: false,
+      problem: null,
+      calibrationFailed: false,
       lastMinute: null,
       setupChanged: false
     }

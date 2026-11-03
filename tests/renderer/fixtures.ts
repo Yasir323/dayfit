@@ -89,6 +89,8 @@ export function makeView(over: Partial<ViewState> = {}): ViewState {
       running: false,
       permission: 'unknown',
       calibrating: false,
+      problem: null,
+      calibrationFailed: false,
       lastMinute: null,
       setupChanged: false
     },

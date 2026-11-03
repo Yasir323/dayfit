@@ -67,11 +67,39 @@ describe('Camera cues settings', () => {
       group().getByText('Camera paused — outside work hours, in a meeting, busy or away')
     ).toBeInTheDocument()
     r2.unmount()
-    render(<Settings view={view({ permission: 'denied' })} />)
+    render(<Settings view={on({ permission: 'denied' })} />)
     expect(
       group().getByText(
         'Camera access is off — allow Dayfit in System Settings → Privacy & Security → Camera'
       )
+    ).toBeInTheDocument()
+  })
+  it('hides the access-off message while the feature is off', () => {
+    render(<Settings view={view({ permission: 'denied' })} />)
+    expect(group().queryByText(/Camera access is off/)).toBeNull()
+  })
+  it('explains each camera problem, even while off', () => {
+    const cases: [string, string][] = [
+      [
+        'denied',
+        'Camera access is off — allow Dayfit in System Settings → Privacy & Security → Camera'
+      ],
+      ['no-camera', 'No camera found — connect one, then turn this on again'],
+      ['busy', 'Another app is using the camera — close it, then turn this on again'],
+      ['failed', "Camera cues couldn't start — turn this on again to retry"]
+    ]
+    for (const [problem, text] of cases) {
+      const r = render(
+        <Settings view={view({ problem: problem as ViewState['camera']['problem'] })} />
+      )
+      expect(group().getByText(text)).toBeInTheDocument()
+      r.unmount()
+    }
+  })
+  it('says when calibration did not see the face', () => {
+    render(<Settings view={on({ running: true, calibrationFailed: true })} />)
+    expect(
+      group().getByText("Couldn't see your face — sit in view of the camera and try again")
     ).toBeInTheDocument()
   })
   it('toggles each cue', async () => {

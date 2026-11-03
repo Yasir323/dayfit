@@ -89,13 +89,13 @@ Everything below "Full backlog" is unprioritised beyond the v1 / later split.
 - [x] Calendar: disable the write-back toggle while an action runs
 - [x] Calendar: cache the connection state instead of decrypting the token file on each check
 - [x] README Privacy still says data is in dayfit.json; it's dayfit.db now
-- [ ] Camera: status reaches the popover one tick late (after a tick, lock or unlock)
-- [ ] Camera: cues should also yield to break, meeting and end-of-day reminders on the same tick
-- [ ] Camera: tell "no camera / camera busy / failed to load" apart from "access off"
-- [ ] Camera: calibrating can stick if no frames arrive; say so when the face wasn't seen
-- [ ] Camera: summary counts slouch/close minutes even when the calibration doesn't fit
-- [ ] Camera: a yawn across a minute boundary can be lost
-- [ ] Camera: the access-off message shows while the feature is off
+- [x] Camera: status reaches the popover one tick late (after a tick, lock or unlock)
+- [x] Camera: cues should also yield to break, meeting and end-of-day reminders on the same tick
+- [x] Camera: tell "no camera / camera busy / failed to load" apart from "access off"
+- [x] Camera: calibrating can stick if no frames arrive; say so when the face wasn't seen
+- [x] Camera: summary counts slouch/close minutes even when the calibration doesn't fit
+- [x] Camera: a yawn across a minute boundary can be lost
+- [x] Camera: the access-off message shows while the feature is off
 - [ ] Camera: tune BLINK_CLOSED (looking down can read as closed eyes) in the manual pass
 
 ## Pick next — finish the app end to end (tick what to build)

@@ -452,6 +452,13 @@ const CUE_NAMES: [keyof FeaturesShape['camera']['cues'], string][] = [
 ]
 
 /** Camera cues: on/off (asks for access), which cues, calibration, and what it saw last. */
+const CAMERA_PROBLEMS: Record<Exclude<ViewState['camera']['problem'], null>, string> = {
+  denied: 'Camera access is off — allow Dayfit in System Settings → Privacy & Security → Camera',
+  'no-camera': 'No camera found — connect one, then turn this on again',
+  busy: 'Another app is using the camera — close it, then turn this on again',
+  failed: "Camera cues couldn't start — turn this on again to retry"
+}
+
 function CameraGroup({
   view,
   send,
@@ -473,11 +480,13 @@ function CameraGroup({
       setBusy(false)
     }
   }
-  const status =
-    st.permission === 'denied'
-      ? 'Camera access is off — allow Dayfit in System Settings → Privacy & Security → Camera'
-      : !camera.enabled
-        ? null
+  // A problem comes from the user turning the feature on, so it shows even while off.
+  const status = st.problem
+    ? CAMERA_PROBLEMS[st.problem]
+    : !camera.enabled
+      ? null
+      : st.permission === 'denied'
+        ? CAMERA_PROBLEMS.denied
         : st.running
           ? 'Camera on'
           : 'Camera paused — outside work hours, in a meeting, busy or away'
@@ -518,11 +527,13 @@ function CameraGroup({
             <p className="muted">
               {st.calibrating
                 ? 'Sit the way you want to sit… (5 s)'
-                : st.setupChanged
-                  ? 'Your setup looks different — recalibrate'
-                  : calibratedOn
-                    ? `Calibrated ${calibratedOn}`
-                    : 'Calibrate to turn on posture and distance'}
+                : st.calibrationFailed
+                  ? "Couldn't see your face — sit in view of the camera and try again"
+                  : st.setupChanged
+                    ? 'Your setup looks different — recalibrate'
+                    : calibratedOn
+                      ? `Calibrated ${calibratedOn}`
+                      : 'Calibrate to turn on posture and distance'}
             </p>
             <div className="backup-actions">
               <button

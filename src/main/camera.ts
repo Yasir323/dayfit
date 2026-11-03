@@ -1,6 +1,12 @@
 import { isAbsolute, join, normalize, relative } from 'node:path'
 import { isMinuteScore } from '../core/faceCues'
-import type { CameraPermission, CameraStatus, DayfitService, ViewState } from './service'
+import type {
+  CameraPermission,
+  CameraProblem,
+  CameraStatus,
+  DayfitService,
+  ViewState
+} from './service'
 
 /** Camera cues run only when every one of these allows it. */
 export interface RunInput {
@@ -19,6 +25,18 @@ export interface RunInput {
 
 /** Idle this long and the camera turns off (reading counts as present until then). */
 export const CAMERA_IDLE_SEC = 300
+/** A calibration request with no answer after this long has failed. */
+export const CALIBRATION_TIMEOUT_MS = 15_000
+
+/** The camera page's error (`Name: message`) in Dayfit's terms. */
+export function cameraProblem(message: string): Exclude<CameraProblem, null> {
+  const name = message.split(':')[0].trim()
+  if (name === 'NotAllowedError' || name === 'SecurityError') return 'denied'
+  if (name === 'NotFoundError' || name === 'OverconstrainedError' || name === 'Camera stopped')
+    return 'no-camera'
+  if (name === 'NotReadableError' || name === 'AbortError') return 'busy'
+  return 'failed'
+}
 
 export function shouldRun(i: RunInput): boolean {
   return (
@@ -89,20 +107,38 @@ export function createCameraController(d: CameraDeps): CameraController {
   let win: CameraWindowHandle | null = null
   /** The page couldn't open the camera; stays off until the user enables it again. */
   let blocked = false
-  let deniedByPage = false
+  let problem: CameraProblem = null
   let calibrating = false
+  let calibrationFailed = false
+  let calibrationTimer: ReturnType<typeof setTimeout> | null = null
+  let lastReported = ''
 
-  const permission = (): CameraPermission => (deniedByPage ? 'denied' : d.mediaStatus())
+  const permission = (): CameraPermission => (problem === 'denied' ? 'denied' : d.mediaStatus())
   const status = (): CameraStatus => ({
     running: win !== null,
     permission: permission(),
-    calibrating
+    calibrating,
+    problem,
+    calibrationFailed
   })
-  const report = (): void => svc.setCameraStatus(status())
+  /** Hands the status to the service; returns true when it changed. */
+  const report = (): boolean => {
+    const st = status()
+    svc.setCameraStatus(st)
+    const key = JSON.stringify(st)
+    const changed = key !== lastReported
+    lastReported = key
+    return changed
+  }
+  const stopCalibrating = (): void => {
+    if (calibrationTimer) clearTimeout(calibrationTimer)
+    calibrationTimer = null
+    calibrating = false
+  }
   const close = (): void => {
     if (win && !win.isDestroyed()) win.destroy()
     win = null
-    calibrating = false
+    stopCalibrating()
   }
   const setEnabled = (enabled: boolean): ViewState => {
     const camera = svc.view().settings.features.camera
@@ -114,7 +150,8 @@ export function createCameraController(d: CameraDeps): CameraController {
       const run = !blocked && shouldRun({ ...i, permission: permission() })
       if (run && !win) win = d.createWindow()
       if (!run && win) close()
-      report()
+      // The popover sees a window opening or closing now, not a tick later.
+      if (report()) d.publish(svc.view())
     },
     async enable() {
       let st = d.mediaStatus()
@@ -123,12 +160,12 @@ export function createCameraController(d: CameraDeps): CameraController {
         st = ok ? 'granted' : 'denied'
       }
       if (st !== 'granted') {
-        deniedByPage = true
+        problem = 'denied'
         report()
         return svc.view()
       }
       blocked = false
-      deniedByPage = false
+      problem = null
       const v = setEnabled(true)
       report()
       return v
@@ -142,7 +179,16 @@ export function createCameraController(d: CameraDeps): CameraController {
     calibrate() {
       if (!win) return svc.view()
       win.send('camera:calibrate')
+      stopCalibrating()
       calibrating = true
+      calibrationFailed = false
+      calibrationTimer = setTimeout(() => {
+        calibrationTimer = null
+        calibrating = false
+        calibrationFailed = true
+        report()
+        d.publish(svc.view())
+      }, CALIBRATION_TIMEOUT_MS)
       report()
       return svc.view()
     },
@@ -155,7 +201,8 @@ export function createCameraController(d: CameraDeps): CameraController {
       d.publish(svc.view())
     },
     onCalibration(payload) {
-      calibrating = false
+      stopCalibrating()
+      calibrationFailed = !isCalibration(payload)
       report()
       if (!isCalibration(payload)) {
         d.publish(svc.view())
@@ -167,7 +214,7 @@ export function createCameraController(d: CameraDeps): CameraController {
     onError(message) {
       console.error('camera page:', message)
       blocked = true
-      deniedByPage = true
+      problem = cameraProblem(message)
       close()
       report()
       d.publish(svc.view())

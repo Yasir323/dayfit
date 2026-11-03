@@ -286,12 +286,14 @@ export function summarizeCamera(
   cal: Calibration | null
 ): { minutes: number; blinkMedian: number; yawns: number; slouchMin: number; closeMin: number } {
   const present = minutes.filter(isPresent)
+  // A calibration from another setup would count every minute as slouched or too close.
+  const fit = cal && calibrationFits(minutes, cal) ? cal : null
   return {
     minutes: present.length,
     blinkMedian: median(present.map((m) => m.blinks)),
     yawns: present.reduce((n, m) => n + m.yawns, 0),
-    slouchMin: cal ? present.filter((m) => slouched(m, cal)).length : 0,
-    closeMin: cal ? present.filter((m) => tooClose(m, cal)).length : 0
+    slouchMin: fit ? present.filter((m) => slouched(m, fit)).length : 0,
+    closeMin: fit ? present.filter((m) => tooClose(m, fit)).length : 0
   }
 }
 

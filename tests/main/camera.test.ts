@@ -192,6 +192,38 @@ describe('camera controller: messages from the page', () => {
     s.c.onMinute(payload)
     expect(s.service.addCameraMinute).not.toHaveBeenCalled()
   })
+  it.each<[string, string, string]>([
+    ['NotAllowedError: Permission denied', 'denied', 'denied'],
+    ['NotFoundError: Requested device not found', 'no-camera', 'granted'],
+    ['OverconstrainedError: x', 'no-camera', 'granted'],
+    ['Camera stopped', 'no-camera', 'granted'],
+    ['NotReadableError: Could not start video source', 'busy', 'granted'],
+    ['Error: model failed to load', 'failed', 'granted']
+  ])('tells camera errors apart: %s', (msg, problem, permission) => {
+    const s = setup()
+    s.c.update(goodUpdate)
+    s.c.onError(msg)
+    expect(s.windows[0].destroyed).toBe(true)
+    expect(s.statuses.at(-1)?.problem).toBe(problem)
+    expect(s.statuses.at(-1)?.permission).toBe(permission)
+  })
+  it('a refused enable reports the problem; a later enable clears it', async () => {
+    const s = setup('not-determined', false)
+    await s.c.enable()
+    expect(s.statuses.at(-1)?.problem).toBe('denied')
+    vi.mocked(s.deps.mediaStatus).mockReturnValue('granted')
+    await s.c.enable()
+    expect(s.statuses.at(-1)?.problem).toBeNull()
+  })
+  it('publishes a status change right away, once', () => {
+    const s = setup()
+    s.c.update(goodUpdate)
+    expect(s.deps.publish).toHaveBeenCalledTimes(1)
+    s.c.update(goodUpdate)
+    expect(s.deps.publish).toHaveBeenCalledTimes(1)
+    s.c.update({ ...goodUpdate, locked: true })
+    expect(s.deps.publish).toHaveBeenCalledTimes(2)
+  })
   it('a camera error closes the window until enabled again', async () => {
     const s = setup()
     s.c.update(goodUpdate)
@@ -228,6 +260,33 @@ describe('camera controller: calibration', () => {
       at: 42
     })
     expect(s.statuses.at(-1)?.calibrating).toBe(false)
+  })
+  it('gives up calibrating when no answer comes, and says so', () => {
+    vi.useFakeTimers()
+    try {
+      const s = setup()
+      s.c.update(goodUpdate)
+      s.c.calibrate()
+      vi.advanceTimersByTime(14_999)
+      expect(s.statuses.at(-1)?.calibrating).toBe(true)
+      vi.advanceTimersByTime(1)
+      expect(s.statuses.at(-1)?.calibrating).toBe(false)
+      expect(s.statuses.at(-1)?.calibrationFailed).toBe(true)
+      expect(s.deps.publish).toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+  it('says so when the face was not seen, and clears it on success', () => {
+    const s = setup()
+    s.c.update(goodUpdate)
+    s.c.calibrate()
+    s.c.onCalibration(null)
+    expect(s.statuses.at(-1)?.calibrationFailed).toBe(true)
+    s.c.calibrate()
+    expect(s.statuses.at(-1)?.calibrationFailed).toBe(false)
+    s.c.onCalibration({ pitch: 2, faceY: 0.5, iris: 0.04 })
+    expect(s.statuses.at(-1)?.calibrationFailed).toBe(false)
   })
   it('drops bad medians and ends calibrating', () => {
     const s = setup()

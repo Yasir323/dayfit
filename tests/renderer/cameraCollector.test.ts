@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { createCollector, BUFFER_CAP } from '../../src/renderer/camera/collector'
-import { foldMinute, type FrameCue } from '../../src/core/faceCues'
+import { foldMinute, type FrameCue, type MinuteScore } from '../../src/core/faceCues'
 
 const frame = (t: number, p: Partial<FrameCue> = {}): FrameCue => ({
   t,
@@ -65,5 +65,30 @@ describe('camera collector: starved minutes', () => {
     c.push(frame(60_000))
     expect(onMinute).toHaveBeenCalledTimes(1)
     expect(onMinute.mock.calls[0][0]).toMatchObject({ present: 0, blinks: 0, perclos: 0 })
+  })
+})
+
+describe('collector: a yawn across a minute boundary', () => {
+  it('is counted once, in the minute where it ends', () => {
+    const minutes: MinuteScore[] = []
+    const c = createCollector({
+      now: () => 0,
+      onMinute: (m) => minutes.push(m),
+      onCalibration: () => {}
+    })
+    // 2 minutes of frames at 10 fps; a 2 s yawn from 59 s to 61 s.
+    for (let i = 0; i < 1200; i++) {
+      const t = i * 100
+      c.push({
+        t,
+        present: true,
+        eyesClosed: false,
+        jaw: t >= 59_000 && t < 61_000 ? 0.9 : 0.1,
+        pitch: 0,
+        faceY: 0.5,
+        iris: 0.04
+      })
+    }
+    expect(minutes.map((m) => m.yawns).reduce((a, b) => a + b, 0)).toBe(1)
   })
 })

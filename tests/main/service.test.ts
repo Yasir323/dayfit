@@ -1390,6 +1390,7 @@ describe('DayfitService camera cues', () => {
   it('turns ten low-blink minutes into a dry-eyes banner', () => {
     clock.set(26, 10)
     quiet()
+    svc.markPunched('in') // no punch-in banner to wait behind
     staring()
     const r = svc.tick(0)
     expect(kinds(r)).toContain('dry-eyes')
@@ -1415,6 +1416,41 @@ describe('DayfitService camera cues', () => {
     expect(kinds(first)).toContain('checkin')
     expect(kinds(first)).not.toContain('dry-eyes')
     expect(kinds(svc.tick(0))).toContain('dry-eyes')
+  })
+  it('waits for the next tick when a break reminder takes the slot', () => {
+    const setUp = (cameraOn: boolean): void => {
+      quiet()
+      svc.updateSettings({
+        features: { camera: { ...DEFAULT_SETTINGS.features.camera, enabled: cameraOn } }
+      })
+      clock.set(26, 9)
+      svc.markPunched('in')
+      svc.tick(0)
+    }
+    // Pass 1, camera off: find the minute the first break fires.
+    setUp(false)
+    let breakMin = 0
+    for (let m = 1; m <= 30 && !breakMin; m++) {
+      clock.set(26, 9, m)
+      if (kinds(svc.tick(0)).includes('break')) breakMin = m
+    }
+    expect(breakMin).toBeGreaterThan(0)
+    // Pass 2, a fresh day: camera turns on with low blinks just as the break fires.
+    fs.rmSync(file, { force: true })
+    svc = new DayfitService(file, clock)
+    setUp(false)
+    for (let m = 1; m < breakMin; m++) {
+      clock.set(26, 9, m)
+      svc.tick(0)
+    }
+    clock.set(26, 9, breakMin)
+    svc.updateSettings({
+      features: { camera: { ...DEFAULT_SETTINGS.features.camera, enabled: true } }
+    })
+    staring()
+    const r = svc.tick(0)
+    expect(kinds(r)).toContain('break')
+    expect(kinds(r)).not.toContain('dry-eyes')
   })
   it('stays quiet on a day off and while busy', () => {
     clock.set(31, 10) // Saturday
@@ -1463,7 +1499,13 @@ describe('DayfitService camera cues', () => {
     ])
   })
   it('shows the status set by the shell', () => {
-    svc.setCameraStatus({ running: true, permission: 'granted', calibrating: false })
+    svc.setCameraStatus({
+      running: true,
+      permission: 'granted',
+      calibrating: false,
+      problem: null,
+      calibrationFailed: false
+    })
     expect(svc.view().camera).toMatchObject({ running: true, permission: 'granted' })
   })
 })

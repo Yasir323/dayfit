@@ -99,10 +99,16 @@ export interface ViewState {
 export type CameraPermission = 'granted' | 'denied' | 'not-determined' | 'unknown'
 
 /** Camera window status, set by the shell; not saved. */
+/** Why the camera page couldn't run, as last reported; cleared by turning the feature on. */
+export type CameraProblem = 'denied' | 'no-camera' | 'busy' | 'failed' | null
+
 export interface CameraStatus {
   running: boolean
   permission: CameraPermission
   calibrating: boolean
+  problem: CameraProblem
+  /** The last calibration ended without seeing a face. */
+  calibrationFailed: boolean
 }
 
 export interface CameraView extends CameraStatus {
@@ -182,7 +188,13 @@ export class DayfitService {
   /** Google Calendar link, from the token file and sign-in flow (set by the shell); not saved. */
   private calendarLink: CalendarLink = { connected: false, connecting: false, canWrite: false }
   /** Camera window status (set by the shell); not saved. */
-  private cameraStatus: CameraStatus = { running: false, permission: 'unknown', calibrating: false }
+  private cameraStatus: CameraStatus = {
+    running: false,
+    permission: 'unknown',
+    calibrating: false,
+    problem: null,
+    calibrationFailed: false
+  }
   /** Clock snapshot taken once per public call, so date and minutes always agree. */
   private at: Date
 
@@ -849,8 +861,9 @@ export class DayfitService {
     s.wellbeing = wb.state
     events.push(...wb.events.map((e) => ({ ...e, itemId: null, silent: false, parts: [] })))
 
-    // Camera cues take the nudge slot only when no wellbeing nudge did (custom reminders
-    // don't count); a cue that has to wait keeps its cooldown for the next tick.
+    // Camera cues take the nudge slot only when no other reminder did this tick (break,
+    // meeting, end of day, wellbeing; custom reminders don't count). A cue that has to wait
+    // keeps its cooldown for the next tick.
     const cam = s.settings.features.camera
     const workDay = s.settings.workDays.includes(weekday(today))
     if (
@@ -859,7 +872,7 @@ export class DayfitService {
       now >= s.settings.workStart &&
       now < s.settings.workEnd &&
       idleSec < CAMERA_AWAY_SEC &&
-      !wb.events.some((e) => e.kind !== 'custom') &&
+      !events.some((e) => e.kind !== 'custom') &&
       !isHeld(blocks, items, now, busyNow, s.settings.bufferMin)
     ) {
       const step = stepCamera({

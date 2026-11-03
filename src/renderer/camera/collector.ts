@@ -1,6 +1,7 @@
 import {
   calibrate,
   foldMinute,
+  YAWN_JAW,
   type Calibration,
   type FrameCue,
   type MinuteScore
@@ -14,6 +15,15 @@ const CALIBRATION_MS = 5_000
 export const BUFFER_CAP = FPS * 70
 /** A minute with fewer frames than this (a frozen or starved feed) is scored as away. */
 export const MIN_FRAMES = (FPS * 60) / 2
+/** An open mouth at a minute's end moves to the next minute if it is no longer than this. */
+const YAWN_CARRY = FPS * 10
+
+/** Where a trailing open-mouth run starts, so a yawn isn't split across two minutes. */
+function yawnTail(fs: FrameCue[]): number {
+  let i = fs.length
+  while (i > 0 && fs[i - 1].present && fs[i - 1].jaw >= YAWN_JAW) i--
+  return fs.length - i <= YAWN_CARRY ? i : fs.length
+}
 
 /** Groups frames into minute scores (and a calibration on request). Frames never leave. */
 export function createCollector(o: {
@@ -31,8 +41,10 @@ export function createCollector(o: {
       minute.push(f)
       if (minute.length > BUFFER_CAP) minute = minute.slice(-BUFFER_CAP)
       if (spans(minute, MINUTE_MS)) {
-        o.onMinute(foldMinute(minute.length >= MIN_FRAMES ? minute : [], o.now()))
-        minute = []
+        const cut = yawnTail(minute)
+        const done = minute.slice(0, cut)
+        o.onMinute(foldMinute(done.length >= MIN_FRAMES ? done : [], o.now()))
+        minute = minute.slice(cut)
       }
       if (calib) {
         calib.push(f)

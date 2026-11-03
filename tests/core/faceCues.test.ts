@@ -343,3 +343,23 @@ describe('isMinuteScore', () => {
     expect(isMinuteScore(v)).toBe(false)
   })
 })
+
+describe('summarizeCamera with a calibration that does not fit', () => {
+  it('counts no slouch or close minutes', () => {
+    const cal = { pitch: 0, faceY: 0.5, iris: 0.04, at: 0 }
+    const ms = Array.from({ length: 12 }, (_, i) => ({
+      at: (i + 1) * 60_000,
+      present: 1,
+      blinks: 15,
+      perclos: 0.03,
+      yawns: 0,
+      pitch: 0,
+      faceY: 0.7,
+      iris: 0.08
+    }))
+    const sum = summarizeCamera(ms, cal)
+    expect(sum.slouchMin).toBe(0)
+    expect(sum.closeMin).toBe(0)
+    expect(sum.minutes).toBe(12)
+  })
+})
