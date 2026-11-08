@@ -6,7 +6,7 @@ type Async<K extends keyof DayfitService> = (
   ...args: Parameters<DayfitService[K]>
 ) => Promise<ViewState>
 
-export type FocusTarget = 'quick-add' | 'nudge' | 'review' | 'checkout'
+export type FocusTarget = 'quick-add' | 'nudge' | 'review' | 'checkout' | 'settings'
 
 export interface DayfitApi {
   view: Async<'view'>
@@ -42,6 +42,7 @@ export interface DayfitApi {
   camera(a: CameraAction): Promise<ViewState>
   hide(): void
   openPortal(): void
+  quit(): void
   onState(cb: (v: ViewState) => void): () => void
   onFocus(cb: (target: FocusTarget) => void): () => void
 }

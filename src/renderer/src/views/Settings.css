@@ -219,3 +219,9 @@
   background: var(--accent-soft);
   color: var(--accent);
 }
+
+.quit-row {
+  display: flex;
+  justify-content: center;
+  padding: 8px 0 16px;
+}

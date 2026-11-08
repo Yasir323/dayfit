@@ -104,6 +104,19 @@ describe('App shell', () => {
     expect(toast.compareDocumentPosition(body) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
+  it('the tray menu can open Settings', async () => {
+    api.view.mockResolvedValue(makeView())
+    let focus: ((t: string) => void) | undefined
+    api.onFocus.mockImplementation((cb?: (t: string) => void) => {
+      focus = cb
+      return () => {}
+    })
+    render(<App />)
+    await screen.findByRole('button', { name: 'Add' })
+    act(() => focus?.('settings'))
+    expect(screen.getByRole('heading', { name: 'Settings' })).toBeInTheDocument()
+  })
+
   it('the tab bar switches to quick-add', async () => {
     api.view.mockResolvedValue(makeView())
     render(<App />)

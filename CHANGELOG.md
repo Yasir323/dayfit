@@ -18,6 +18,7 @@ First public release, for macOS (menu bar) and Windows (system tray). Everything
 - **Backup.** Export everything to one JSON file and import it on another machine.
 - Global shortcut and full keyboard use.
 - Settings says when the system blocks notifications.
+- Right-click menu on the icon (Open Dayfit, Settings…, Quit Dayfit) and a Quit button in Settings.
 - macOS `.dmg` and `.zip` (Apple silicon and Intel) and a Windows installer.
 
 ### Known limitations

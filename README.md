@@ -17,7 +17,7 @@ Dayfit is a menu bar (macOS) and system tray (Windows) day planner for people wh
 - **Week view.** The last seven days of focus time, water and breaks, plus streaks.
 - **Backup.** Export everything to one JSON file from Settings and import it on another machine.
 
-It lives in the macOS menu bar or the Windows tray, opens with a global shortcut, and works with the keyboard.
+It lives in the macOS menu bar or the Windows tray, opens with a global shortcut, and works with the keyboard. Right-click the icon (or Control-click on macOS) for Open, Settings and Quit; Settings also has a Quit button.
 
 <p align="center">
   <img src="docs/screenshots/quick-add.png" width="260" alt="Quick-add with recognised tokens and editable fields">

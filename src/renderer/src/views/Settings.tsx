@@ -939,6 +939,12 @@ export function Settings({ view, onView }: Props): React.JSX.Element {
       <HomeSetup ticked={view.ergonomics ?? []} onView={onView} />
 
       <Backup onView={onView} />
+
+      <div className="quit-row">
+        <button type="button" className="btn" onClick={() => api.quit()}>
+          Quit Dayfit
+        </button>
+      </div>
     </section>
   )
 }

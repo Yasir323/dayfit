@@ -41,6 +41,7 @@ export function App(): React.JSX.Element {
     const offState = api.onState(setView)
     const offFocus = api.onFocus((target) => {
       if (target === 'quick-add') setTab('add')
+      else if (target === 'settings') setTab('settings')
       else setTab('today')
       if (target === 'nudge') setNudgeFocus((n) => n + 1)
       if (target === 'checkout') setCheckout(true)

@@ -45,6 +45,7 @@ const dayfit = {
   camera: (a: string) => ipcRenderer.invoke('dayfit:camera', a),
   hide: () => ipcRenderer.send('dayfit:hide'),
   openPortal: () => ipcRenderer.send('dayfit:openPortal'),
+  quit: () => ipcRenderer.send('dayfit:quit'),
   onState: subscribe('dayfit:state'),
   onFocus: subscribe('dayfit:focus')
 } as DayfitApi

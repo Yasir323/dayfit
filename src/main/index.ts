@@ -241,6 +241,7 @@ if (!app.requestSingleInstanceLock()) {
     registerIpc(service, publish, {
       hide: () => popover.hide(),
       openPortal,
+      quit: () => app.quit(),
       exportData,
       importData,
       calendar: calendarAction,

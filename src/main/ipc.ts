@@ -44,6 +44,8 @@ export interface ShellActions {
   hide(): void
   /** `dayfit:openPortal` (attendance banner): opens the HRMS link in the browser. */
   openPortal(): void
+  /** `dayfit:quit` (Settings): quits the app. */
+  quit(): void
   /** `dayfit:calendar`: Google Calendar connect, sync and write-back; never rejects. */
   calendar(a: CalendarAction): Promise<ViewState>
   /** `dayfit:camera`: camera cues on (asks for access), off, or calibrate. */
@@ -78,4 +80,5 @@ export function registerIpc(
   ipcMain.handle('dayfit:camera', async (_e, a: CameraAction) => onState(await shell.camera(a)))
   ipcMain.on('dayfit:hide', () => shell.hide())
   ipcMain.on('dayfit:openPortal', () => shell.openPortal())
+  ipcMain.on('dayfit:quit', () => shell.quit())
 }

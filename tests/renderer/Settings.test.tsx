@@ -13,7 +13,8 @@ const api = vi.hoisted(() => ({
   setErgonomics: vi.fn(),
   importData: vi.fn(),
   onState: vi.fn(),
-  onFocus: vi.fn()
+  onFocus: vi.fn(),
+  quit: vi.fn()
 }))
 vi.mock('../../src/renderer/src/api', () => ({ api }))
 
@@ -85,6 +86,12 @@ describe('Settings', () => {
     expect(screen.queryByText('Shortcut unavailable — pick another')).toBeNull()
     rerender(<Settings view={{ ...view(), hotkeyOk: false }} />)
     expect(screen.getByText('Shortcut unavailable — pick another')).toBeInTheDocument()
+  })
+
+  it('Quit Dayfit asks the app to quit', async () => {
+    render(<Settings view={view()} />)
+    await userEvent.click(screen.getByRole('button', { name: 'Quit Dayfit' }))
+    expect(api.quit).toHaveBeenCalledOnce()
   })
 
   it('says when the system blocks notifications', () => {

@@ -1,13 +1,14 @@
-import { BrowserWindow, Tray, nativeImage, screen } from 'electron'
+import { BrowserWindow, Menu, Tray, app, nativeImage, screen } from 'electron'
 import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
 import trayTemplate from '../../resources/trayTemplate.png?asset'
 import trayIco from '../../resources/tray.ico?asset'
 import { createBlurGuard } from './blurGuard'
 import { trayDisplay } from './trayLabel'
+import { trayMenuTemplate } from './trayMenu'
 import type { ViewState } from './service'
 
-export type FocusTarget = 'quick-add' | 'nudge' | 'review' | 'checkout'
+export type FocusTarget = 'quick-add' | 'nudge' | 'review' | 'checkout' | 'settings'
 
 const WIDTH = 380
 const HEIGHT = 580
@@ -88,6 +89,23 @@ export function createPopover(): Popover {
   }
   tray.on('click', toggle)
 
+  // Right-click (and Control-click on macOS) opens the menu; a plain click still toggles.
+  const focusTarget = (target: FocusTarget): void => {
+    show()
+    whenLoaded(() => win.webContents.send('dayfit:focus', target))
+  }
+  tray.on('right-click', () =>
+    tray.popUpContextMenu(
+      Menu.buildFromTemplate(
+        trayMenuTemplate({
+          open: show,
+          settings: () => focusTarget('settings'),
+          quit: () => app.quit()
+        })
+      )
+    )
+  )
+
   const whenLoaded = (fn: () => void): void => {
     if (win.webContents.isLoading()) win.webContents.once('did-finish-load', fn)
     else fn()
@@ -106,9 +124,6 @@ export function createPopover(): Popover {
     onShow: (cb) => {
       shown.push(cb)
     },
-    focus: (target) => {
-      show()
-      whenLoaded(() => win.webContents.send('dayfit:focus', target))
-    }
+    focus: focusTarget
   }
 }
