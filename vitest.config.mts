@@ -7,7 +7,9 @@ export default defineConfig({
         test: {
           name: 'node',
           environment: 'node',
-          include: ['tests/core/**/*.test.ts', 'tests/main/**/*.test.ts']
+          include: ['tests/core/**/*.test.ts', 'tests/main/**/*.test.ts'],
+          // Windows CI runners can stall on disk for seconds; real SQLite tests need the headroom.
+          testTimeout: 20_000
         }
       },
       {
