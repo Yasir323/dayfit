@@ -1437,8 +1437,7 @@ describe('DayfitService camera cues', () => {
     }
     expect(breakMin).toBeGreaterThan(0)
     // Pass 2, a fresh day: camera turns on with low blinks just as the break fires.
-    fs.rmSync(file, { force: true })
-    svc = new DayfitService(file, clock)
+    svc = new DayfitService(path.join(dir, 'fresh.json'), clock)
     setUp(false)
     for (let m = 1; m < breakMin; m++) {
       clock.set(26, 9, m)
