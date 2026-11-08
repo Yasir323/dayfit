@@ -25,12 +25,13 @@ Everything below "Full backlog" is unprioritised beyond the v1 / later split.
 - [x] In-app reminder fallback: menu-bar label + popover banners
 - [x] Busy mode: mutes Dayfit's own notifications during deep work and fixed items
 - [x] Local-only storage, no account, no cloud
-- [ ] Open source release (README, screenshots, contributing guide, CI, ad-hoc signed mac builds done; needs a public repo and the first tagged release)
+- [x] Open source release: public repo (github.com/Yasir323/dayfit), CI on macOS and Windows, v1.0.0 tag and draft release
 - [x] v1 ships without outside integrations: Google Calendar is built but off (`FLAGS.calendar`) until a later version
 
 ## Known issues and polish (from reviews)
 
-- [ ] Sign dev builds (Apple Development cert) so macOS shows notifications
+- [ ] Developer ID signing so macOS shows notifications (`npm run dist:mac:signed` is ready; needs the certificate)
+- [x] Settings says when the system blocks notifications
 - [x] Visual check of the redesign and break notifications in the running app (`npm run dev`)
 - [x] Empty state missing when only Tomorrow/Later have items
 - [x] Footer not sticky
@@ -128,7 +129,9 @@ Calendar sync, Slack/Teams, AI and mood detection stay in "Later versions".
 ### Release (end)
 
 - [x] App icon and packaging for Mac + Windows
-- [ ] Sign dev and release builds (Apple Development / Developer ID)
+- [ ] Sign release builds with Developer ID and notarize (waiting on the certificate)
+- [ ] Windows signing (SignPath free open-source plan)
+- [ ] Publish the v1.0.0 release
 - [x] Open-source release: README, screenshots, contributing guide, CI
 
 ## Next up
@@ -170,9 +173,9 @@ Calendar sync, Slack/Teams, AI and mood detection stay in "Later versions".
 ## Body and health
 
 - [x] Eye-strain reminders (20-20-20 rule)
-- [ ] Blink-rate detection for dry eyes
-- [ ] Posture warning
-- [ ] Screen-distance warning
+- [x] Blink-rate detection for dry eyes
+- [x] Posture warning
+- [x] Screen-distance warning
 - [x] Caffeine tracker: daily cap + cutoff hour; after cutoff suggest walk/water instead of coffee
 - [x] Meal / skipped-lunch reminder
 - [x] Snack reminder

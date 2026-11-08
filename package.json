@@ -15,6 +15,7 @@
     "postinstall": "install-electron && electron-builder install-app-deps",
     "test": "vitest run",
     "dist:mac": "electron-vite build && electron-builder --mac --publish never",
+    "dist:mac:signed": "electron-vite build && electron-builder --mac --publish never -c.forceCodeSigning=true -c.mac.hardenedRuntime=true -c.mac.notarize=true -c.mac.identity=\"$CSC_NAME\"",
     "dist:win": "electron-vite build && electron-builder --win --publish never",
     "icons": "electron scripts/make-icons.mjs"
   },

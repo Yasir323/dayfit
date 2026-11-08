@@ -62,6 +62,23 @@ describe('app icon and installers', () => {
     expect(yml).toMatch(/^ {2}hardenedRuntime: false$/m)
     expect(yml).toMatch(/^ {2}notarize: false$/m)
   })
+  it('signed mac script signs with Developer ID, notarizes and fails rather than skip signing', () => {
+    const pkg = JSON.parse(read('package.json')) as { scripts: Record<string, string> }
+    const cmd = pkg.scripts['dist:mac:signed']
+    for (const part of [
+      '--mac --publish never',
+      '-c.forceCodeSigning=true',
+      '-c.mac.hardenedRuntime=true',
+      '-c.mac.notarize=true',
+      '-c.mac.identity="$CSC_NAME"'
+    ])
+      expect(cmd).toContain(part)
+  })
+  it('hardened runtime entitlements do not allow library injection', () => {
+    const plist = read('build/entitlements.mac.plist')
+    expect(plist).toContain('com.apple.security.cs.allow-jit')
+    expect(plist).not.toContain('allow-dyld-environment-variables')
+  })
   it('dist scripts never publish', () => {
     const pkg = JSON.parse(read('package.json')) as { scripts: Record<string, string> }
     expect(pkg.scripts['dist:mac']).toContain('--mac --publish never')

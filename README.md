@@ -35,7 +35,7 @@ Release builds are not signed with a trusted certificate yet:
 
 ### Known limitation: notifications on unsigned macOS builds
 
-macOS may not show notifications from an unsigned app, so Dayfit's reminders can stay silent. Nothing is lost: each reminder also appears as a label next to the menu-bar icon and as a banner in the popover, where you can act on it. This goes away once builds are signed (on the roadmap). It also affects `npm run dev`.
+macOS does not show notifications from an ad-hoc signed app, so Dayfit's reminders can stay silent; Settings says so when it happens. Nothing is lost: each reminder also appears as a label next to the menu-bar icon and as a banner in the popover, where you can act on it. This goes away once builds are signed (on the roadmap). It also affects `npm run dev`.
 
 ## Syntax cheat-sheet
 
@@ -115,7 +115,7 @@ Run each on its own platform. The first build downloads the Electron binaries fo
 
 macOS builds are ad-hoc signed by default (`mac.identity: '-'`, `notarize: false` in `electron-builder.yml`) and Windows builds are unsigned, so macOS Gatekeeper and Windows SmartScreen will warn on first launch. To sign:
 
-- macOS: install a Developer ID Application certificate in your keychain, remove `identity: '-'` and `hardenedRuntime: false`, set `notarize: true`, and export `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD` and `APPLE_TEAM_ID`.
+- macOS: install a Developer ID Application certificate in your keychain, export `CSC_NAME` (the certificate name without the "Developer ID Application:" prefix, e.g. `Jane Doe (ABCDE12345)`), `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD` and `APPLE_TEAM_ID`, then run `npm run dist:mac:signed`. It turns on hardened runtime and notarization, and fails if the certificate is not found instead of building an unsigned app.
 - Windows: set `CSC_LINK` and `CSC_KEY_PASSWORD` to your code-signing certificate before running `dist:win`.
 
 ## Roadmap

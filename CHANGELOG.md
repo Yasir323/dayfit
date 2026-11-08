@@ -17,13 +17,14 @@ First public release, for macOS (menu bar) and Windows (system tray). Everything
 - **Week view** with seven days of focus time, water and breaks, plus streaks.
 - **Backup.** Export everything to one JSON file and import it on another machine.
 - Global shortcut and full keyboard use.
+- Settings says when the system blocks notifications.
 - macOS `.dmg` and `.zip` (Apple silicon and Intel) and a Windows installer.
 
 ### Known limitations
 
 - macOS builds are ad-hoc signed, not notarized: open them once through **System Settings → Privacy & Security → Open Anyway**. macOS asks for camera access again after each update.
 - Windows builds are unsigned, so SmartScreen warns about an unknown publisher.
-- Unsigned macOS builds may not show system notifications. Reminders still appear next to the menu-bar icon and in the popover.
+- Ad-hoc signed macOS builds can't show system notifications. Settings says so, and reminders still appear next to the menu-bar icon and in the popover.
 - Google Calendar sync is built but switched off (`FLAGS.calendar`). Integrations come in later versions.
 
 [1.0.0]: https://github.com/Yasir323/dayfit/releases/tag/v1.0.0
