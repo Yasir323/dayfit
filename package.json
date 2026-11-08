@@ -1,6 +1,6 @@
 {
   "name": "dayfit",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Dayfit: a menu bar day planner",
   "main": "./out/main/index.js",
   "author": "Dayfit contributors",
