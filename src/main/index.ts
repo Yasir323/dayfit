@@ -268,7 +268,12 @@ if (!app.requestSingleInstanceLock()) {
       }),
       onOpenPortal: openPortal,
       onOpen: (target: 'nudge' | 'checkout' | null) =>
-        target ? popover.focus(target) : popover.show()
+        target ? popover.focus(target) : popover.show(),
+      onDelivery: guarded('notification delivery', (shown: boolean) => {
+        if (service.view().notificationsOk === shown) return
+        service.setNotificationsOk(shown)
+        publish(service.view())
+      })
     }
 
     /** Opens or closes the camera window to match the view (feature, hours, meeting, busy…). */

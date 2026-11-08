@@ -31,6 +31,8 @@ export interface NotifyHandlers {
   onOpenPortal(): void
   /** Plain click (and the only interaction on Windows): where the popover should open. */
   onOpen(target: 'nudge' | 'checkout' | null): void
+  /** Whether the system showed the notification (false: it refused, e.g. an unsigned macOS app). */
+  onDelivery(shown: boolean): void
 }
 
 const NUDGE_ACTIONS: { text: string; answer: NudgeAnswer }[] = [
@@ -115,6 +117,12 @@ export function showNotification(
       else if (text === 'Open portal') handlers.onOpenPortal()
       else if (text === 'Punched' && kind !== null) handlers.onPunched(kind)
     }
+  })
+  n.on('show', () => handlers.onDelivery(true))
+  n.on('failed', (_e, error) => {
+    console.warn('notification not shown:', error)
+    live.delete(n)
+    handlers.onDelivery(false)
   })
   live.add(n)
   n.on('close', () => live.delete(n))

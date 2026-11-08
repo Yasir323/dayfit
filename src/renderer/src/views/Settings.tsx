@@ -793,6 +793,12 @@ export function Settings({ view, onView }: Props): React.JSX.Element {
       <fieldset>
         <legend>Reminders</legend>
         <div className="group-card">
+          {!view.notificationsOk && (
+            <p className="field-error" role="alert">
+              Notifications are blocked by the system. Reminders still show next to the menu bar
+              icon and here.
+            </p>
+          )}
           <Toggle
             label="Water"
             checked={s.water.enabled}

@@ -90,6 +90,8 @@ export interface ViewState {
   focus: { itemId: string; title: string; endsAt: number; minutesLeft: number } | null
   /** False when the quick-add shortcut could not be registered (set by the shell). */
   hotkeyOk: boolean
+  /** False when the system refused the last notification (set by the shell). */
+  notificationsOk: boolean
   /** Google Calendar sync: the link (from the shell) and the last sync result. */
   calendar: CalendarView
   /** Camera cues: window status and the latest minute. */
@@ -185,6 +187,7 @@ export class DayfitService {
   /** The fatigue signals say the user is slowing down (set by the shell); not saved. */
   private fatigueSlow = false
   private hotkeyOk = true
+  private notificationsOk = true
   /** Google Calendar link, from the token file and sign-in flow (set by the shell); not saved. */
   private calendarLink: CalendarLink = { connected: false, connecting: false, canWrite: false }
   /** Camera window status (set by the shell); not saved. */
@@ -758,6 +761,11 @@ export class DayfitService {
     this.hotkeyOk = ok
   }
 
+  /** Called by the shell when a notification is shown or refused; not persisted. */
+  setNotificationsOk(ok: boolean): void {
+    this.notificationsOk = ok
+  }
+
   updateSettings(p: SettingsPatch): ViewState {
     this.begin()
     const old = this.state.settings
@@ -1250,6 +1258,7 @@ export class DayfitService {
       trayLabel: s.unseen ?? (focus ? `Focus ${focus.minutesLeft}m` : null),
       focus,
       hotkeyOk: this.hotkeyOk,
+      notificationsOk: this.notificationsOk,
       calendar: { ...this.calendarLink, ...s.calendar },
       camera: this.cameraView()
     })

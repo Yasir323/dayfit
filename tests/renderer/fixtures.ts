@@ -78,6 +78,7 @@ export function makeView(over: Partial<ViewState> = {}): ViewState {
     manualBusy: null,
     waterMl: 500,
     hotkeyOk: true,
+    notificationsOk: true,
     calendar: {
       connected: false,
       connecting: false,

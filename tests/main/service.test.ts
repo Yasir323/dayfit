@@ -457,6 +457,12 @@ describe('DayfitService', () => {
     svc.setHotkeyOk(false)
     expect(svc.view().hotkeyOk).toBe(false)
   })
+
+  it('reports whether notifications reach the screen', () => {
+    expect(svc.view().notificationsOk).toBe(true)
+    svc.setNotificationsOk(false)
+    expect(svc.view().notificationsOk).toBe(false)
+  })
 })
 
 describe('DayfitService in-app alerts', () => {

@@ -38,6 +38,7 @@ const view = (over: Partial<ViewState['settings']> = {}): ViewState =>
     manualBusy: null,
     waterMl: 0,
     hotkeyOk: true,
+    notificationsOk: true,
     attendance: { in: false, out: false },
     checkedOut: false,
     alerts: [],
@@ -84,6 +85,16 @@ describe('Settings', () => {
     expect(screen.queryByText('Shortcut unavailable — pick another')).toBeNull()
     rerender(<Settings view={{ ...view(), hotkeyOk: false }} />)
     expect(screen.getByText('Shortcut unavailable — pick another')).toBeInTheDocument()
+  })
+
+  it('says when the system blocks notifications', () => {
+    const msg = /Notifications are blocked/
+    const { rerender } = render(<Settings view={view()} />)
+    expect(screen.queryByText(msg)).toBeNull()
+    rerender(<Settings view={{ ...view(), notificationsOk: false }} />)
+    expect(screen.getByText(msg)).toHaveTextContent(
+      'Notifications are blocked by the system. Reminders still show next to the menu bar icon and here.'
+    )
   })
 
   it('rejects an end before the start without sending', () => {
