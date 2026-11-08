@@ -13,6 +13,7 @@ import {
 import { READ_SCOPE, WRITE_SCOPE, type Fetch, type Loopback } from '../../src/main/googleAuth'
 import { DayfitService, type Clock } from '../../src/main/service'
 import type { StoredToken, TokenStore } from '../../src/main/tokenStore'
+import { removeDir } from './tempDir'
 
 const EVENTS = 'https://www.googleapis.com/calendar/v3/calendars/primary/events'
 const TOKEN = 'https://oauth2.googleapis.com/token'
@@ -202,7 +203,7 @@ beforeEach(() => {
 })
 afterEach(() => {
   vi.useRealTimers()
-  fs.rmSync(dir, { recursive: true, force: true })
+  removeDir(dir)
 })
 
 describe('calendar controller: not connected', () => {

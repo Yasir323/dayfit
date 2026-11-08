@@ -31,8 +31,14 @@ const SCHEMA = `
 
 function connect(file: string): DatabaseSync {
   const db = new DatabaseSync(file)
-  db.exec('PRAGMA journal_mode = WAL')
-  db.exec(SCHEMA)
+  try {
+    db.exec('PRAGMA journal_mode = WAL')
+    db.exec(SCHEMA)
+  } catch (e) {
+    // Release the file: Windows will not rename a corrupt file that is still open.
+    db.close()
+    throw e
+  }
   return db
 }
 

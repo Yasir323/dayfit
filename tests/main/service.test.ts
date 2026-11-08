@@ -9,6 +9,7 @@ import { loadState } from '../../src/main/store'
 import { openDb } from '../../src/main/db'
 import { EMPTY_BREAK_STATE } from '../../src/core/breaks'
 import { EMPTY_END_OF_DAY_STATE } from '../../src/core/endOfDay'
+import { removeDir } from './tempDir'
 
 const D = '2026-10-26' // Monday
 const D1 = '2026-10-27'
@@ -52,7 +53,7 @@ beforeEach(() => {
   let n = 0
   svc = new DayfitService(file, clock, () => `id${++n}`)
 })
-afterEach(() => fs.rmSync(dir, { recursive: true, force: true }))
+afterEach(() => removeDir(dir))
 
 describe('DayfitService', () => {
   it('addItems places a task and the view shows its block', () => {

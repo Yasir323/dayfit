@@ -8,6 +8,7 @@ import { openDb } from '../../src/main/db'
 import { EMPTY_BREAK_STATE } from '../../src/core/breaks'
 import { EMPTY_END_OF_DAY_STATE } from '../../src/core/endOfDay'
 import { EMPTY_WELLBEING_STATE } from '../../src/core/wellbeing'
+import { removeDir } from './tempDir'
 
 let dir: string
 let file: string
@@ -15,7 +16,7 @@ beforeEach(() => {
   dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dayfit-store-'))
   file = path.join(dir, 'dayfit.json')
 })
-afterEach(() => fs.rmSync(dir, { recursive: true, force: true }))
+afterEach(() => removeDir(dir))
 
 /** Puts a raw (possibly older-shaped) state document into the database, as an old app would. */
 function writeRaw(raw: unknown): void {
@@ -238,6 +239,6 @@ describe('store camera defaults', () => {
       calibration: null
     })
     expect(s.camera).toEqual({ date: null, minutes: [], state: { lastAt: {} } })
-    fs.rmSync(dir2, { recursive: true, force: true })
+    removeDir(dir2)
   })
 })

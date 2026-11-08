@@ -3,6 +3,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { migrateJson, openDb, restoreMigrated } from '../../src/main/db'
+import { removeDir } from './tempDir'
 
 let dir: string
 let file: string
@@ -10,7 +11,7 @@ beforeEach(() => {
   dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dayfit-db-'))
   file = path.join(dir, 'dayfit.db')
 })
-afterEach(() => fs.rmSync(dir, { recursive: true, force: true }))
+afterEach(() => removeDir(dir))
 
 describe('openDb', () => {
   it('starts empty and round-trips the state', () => {

@@ -1,3 +1,4 @@
+import path from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
 import {
   createCameraController,
@@ -307,9 +308,9 @@ describe('camera controller: calibration', () => {
 describe('resolveAsset', () => {
   const root = '/app/out/renderer'
   it('maps a page path inside the renderer folder', () => {
-    expect(resolveAsset(root, '/camera.html')).toBe('/app/out/renderer/camera.html')
+    expect(resolveAsset(root, '/camera.html')).toBe(path.join(root, 'camera.html'))
     expect(resolveAsset(root, '/mediapipe/vision_wasm_internal.wasm')).toBe(
-      '/app/out/renderer/mediapipe/vision_wasm_internal.wasm'
+      path.join(root, 'mediapipe', 'vision_wasm_internal.wasm')
     )
   })
   it.each(['/../main/index.js', '/%2e%2e/main/index.js', '/models/../../preload/camera.js', '/'])(
